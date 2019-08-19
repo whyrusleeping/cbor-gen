@@ -60,19 +60,19 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 		b[0] = (t << 5) | byte(l)
 		return b[:1]
 	case l < (1 << 8):
-		b[0] = (t << 4) | 24
+		b[0] = (t << 5) | 24
 		b[1] = byte(l)
 		return b[:2]
 	case l < (1 << 16):
-		b[0] = (t << 4) | 25
+		b[0] = (t << 5) | 25
 		binary.BigEndian.PutUint16(b[1:3], uint16(l))
 		return b[:3]
 	case l < (1 << 32):
-		b[0] = (t << 4) | 26
+		b[0] = (t << 5) | 26
 		binary.BigEndian.PutUint32(b[1:5], uint32(l))
 		return b[:5]
 	default:
-		b[0] = (t << 4) | 27
+		b[0] = (t << 5) | 27
 		binary.BigEndian.PutUint64(b[1:], uint64(l))
 		return b[:]
 	}
