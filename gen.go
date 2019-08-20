@@ -82,7 +82,6 @@ func PrintHeaderAndUtilityMethods(w io.Writer, pkg string) error {
 	fmt.Fprintf(w, "package %s\n\n", pkg)
 
 	fmt.Fprintf(w, "import (\n")
-	fmt.Fprintf(w, "\t\"encoding/binary\"\n")
 	fmt.Fprintf(w, "\t\"fmt\"\n")
 	fmt.Fprintf(w, "\t\"io\"\n")
 	fmt.Fprintf(w, "\n\tcbg \"github.com/whyrusleeping/cbor-gen\"\n")
@@ -145,7 +144,7 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 
 	// Now for the unmarshal
 
-	fmt.Fprintf(w, "func (t *%s) UnmarshalCBOR(br ByteReader) error {\n", t.Name())
+	fmt.Fprintf(w, "func (t *%s) UnmarshalCBOR(br cbg.ByteReader) error {\n", t.Name())
 
 	fmt.Fprintf(w, "\tfirst, err := br.ReadByte()\n")
 	fmt.Fprintf(w, "\tif err != nil {\n\t\treturn err\n\t}\n\n")
@@ -180,8 +179,8 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 				continue
 			}
 
-			fmt.Fprintf(w, "\tt.%s = make([]%s, 0, extra)\n", f.Name, f.Type)
-			fmt.Fprintf(w, "\tfor i := 0; i < extra; i++ {\n")
+			fmt.Fprintf(w, "\tt.%s = make([]%s, 0, extra)\n", f.Name, f.Type.Name())
+			fmt.Fprintf(w, "\tfor i := 0; i < int(extra); i++ {\n")
 			switch e.Kind() {
 			case reflect.Struct:
 				fmt.Fprintf(w, "\t\tvar v %s\n", f.Type)
