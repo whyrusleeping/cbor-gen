@@ -187,11 +187,13 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 			fmt.Fprintf(w, "\tmaj, extra, err = cbg.CborReadHeader(br)\n\tif err != nil {\n\t\treturn err\n\t}\n\n")
 			fmt.Fprintf(w, "\tif extra > 8192 {\n\t\treturn fmt.Errorf(\"array too large\")\n\t}\n")
 			if e.Kind() == reflect.Uint8 {
+				fmt.Fprintf(w, "\tif maj != cbg.MajByteString {\n\t\treturn fmt.Errorf(\"expected byte array\")\n\t}\n")
 				fmt.Fprintf(w, "\tt.%s = make([]byte, extra)\n", f.Name)
 				fmt.Fprintf(w, "\tif _, err := io.ReadFull(br, t.%s); err != nil {\n\t\treturn err\n\t}\n\n", f.Name)
 				continue
 			}
 
+			fmt.Fprintf(w, "\tif maj != cbg.MajArray {\n\t\treturn fmt.Errorf(\"expected cbor array\")\n\t}\n")
 			fmt.Fprintf(w, "\tt.%s = make(%s, 0, extra)\n", f.Name, f.Type)
 			fmt.Fprintf(w, "\tfor i := 0; i < int(extra); i++ {\n")
 			switch e.Kind() {
