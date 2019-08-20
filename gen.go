@@ -115,7 +115,7 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 
 	firstByte := (MajArray << 5) | byte(t.NumField())
 
-	fmt.Fprintf(w, "\tw.Write([]byte{0x%x})\n", firstByte)
+	fmt.Fprintf(w, "\tif _, err := w.Write([]byte{0x%x}); err != nil {\n\t\treturn err\n\t}\n", firstByte)
 
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
