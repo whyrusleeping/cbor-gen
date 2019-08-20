@@ -163,7 +163,7 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 	fmt.Fprintf(w, "\tif err != nil {\n\t\treturn err\n\t}\n\n")
 	fmt.Fprintf(w, "\tif first != 0x%x {\n", firstByte)
 	fmt.Fprintf(w, "\t\treturn fmt.Errorf(\"object had incorrect type or length\")\n\t}\n\n")
-	fmt.Fprintf(w, "\tvar maj byte\n\tvar extra uint64\n_ = maj\n_ = extra\n")
+	fmt.Fprintf(w, "\tvar maj byte\n\tvar extra uint64\n\t_ = maj\n\t_ = extra\n\n")
 
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
