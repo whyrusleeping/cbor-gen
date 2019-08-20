@@ -167,7 +167,9 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 			fmt.Fprintf(w, "\tt.%s = extra\n\n", f.Name)
 		case reflect.Slice:
 			e := f.Type.Elem()
+			var pointer bool
 			if e.Kind() == reflect.Ptr {
+				pointer = true
 				e = e.Elem()
 			}
 
@@ -179,15 +181,20 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 				continue
 			}
 
-			fmt.Fprintf(w, "\tt.%s = make([]%s, 0, extra)\n", f.Name, f.Type.Name())
+			fmt.Fprintf(w, "\tt.%s = make(%s, 0, extra)\n", f.Name, f.Type)
 			fmt.Fprintf(w, "\tfor i := 0; i < int(extra); i++ {\n")
 			switch e.Kind() {
 			case reflect.Struct:
-				fmt.Fprintf(w, "\t\tvar v %s\n", f.Type)
+				fmt.Fprintf(w, "\t\tvar v %s\n", e.Name())
 				fmt.Fprintf(w, "\t\tif err := v.UnmarshalCBOR(br); err != nil {\n\t\t\treturn err\n\t\t}\n\n")
-				fmt.Fprintf(w, "\t\tt.%s = append(t.%s, v)\n", f.Name, f.Name)
+
+				var ptrfix string
+				if pointer {
+					ptrfix = "&"
+				}
+				fmt.Fprintf(w, "\t\tt.%s = append(t.%s, %sv)\n", f.Name, f.Name, ptrfix)
 			default:
-				return fmt.Errorf("do not yet support slices of non-structs: %s", f.Type.Elem())
+				return fmt.Errorf("do not yet support slices of non-structs: %s", e)
 			}
 			fmt.Fprintf(w, "\t}\n\n")
 		default:
