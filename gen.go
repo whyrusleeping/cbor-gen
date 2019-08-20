@@ -7,6 +7,17 @@ import (
 	"reflect"
 )
 
+const (
+	MajUnsignedInt = 0
+	MajNegativeInt = 1
+	MajByteString  = 2
+	MajTextString  = 3
+	MajArray       = 4
+	MajMap         = 5
+	MajTag         = 6
+	MajFloat       = 7
+)
+
 type ByteReader interface {
 	io.ByteReader
 	io.Reader
@@ -100,7 +111,7 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 		return fmt.Errorf("lazy programmer doesnt want to handle field counters > 23")
 	}
 
-	firstByte := (4 << 5) | byte(t.NumField())
+	firstByte := (MajArray << 5) | byte(t.NumField())
 
 	fmt.Fprintf(w, "\tw.Write([]byte{0x%x})\n", firstByte)
 
@@ -114,7 +125,7 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 			fmt.Fprintf(w, "\tif err := t.%s.MarshalCBOR(w); err != nil {\n", f.Name)
 			fmt.Fprintf(w, "\t\treturn err\n\t}\n\n")
 		case reflect.Uint64:
-			fmt.Fprintf(w, "\t w.Write(cbg.CborEncodeMajorType(0, t.%s))\n\n", f.Name)
+			fmt.Fprintf(w, "\t w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, t.%s))\n\n", f.Name)
 		case reflect.Slice:
 			e := f.Type.Elem()
 			if e.Kind() == reflect.Ptr {
@@ -122,12 +133,12 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 			}
 
 			if e.Kind() == reflect.Uint8 {
-				fmt.Fprintf(w, "\tw.Write(cbg.CborEncodeMajorType(2, uint64(len(t.%s))))\n", f.Name)
+				fmt.Fprintf(w, "\tw.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len(t.%s))))\n", f.Name)
 				fmt.Fprintf(w, "\tw.Write(t.%s)\n\n", f.Name)
 				continue
 			}
 
-			fmt.Fprintf(w, "\tw.Write(cbg.CborEncodeMajorType(4, uint64(len(t.%s))))\n", f.Name)
+			fmt.Fprintf(w, "\tw.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.%s))))\n", f.Name)
 			fmt.Fprintf(w, "\tfor i, v := range t.%s {\n", f.Name)
 			switch e.Kind() {
 			case reflect.Struct:
@@ -163,7 +174,7 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 			fmt.Fprintf(w, "\t\treturn err\n\t}\n\n")
 		case reflect.Uint64:
 			fmt.Fprintf(w, "\tmaj, extra, err = cbg.CborReadHeader(br)\n\tif err != nil {\n\t\treturn err\n\t}\n\n")
-			fmt.Fprintf(w, "\tif maj != 0 {\n\t\treturn fmt.Errorf(\"wrong type for uint64 field\")\n\t}\n")
+			fmt.Fprintf(w, "\tif maj != cbg.MajUnsignedInt {\n\t\treturn fmt.Errorf(\"wrong type for uint64 field\")\n\t}\n")
 			fmt.Fprintf(w, "\tt.%s = extra\n\n", f.Name)
 		case reflect.Slice:
 			e := f.Type.Elem()
