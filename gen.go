@@ -6,6 +6,8 @@ import (
 	"io"
 	"reflect"
 	"text/template"
+
+	cid "github.com/ipfs/go-cid"
 )
 
 const (
@@ -65,6 +67,15 @@ func CborReadHeader(br ByteReader) (byte, uint64, error) {
 	}
 }
 
+func CborWriteHeader(w io.Writer, t byte, val uint64) error {
+	header := CborEncodeMajorType(t, val)
+	if _, err := w.Write(header); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func CborEncodeMajorType(t byte, l uint64) []byte {
 	var b [9]byte
 	switch {
@@ -90,25 +101,87 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 	}
 }
 
+func ReadTaggedByteArray(br ByteReader, exptag uint64, maxlen uint64) ([]byte, error) {
+	maj, extra, err := CborReadHeader(br)
+	if err != nil {
+		return nil, err
+	}
+
+	if maj != MajTag {
+		return nil, fmt.Errorf("expected cbor type 'tag' in input")
+	}
+
+	if extra != exptag {
+		return nil, fmt.Errorf("expected tag %d", exptag)
+	}
+
+	maj, extra, err = CborReadHeader(br)
+	if err != nil {
+		return nil, err
+	}
+
+	if maj != MajByteString {
+		return nil, fmt.Errorf("expected cbor type 'byte string' in input")
+	}
+
+	if extra > 256*1024 {
+		return nil, fmt.Errorf("string in cbor input too long")
+	}
+
+	buf := make([]byte, extra)
+	if _, err := io.ReadFull(br, buf); err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+
+}
+
+func ReadCid(br ByteReader) (cid.Cid, error) {
+	buf, err := ReadTaggedByteArray(br, 42, 512)
+	if err != nil {
+		return cid.Undef, err
+	}
+
+	if len(buf) < 2 {
+		return cid.Undef, fmt.Errorf("cbor serialized CIDs must have at least two bytes")
+	}
+
+	if buf[0] != 0 {
+		return cid.Undef, fmt.Errorf("cbor serialized CIDs must have binary multibase")
+	}
+
+	return cid.Cast(buf[1:])
+}
+
+func WriteCid(w io.Writer, c cid.Cid) error {
+	if c == cid.Undef {
+		return fmt.Errorf("cannot marshal Undefined Cid")
+	}
+
+	if err := CborWriteHeader(w, MajTag, 42); err != nil {
+		return err
+	}
+
+	if err := CborWriteHeader(w, MajByteString, uint64(len(c.Bytes())+1)); err != nil {
+		return err
+	}
+
+	// that binary multibase prefix...
+	if _, err := w.Write([]byte{0}); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(c.Bytes()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func doTemplate(w io.Writer, info interface{}, templ string) error {
 	t := template.Must(template.New("").
-		Funcs(template.FuncMap{
-			"ReflectType": func(s string) reflect.Kind {
-				switch s {
-				case "string":
-					return reflect.String
-				case "struct":
-					return reflect.Struct
-				case "uint64":
-					return reflect.Uint64
-				case "slice":
-					return reflect.Slice
-				default:
-					panic("do not support")
-				}
-			},
-		}).
-		Parse(templ))
+		Funcs(template.FuncMap{}).Parse(templ))
 
 	return t.Execute(w, info)
 }
@@ -153,7 +226,7 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 
 		ft := f.Type
 		var pointer bool
-		if t.Kind() == reflect.Ptr {
+		if ft.Kind() == reflect.Ptr {
 			ft = ft.Elem()
 			pointer = true
 		}
@@ -219,9 +292,48 @@ func GenTupleEncodersForType(i interface{}, w io.Writer) error {
 				return err
 			}
 		case reflect.Struct:
+			fname := f.Type.PkgPath() + "." + f.Type.Name()
+			switch fname {
+			case "math/big.Int":
+				err := doTemplate(w, f, `
+	{
+		if err := cbg.CborWriteHeader(w, cbg.MajTag, 2); err != nil {
+			return err
+		}
+		var b []byte
+		if t.{{ .Name }} != nil {
+			b = t.{{ .Name }}.Bytes()
+		}
+
+		if err := cbg.CborWriteHeader(w, cbg.MajByteString, uint64(len(b))); err != nil {
+			return err
+		}
+		if _, err := w.Write(b); err != nil {
+			return err
+		}
+	}
+`)
+				if err != nil {
+					return err
+				}
+
+				continue
+			case "github.com/ipfs/go-cid.Cid":
+				err := doTemplate(w, f, `
+	if err := cbg.WriteCid(w, t.{{ .Name }}); err != nil {
+		return err
+	}
+`)
+				if err != nil {
+					return err
+				}
+				continue
+			default:
+			}
+
 			err := doTemplate(w, f, `
 {{ if .Pointer }}
-	t.{{ .Name }} = new({{ .Type }})
+	t.{{ .Name }} = new({{ .Type.Name }})
 {{ end }}
 	if err := t.{{ .Name }}.MarshalCBOR(w); err != nil {
 		return err
@@ -353,8 +465,65 @@ func (t *{{ .Name}}) UnmarshalCBOR(br cbg.ByteReader) error {
 				return err
 			}
 		case reflect.Struct:
-			fmt.Fprintf(w, "\tif err := t.%s.UnmarshalCBOR(br); err != nil {\n", f.Name)
-			fmt.Fprintf(w, "\t\treturn err\n\t}\n\n")
+			fname := f.Type.PkgPath() + "." + f.Type.Name()
+			switch fname {
+			case "math/big.Int":
+				err := doTemplate(w, f, `
+	maj, extra, err = cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajTag || extra != 2 {
+		return fmt.Errorf("big ints should be cbor bignums")
+	}
+
+	maj, extra, err = cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("big ints should be tagged cbor byte strings")
+	}
+
+	if extra > 256 {
+		return fmt.Errorf("cbor bignum was too large")
+	}
+
+	if extra > 0 {
+		buf := make([]byte, extra)
+		if _, err := io.ReadFull(br, buf); err != nil {
+			return err
+		}
+		t.{{ .Name }} = big.NewInt(0).SetBytes(buf)
+	}
+`)
+				if err != nil {
+					return err
+				}
+			case "github.com/ipfs/go-cid.Cid":
+				err := doTemplate(w, f, `
+	{
+		c, err := cbg.ReadCid(br)
+		if err != nil {
+			return err
+		}
+		t.{{ .Name }} = c
+	}
+`)
+				if err != nil {
+					return err
+				}
+
+			default:
+				if f.Pointer {
+					fmt.Fprintf(w, "\tt.%s = new(%s)\n", f.Name, f.Type.Name())
+				}
+				fmt.Fprintf(w, "\tif err := t.%s.UnmarshalCBOR(br); err != nil {\n", f.Name)
+				fmt.Fprintf(w, "\t\treturn err\n\t}\n\n")
+			}
+
 		case reflect.Uint64:
 			fmt.Fprintf(w, "\tmaj, extra, err = cbg.CborReadHeader(br)\n\tif err != nil {\n\t\treturn err\n\t}\n\n")
 			fmt.Fprintf(w, "\tif maj != cbg.MajUnsignedInt {\n\t\treturn fmt.Errorf(\"wrong type for uint64 field\")\n\t}\n")
