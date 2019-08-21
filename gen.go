@@ -198,6 +198,10 @@ func ReadCid(br ByteReader) (cid.Cid, error) {
 		return cid.Undef, err
 	}
 
+	if len(buf) == 0 {
+		return cid.Undef, nil
+	}
+
 	if len(buf) < 2 {
 		return cid.Undef, fmt.Errorf("cbor serialized CIDs must have at least two bytes")
 	}
@@ -210,12 +214,12 @@ func ReadCid(br ByteReader) (cid.Cid, error) {
 }
 
 func WriteCid(w io.Writer, c cid.Cid) error {
-	if c == cid.Undef {
-		return fmt.Errorf("cannot marshal Undefined Cid")
-	}
-
 	if err := CborWriteHeader(w, MajTag, 42); err != nil {
 		return err
+	}
+	if c == cid.Undef {
+		return CborWriteHeader(w, MajByteString, 0)
+
 	}
 
 	if err := CborWriteHeader(w, MajByteString, uint64(len(c.Bytes())+1)); err != nil {
