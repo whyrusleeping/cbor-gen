@@ -414,8 +414,8 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 	switch e.Kind() {
 	default:
-		return fmt.Errorf("do not yet support slices of non-structs: %s %s", f.Type.Elem(), e.Kind())
-	case reflect.Struct:
+		return fmt.Errorf("do not yet support slices of %s yet", e.Kind())
+	case reflect.Struct, reflect.Uint64:
 		// ok
 	}
 
@@ -437,6 +437,13 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 `)
 
+	case ".uint64":
+		return doTemplate(w, f, `
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, v); err != nil {
+			return err
+		}
+	}
+`)
 	default:
 		return doTemplate(w, f, `
 		if err := v.MarshalCBOR(w); err != nil {
@@ -656,6 +663,22 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 				ptrfix = "&"
 			}
 			fmt.Fprintf(w, "\t\tt.%s = append(t.%s, %sv)\n", f.Name, f.Name, ptrfix)
+		}
+	case reflect.Uint64:
+		err := doTemplate(w, f, `
+		maj, val, err := cbg.CborReadHeader(br)
+		if err != nil {
+			return xerrors.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
+		}
+
+		if maj != cbg.MajUnsignedInt {
+			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
+		}
+		
+		t.{{ .Name }} = append(t.{{ .Name }}, val)
+`)
+		if err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("do not yet support slices of non-structs: %s", e)
