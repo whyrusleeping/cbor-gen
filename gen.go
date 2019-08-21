@@ -364,7 +364,7 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 	case "github.com/ipfs/go-cid.Cid":
 		return doTemplate(w, f, `
 	if err := cbg.WriteCid(w, t.{{ .Name }}); err != nil {
-		return err
+		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
 	}
 `)
 	default:
@@ -556,7 +556,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	{
 		c, err := cbg.ReadCid(br)
 		if err != nil {
-			return err
+			return xerrors.Errorf("failed to read cid field {{ .Name }}: %w", err)
 		}
 		t.{{ .Name }} = c
 	}
