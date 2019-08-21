@@ -416,16 +416,33 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		// ok
 	}
 
-	return doTemplate(w, f, `
+	err := doTemplate(w, f, `
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.{{ .Name }})))); err != nil {
 		return err
 	}
-	for _, v := range t.{{ .Name }} {
+	for _, v := range t.{{ .Name }} {`)
+	if err != nil {
+		return err
+	}
+	fname := e.PkgPath() + "." + e.Name()
+	switch fname {
+	case "github.com/ipfs/go-cid.Cid":
+		return doTemplate(w, f, `
+		if err := cbg.WriteCid(w, v); err != nil {
+			return err
+		}
+	}
+`)
+
+	default:
+		return doTemplate(w, f, `
 		if err := v.MarshalCBOR(w); err != nil {
 			return err
 		}
 	}
 `)
+	}
+
 }
 
 func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
@@ -543,7 +560,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 `)
 	default:
 		return doTemplate(w, f, `
-{{ if f.Pointer }}
+{{ if .Pointer }}
 	t.{{ .Name }} = new({{ .Type.Name }})
 {{ end }}
 	if err := t.{{ .Name }}.UnmarshalCBOR(br); err != nil {
@@ -604,7 +621,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return fmt.Errorf("expected cbor array")
 	}
 	if extra > 0 {
-		t.{{ .Name }} = make({{ f.Type }}, 0, extra)
+		t.{{ .Name }} = make({{ .Type }}, 0, extra)
 	}
 	for i := 0; i < int(extra); i++ {
 `)
@@ -614,14 +631,29 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	switch e.Kind() {
 	case reflect.Struct:
-		fmt.Fprintf(w, "\t\tvar v %s\n", e.Name())
-		fmt.Fprintf(w, "\t\tif err := v.UnmarshalCBOR(br); err != nil {\n\t\t\treturn err\n\t\t}\n\n")
-
-		var ptrfix string
-		if pointer {
-			ptrfix = "&"
+		fname := e.PkgPath() + "." + e.Name()
+		switch fname {
+		case "github.com/ipfs/go-cid.Cid":
+			err := doTemplate(w, f, `
+		c, err := cbg.ReadCid(br)
+		if err != nil {
+			return err
 		}
-		fmt.Fprintf(w, "\t\tt.%s = append(t.%s, %sv)\n", f.Name, f.Name, ptrfix)
+		t.{{ .Name }} = append(t.{{ .Name }}, c)
+`)
+			if err != nil {
+				return err
+			}
+		default:
+			fmt.Fprintf(w, "\t\tvar v %s\n", e.Name())
+			fmt.Fprintf(w, "\t\tif err := v.UnmarshalCBOR(br); err != nil {\n\t\t\treturn err\n\t\t}\n\n")
+
+			var ptrfix string
+			if pointer {
+				ptrfix = "&"
+			}
+			fmt.Fprintf(w, "\t\tt.%s = append(t.%s, %sv)\n", f.Name, f.Name, ptrfix)
+		}
 	default:
 		return fmt.Errorf("do not yet support slices of non-structs: %s", e)
 	}
@@ -630,20 +662,8 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	return nil
 }
 
-// Generates 'tuple representation' cbor encoders for the given type
-func GenTupleEncodersForType(i interface{}, w io.Writer) error {
-	gti, err := ParseTypeInfo(i)
-	if err != nil {
-		return err
-	}
-
-	if err := emitCborMarshalStructTuple(w, gti); err != nil {
-		return err
-	}
-
-	// Now for the unmarshal
-
-	err = doTemplate(w, gti, `
+func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
+	err := doTemplate(w, gti, `
 func (t *{{ .Name}}) UnmarshalCBOR(br cbg.ByteReader) error {
 
 	maj, extra, err := cbg.CborReadHeader(br)
@@ -691,6 +711,24 @@ func (t *{{ .Name}}) UnmarshalCBOR(br cbg.ByteReader) error {
 	}
 
 	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+
+	return nil
+}
+
+// Generates 'tuple representation' cbor encoders for the given type
+func GenTupleEncodersForType(i interface{}, w io.Writer) error {
+	gti, err := ParseTypeInfo(i)
+	if err != nil {
+		return err
+	}
+
+	if err := emitCborMarshalStructTuple(w, gti); err != nil {
+		return err
+	}
+
+	if err := emitCborUnmarshalStructTuple(w, gti); err != nil {
+		return err
+	}
 
 	return nil
 }
