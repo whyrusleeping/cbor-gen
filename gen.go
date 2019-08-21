@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"text/template"
 
 	cid "github.com/ipfs/go-cid"
@@ -268,6 +269,10 @@ type GenTypeInfo struct {
 	Fields []Field
 }
 
+func nameIsExported(name string) bool {
+	return strings.ToUpper(name[0:1]) == name[0:1]
+}
+
 func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 	t := reflect.TypeOf(i)
 
@@ -277,6 +282,9 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
+		if !nameIsExported(f.Name) {
+			continue
+		}
 
 		ft := f.Type
 		var pointer bool
