@@ -26,6 +26,60 @@ type ByteReader interface {
 	io.Reader
 }
 
+type Deferred struct {
+	Raw []byte
+}
+
+func (d *Deferred) MarshalCBOR(w io.Writer) error {
+	_, err := w.Write(d.Raw)
+	return err
+}
+
+func (d *Deferred) UnmarshalCBOR(br ByteReader) error {
+	// TODO: theres a more efficient way to implement this method, but for now
+	// this is fine
+	maj, extra, err := CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+	header := CborEncodeMajorType(maj, extra)
+
+	switch maj {
+	case MajUnsignedInt:
+		d.Raw = header
+		return nil
+	case MajByteString, MajTextString:
+		buf := make([]byte, int(extra)+len(header))
+		copy(buf, header)
+		if _, err := io.ReadFull(br, buf[len(header):]); err != nil {
+			return err
+		}
+
+		return nil
+	case MajTag:
+		sub := new(Deferred)
+		if err := sub.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		d.Raw = append(header, sub.Raw...)
+		return nil
+	case MajArray:
+		d.Raw = header
+		for i := 0; i < int(extra); i++ {
+			sub := new(Deferred)
+			if err := sub.UnmarshalCBOR(br); err != nil {
+				return err
+			}
+
+			d.Raw = append(d.Raw, sub.Raw...)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unhandled deferred cbor type: %d", maj)
+	}
+}
+
 func CborReadHeader(br ByteReader) (byte, uint64, error) {
 	first, err := br.ReadByte()
 	if err != nil {
