@@ -383,9 +383,6 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 `)
 	default:
 		return doTemplate(w, f, `
-{{ if .Pointer }}
-	{{ .Name }} = new({{ .Type.Name }})
-{{ end }}
 	if err := {{ .Name }}.MarshalCBOR(w); err != nil {
 		return err
 	}
