@@ -269,6 +269,8 @@ type Field struct {
 	Name    string
 	Pointer bool
 	Type    reflect.Type
+
+	IterLabel string
 }
 
 type GenTypeInfo struct {
@@ -301,7 +303,7 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 		}
 
 		out.Fields = append(out.Fields, Field{
-			Name:    f.Name,
+			Name:    "t." + f.Name,
 			Pointer: pointer,
 			Type:    ft,
 		})
@@ -330,10 +332,10 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	return doTemplate(w, f, `
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len(t.{{ .Name }})))); err != nil {
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
-	if _, err := w.Write([]byte(t.{{ .Name }})); err != nil {
+	if _, err := w.Write([]byte({{ .Name }})); err != nil {
 		return err
 	}
 `)
@@ -348,8 +350,8 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 			return err
 		}
 		var b []byte
-		if t.{{ .Name }} != nil {
-			b = t.{{ .Name }}.Bytes()
+		if {{ .Name }} != nil {
+			b = {{ .Name }}.Bytes()
 		}
 
 		if err := cbg.CborWriteHeader(w, cbg.MajByteString, uint64(len(b))); err != nil {
@@ -363,16 +365,16 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 
 	case "github.com/ipfs/go-cid.Cid":
 		return doTemplate(w, f, `
-	if err := cbg.WriteCid(w, t.{{ .Name }}); err != nil {
+	if err := cbg.WriteCid(w, {{ .Name }}); err != nil {
 		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
 	}
 `)
 	default:
 		return doTemplate(w, f, `
 {{ if .Pointer }}
-	t.{{ .Name }} = new({{ .Type.Name }})
+	{{ .Name }} = new({{ .Type.Name }})
 {{ end }}
-	if err := t.{{ .Name }}.MarshalCBOR(w); err != nil {
+	if err := {{ .Name }}.MarshalCBOR(w); err != nil {
 		return err
 	}
 `)
@@ -385,7 +387,7 @@ func emitCborMarshalUint64Field(w io.Writer, f Field) error {
 		return fmt.Errorf("pointers to integers not supported")
 	}
 	return doTemplate(w, f, `
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, t.{{ .Name }})); err != nil {
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, {{ .Name }})); err != nil {
 		return err
 	}
 `)
@@ -399,10 +401,10 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len(t.{{ .Name }})))); err != nil {
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
-	if _, err := w.Write(t.{{ .Name}}); err != nil {
+	if _, err := w.Write({{ .Name}}); err != nil {
 		return err
 	}
 `)
@@ -412,47 +414,60 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		e = e.Elem()
 	}
 
-	switch e.Kind() {
-	default:
-		return fmt.Errorf("do not yet support slices of %s yet", e.Kind())
-	case reflect.Struct, reflect.Uint64:
-		// ok
-	}
-
 	err := doTemplate(w, f, `
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.{{ .Name }})))); err != nil {
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
-	for _, v := range t.{{ .Name }} {`)
+	for _, v := range {{ .Name }} {`)
 	if err != nil {
 		return err
 	}
-	fname := e.PkgPath() + "." + e.Name()
-	switch fname {
-	case "github.com/ipfs/go-cid.Cid":
-		return doTemplate(w, f, `
+
+	switch e.Kind() {
+	default:
+		return fmt.Errorf("do not yet support slices of %s yet", e.Kind())
+	case reflect.Struct:
+		fname := e.PkgPath() + "." + e.Name()
+		switch fname {
+		case "github.com/ipfs/go-cid.Cid":
+			err := doTemplate(w, f, `
 		if err := cbg.WriteCid(w, v); err != nil {
 			return xerrors.Errorf("failed writing cid field {{ .Name }}: %w", err)
 		}
-	}
 `)
+			if err != nil {
+				return err
+			}
 
-	case ".uint64":
-		return doTemplate(w, f, `
-		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, v); err != nil {
-			return err
-		}
-	}
-`)
-	default:
-		return doTemplate(w, f, `
+		default:
+			err := doTemplate(w, f, `
 		if err := v.MarshalCBOR(w); err != nil {
 			return err
 		}
-	}
 `)
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Uint64:
+		err := doTemplate(w, f, `
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, v); err != nil {
+			return err
+		}
+`)
+		if err != nil {
+			return err
+		}
+	case reflect.Slice:
+		subf := Field{Name: "v", Type: e}
+		if err := emitCborMarshalSliceField(w, subf); err != nil {
+			return err
+		}
 	}
 
+	// array end
+	fmt.Fprintf(w, "\t}\n")
+	return nil
 }
 
 func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
@@ -518,7 +533,7 @@ func emitCborUnmarshalStringField(w io.Writer, f Field) error {
 			return err
 		}
 
-		t.{{ .Name }} = string(buf)
+		{{ .Name }} = string(buf)
 	}
 `)
 }
@@ -555,7 +570,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		if _, err := io.ReadFull(br, buf); err != nil {
 			return err
 		}
-		t.{{ .Name }} = big.NewInt(0).SetBytes(buf)
+		{{ .Name }} = big.NewInt(0).SetBytes(buf)
 	}
 `)
 	case "github.com/ipfs/go-cid.Cid":
@@ -565,15 +580,15 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		if err != nil {
 			return xerrors.Errorf("failed to read cid field {{ .Name }}: %w", err)
 		}
-		t.{{ .Name }} = c
+		{{ .Name }} = c
 	}
 `)
 	default:
 		return doTemplate(w, f, `
 {{ if .Pointer }}
-	t.{{ .Name }} = new({{ .Type.Name }})
+	{{ .Name }} = new({{ .Type.Name }})
 {{ end }}
-	if err := t.{{ .Name }}.UnmarshalCBOR(br); err != nil {
+	if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
 		return err
 	}
 `)
@@ -589,11 +604,15 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 	if maj != cbg.MajUnsignedInt {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
-	t.{{ .Name }} = extra
+	{{ .Name }} = extra
 `)
 }
 
 func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
+	if f.IterLabel == "" {
+		f.IterLabel = "i"
+	}
+
 	e := f.Type.Elem()
 	var pointer bool
 	if e.Kind() == reflect.Ptr {
@@ -619,8 +638,8 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	if maj != cbg.MajByteString {
 		return fmt.Errorf("expected byte array")
 	}
-	t.{{ .Name }} = make([]byte, extra)
-	if _, err := io.ReadFull(br, t.{{ .Name }}); err != nil {
+	{{ .Name }} = make([]byte, extra)
+	if _, err := io.ReadFull(br, {{ .Name }}); err != nil {
 		return err
 	}
 `)
@@ -631,9 +650,9 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return fmt.Errorf("expected cbor array")
 	}
 	if extra > 0 {
-		t.{{ .Name }} = make({{ .Type }}, 0, extra)
+		{{ .Name }} = make({{ .Type }}, extra)
 	}
-	for i := 0; i < int(extra); i++ {
+	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel}}++ {
 `)
 	if err != nil {
 		return err
@@ -649,7 +668,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		if err != nil {
 			return xerrors.Errorf("reading cid field {{ .Name }} failed: %w", err)
 		}
-		t.{{ .Name }} = append(t.{{ .Name }}, c)
+		{{ .Name }}[{{ .IterLabel }}] = c
 `)
 			if err != nil {
 				return err
@@ -662,7 +681,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			if pointer {
 				ptrfix = "&"
 			}
-			fmt.Fprintf(w, "\t\tt.%s = append(t.%s, %sv)\n", f.Name, f.Name, ptrfix)
+			fmt.Fprintf(w, "\t\t%s[%s] = %sv\n", f.Name, f.IterLabel, ptrfix)
 		}
 	case reflect.Uint64:
 		err := doTemplate(w, f, `
@@ -675,13 +694,26 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
 		}
 		
-		t.{{ .Name }} = append(t.{{ .Name }}, val)
+		{{ .Name }}[{{ .IterLabel}}] = val
 `)
 		if err != nil {
 			return err
 		}
+	case reflect.Slice:
+		nextIter := string([]byte{f.IterLabel[0] + 1})
+		subf := Field{
+			Name:      fmt.Sprintf("%s[%s]", f.Name, f.IterLabel),
+			Type:      e,
+			IterLabel: nextIter,
+		}
+		fmt.Fprintf(w, "\t\t{\n\t\t\tvar maj byte\n\t\tvar extra uint64\n\t\tvar err error\n")
+		if err := emitCborUnmarshalSliceField(w, subf); err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "\t\t}\n")
+
 	default:
-		return fmt.Errorf("do not yet support slices of non-structs: %s", e)
+		return fmt.Errorf("do not yet support slices of %s yet", e.Elem())
 	}
 	fmt.Fprintf(w, "\t}\n\n")
 
