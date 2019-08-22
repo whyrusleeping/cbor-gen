@@ -22,13 +22,8 @@ const (
 	MajFloat       = 7
 )
 
-type ByteReader interface {
-	io.ByteReader
-	io.Reader
-}
-
 type CBORUnmarshaler interface {
-	UnmarshalCBOR(ByteReader) error
+	UnmarshalCBOR(io.Reader) error
 }
 
 type CBORMarshaler interface {
@@ -44,7 +39,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 	return err
 }
 
-func (d *Deferred) UnmarshalCBOR(br ByteReader) error {
+func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 	// TODO: theres a more efficient way to implement this method, but for now
 	// this is fine
 	maj, extra, err := CborReadHeader(br)
@@ -89,8 +84,17 @@ func (d *Deferred) UnmarshalCBOR(br ByteReader) error {
 	}
 }
 
-func CborReadHeader(br ByteReader) (byte, uint64, error) {
-	first, err := br.ReadByte()
+func readByte(r io.Reader) (byte, error) {
+	if br, ok := r.(io.ByteReader); ok {
+		return br.ReadByte()
+	}
+	var b [1]byte
+	_, err := io.ReadFull(r, b[:])
+	return b[0], err
+}
+
+func CborReadHeader(br io.Reader) (byte, uint64, error) {
+	first, err := readByte(br)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -102,7 +106,7 @@ func CborReadHeader(br ByteReader) (byte, uint64, error) {
 	case low < 24:
 		return maj, uint64(low), nil
 	case low == 24:
-		next, err := br.ReadByte()
+		next, err := readByte(br)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -164,7 +168,7 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 	}
 }
 
-func ReadTaggedByteArray(br ByteReader, exptag uint64, maxlen uint64) ([]byte, error) {
+func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, error) {
 	maj, extra, err := CborReadHeader(br)
 	if err != nil {
 		return nil, err
@@ -200,7 +204,7 @@ func ReadTaggedByteArray(br ByteReader, exptag uint64, maxlen uint64) ([]byte, e
 
 }
 
-func ReadCid(br ByteReader) (cid.Cid, error) {
+func ReadCid(br io.Reader) (cid.Cid, error) {
 	buf, err := ReadTaggedByteArray(br, 42, 512)
 	if err != nil {
 		return cid.Undef, err
@@ -730,7 +734,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(br cbg.ByteReader) error {
+func (t *{{ .Name}}) UnmarshalCBOR(br io.Reader) error {
 
 	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
