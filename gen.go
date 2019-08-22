@@ -59,6 +59,8 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 			return err
 		}
 
+		d.Raw = buf
+
 		return nil
 	case MajTag:
 		sub := new(Deferred)
