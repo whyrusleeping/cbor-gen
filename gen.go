@@ -27,6 +27,14 @@ type ByteReader interface {
 	io.Reader
 }
 
+type CBORUnmarshaler interface {
+	UnmarshalCBOR(ByteReader) error
+}
+
+type CBORMarshaler interface {
+	MarshalCBOR(io.Writer) error
+}
+
 type Deferred struct {
 	Raw []byte
 }
