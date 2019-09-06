@@ -81,6 +81,17 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 			d.Raw = append(d.Raw, sub.Raw...)
 		}
 		return nil
+	case MajMap:
+		d.Raw = header
+		sub := new(Deferred)
+		for i := 0; i < int(extra*2); i++ {
+			sub.Raw = sub.Raw[:0]
+			if err := sub.UnmarshalCBOR(br); err != nil {
+				return err
+			}
+			d.Raw = append(d.Raw, sub.Raw...)
+		}
+		return nil
 	default:
 		return fmt.Errorf("unhandled deferred cbor type: %d", maj)
 	}
