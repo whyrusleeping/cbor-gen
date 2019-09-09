@@ -19,7 +19,7 @@ const (
 	MajArray       = 4
 	MajMap         = 5
 	MajTag         = 6
-	MajFloat       = 7
+	MajOther       = 7
 )
 
 type CBORUnmarshaler interface {
@@ -49,7 +49,7 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 	header := CborEncodeMajorType(maj, extra)
 
 	switch maj {
-	case MajUnsignedInt:
+	case MajUnsignedInt, MajNegativeInt, MajOther:
 		d.Raw = header
 		return nil
 	case MajByteString, MajTextString:
@@ -214,7 +214,19 @@ func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, er
 	}
 
 	return buf, nil
+}
 
+func WriteBool(w io.Writer, b bool) error {
+	if b {
+		if _, err := w.Write([]byte{0xf5}); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write([]byte{0xf4}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ReadCid(br io.Reader) (cid.Cid, error) {
@@ -415,6 +427,14 @@ func emitCborMarshalUint64Field(w io.Writer, f Field) error {
 `)
 }
 
+func emitCborMarshalBoolField(w io.Writer, f Field) error {
+	return doTemplate(w, f, `
+	if err := cbg.WriteBool(w, {{ .Name }}); err != nil {
+		return err
+	}
+`)
+}
+
 func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	if f.Pointer {
 		return fmt.Errorf("pointers to slices not supported")
@@ -522,6 +542,10 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 			if err := emitCborMarshalSliceField(w, f); err != nil {
 				return err
 			}
+		case reflect.Bool:
+			if err := emitCborMarshalBoolField(w, f); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
 		}
@@ -627,6 +651,26 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
 	{{ .Name }} = extra
+`)
+}
+
+func emitCborUnmarshalBoolField(w io.Writer, f Field) error {
+	return doTemplate(w, f, `
+	maj, extra, err = cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajOther {
+		return fmt.Errorf("booleans must be major type 7")
+	}
+	switch extra {
+	case 20:
+		{{ .Name }} = false
+	case 21:
+		{{ .Name }} = true
+	default:
+		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+	}
 `)
 }
 
@@ -783,6 +827,10 @@ func (t *{{ .Name}}) UnmarshalCBOR(br io.Reader) error {
 			}
 		case reflect.Slice:
 			if err := emitCborUnmarshalSliceField(w, f); err != nil {
+				return err
+			}
+		case reflect.Bool:
+			if err := emitCborUnmarshalBoolField(w, f); err != nil {
 				return err
 			}
 		default:
