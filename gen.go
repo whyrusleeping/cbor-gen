@@ -631,10 +631,17 @@ func emitCborUnmarshalStringField(w io.Writer, f Field) error {
 	if f.Pointer {
 		return fmt.Errorf("pointers to strings not supported")
 	}
+	if f.Type == nil {
+		f.Type = reflect.TypeOf("")
+	}
 	return doTemplate(w, f, `
-	{{ .Name }}, err = cbg.ReadString(br)
-	if err != nil {
-		return err
+	{
+		sval, err := cbg.ReadString(br)
+		if err != nil {
+			return err
+		}
+
+		{{ .Name }} = {{ .Type }}(sval)
 	}
 `)
 }
