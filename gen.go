@@ -11,6 +11,8 @@ import (
 	cid "github.com/ipfs/go-cid"
 )
 
+const MaxLength = 8192
+
 const (
 	MajUnsignedInt = 0
 	MajNegativeInt = 1
@@ -229,6 +231,29 @@ func WriteBool(w io.Writer, b bool) error {
 	return nil
 }
 
+func ReadString(r io.Reader) (string, error) {
+	maj, l, err := CborReadHeader(r)
+	if err != nil {
+		return "", err
+	}
+
+	if maj != MajTextString {
+		return "", fmt.Errorf("got tag %d while reading string value", maj)
+	}
+
+	if l > MaxLength {
+		return "", fmt.Errorf("string in input was too long")
+	}
+
+	buf := make([]byte, l)
+	_, err = io.ReadFull(r, buf)
+	if err != nil {
+		return "", err
+	}
+
+	return string(buf), nil
+}
+
 func ReadCid(br io.Reader) (cid.Cid, error) {
 	buf, err := ReadTaggedByteArray(br, 42, 512)
 	if err != nil {
@@ -435,6 +460,49 @@ func emitCborMarshalBoolField(w io.Writer, f Field) error {
 `)
 }
 
+func emitCborMarshalMapField(w io.Writer, f Field) error {
+	err := doTemplate(w, f, `
+	if err := cbg.CborWriteHeader(w, cbg.MajMap, uint64(len({{ .Name }}))); err != nil {
+		return err
+	}
+
+	for k, v := range {{ .Name }} {
+`)
+	if err != nil {
+		return err
+	}
+
+	// Map key
+	switch f.Type.Key().Kind() {
+	case reflect.String:
+		if err := emitCborMarshalStringField(w, Field{Name: "k"}); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("non-string map keys are not yet supported")
+	}
+
+	// Map value
+	switch f.Type.Elem().Kind() {
+	case reflect.Ptr:
+		if f.Type.Elem().Elem().Kind() != reflect.Struct {
+			return fmt.Errorf("unsupported map elem ptr type: %s", f.Type.Elem())
+		}
+
+		fallthrough
+	case reflect.Struct:
+		if err := emitCborMarshalStructField(w, Field{Name: "v", Type: f.Type.Elem()}); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("currently unsupported map elem type: %s", f.Type.Elem())
+	}
+
+	return doTemplate(w, f, `
+	}
+`)
+}
+
 func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	if f.Pointer {
 		return fmt.Errorf("pointers to slices not supported")
@@ -446,7 +514,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
-	if _, err := w.Write({{ .Name}}); err != nil {
+	if _, err := w.Write({{ .Name }}); err != nil {
 		return err
 	}
 `)
@@ -546,6 +614,10 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 			if err := emitCborMarshalBoolField(w, f); err != nil {
 				return err
 			}
+		case reflect.Map:
+			if err := emitCborMarshalMapField(w, f); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
 		}
@@ -560,32 +632,16 @@ func emitCborUnmarshalStringField(w io.Writer, f Field) error {
 		return fmt.Errorf("pointers to strings not supported")
 	}
 	return doTemplate(w, f, `
-	maj, extra, err = cbg.CborReadHeader(br)
+	{{ .Name }}, err = cbg.ReadString(br)
 	if err != nil {
 		return err
-	}
-
-	if maj != cbg.MajTextString {
-		return fmt.Errorf("expected cbor type 'text string' in input")
-	}
-
-	if extra > 256 * 1024 {
-		return fmt.Errorf("string in cbor input too long")
-	}
-
-	{
-		buf := make([]byte, extra)
-		if _, err := io.ReadFull(br, buf); err != nil {
-			return err
-		}
-
-		{{ .Name }} = string(buf)
 	}
 `)
 }
 
 func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	fname := f.Type.PkgPath() + "." + f.Type.Name()
+
 	switch fname {
 	case "math/big.Int":
 		return doTemplate(w, f, `
@@ -632,7 +688,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	default:
 		return doTemplate(w, f, `
 {{ if .Pointer }}
-	{{ .Name }} = new({{ .Type.Name }})
+	{{ .Name }} = new({{ .Type }})
 {{ end }}
 	if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
 		return err
@@ -670,6 +726,76 @@ func emitCborUnmarshalBoolField(w io.Writer, f Field) error {
 		{{ .Name }} = true
 	default:
 		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+	}
+`)
+}
+
+func emitCborUnmarshalMapField(w io.Writer, f Field) error {
+	err := doTemplate(w, f, `
+	maj, extra, err = cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("expected a map (major type 5)")
+	}
+	if extra > 4096 {
+		return fmt.Errorf("map too large")
+	}
+
+	{{ .Name }} = make({{ .Type }}, extra)
+
+
+	for i, l := 0, int(extra); i < l; i++ {
+`)
+	if err != nil {
+		return err
+	}
+
+	switch f.Type.Key().Kind() {
+	case reflect.String:
+		if err := doTemplate(w, f, `
+	var k string
+`); err != nil {
+			return err
+		}
+		if err := emitCborUnmarshalStringField(w, Field{Name: "k"}); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("maps with non-string keys are not yet supported")
+	}
+
+	var pointer bool
+	t := f.Type.Elem()
+	switch t.Kind() {
+	case reflect.Ptr:
+		if t.Elem().Kind() != reflect.Struct {
+			return fmt.Errorf("unsupported map elem ptr type: %s", t)
+		}
+
+		t = t.Elem()
+		pointer = true
+		fallthrough
+	case reflect.Struct:
+		if err := doTemplate(w, f, `
+	var v {{ .Type.Elem }}
+`); err != nil {
+			return err
+		}
+		if err := emitCborUnmarshalStructField(w, Field{Name: "v", Pointer: pointer, Type: t}); err != nil {
+			return err
+		}
+		if err := doTemplate(w, f, `
+	{{ .Name }}[k] = v
+`); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("currently only support maps of structs")
+	}
+
+	return doTemplate(w, f, `
 	}
 `)
 }
@@ -831,6 +957,10 @@ func (t *{{ .Name}}) UnmarshalCBOR(br io.Reader) error {
 			}
 		case reflect.Bool:
 			if err := emitCborUnmarshalBoolField(w, f); err != nil {
+				return err
+			}
+		case reflect.Map:
+			if err := emitCborUnmarshalMapField(w, f); err != nil {
 				return err
 			}
 		default:
