@@ -1,6 +1,8 @@
 package typegen
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -96,6 +98,57 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 		return nil
 	default:
 		return fmt.Errorf("unhandled deferred cbor type: %d", maj)
+	}
+}
+
+// this is a bit gnarly i should just switch to taking in a byte array at the top level
+type BytePeeker interface {
+	io.Reader
+	PeekByte() (byte, error)
+}
+
+type peeker struct {
+	io.Reader
+}
+
+func (p *peeker) PeekByte() (byte, error) {
+	switch r := p.Reader.(type) {
+	case *bytes.Reader:
+		b, err := r.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		return b, r.UnreadByte()
+	case *bytes.Buffer:
+		b, err := r.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		return b, r.UnreadByte()
+	case *bufio.Reader:
+		o, err := r.Peek(1)
+		if err != nil {
+			return 0, err
+		}
+
+		return o[0], nil
+	default:
+		panic("invariant violated")
+	}
+}
+
+func GetPeeker(r io.Reader) BytePeeker {
+	switch r := r.(type) {
+	case *bytes.Reader:
+		return &peeker{r}
+	case *bytes.Buffer:
+		return &peeker{r}
+	case *bufio.Reader:
+		return &peeker{r}
+	case *peeker:
+		return r
+	default:
+		return &peeker{bufio.NewReaderSize(r, 16)}
 	}
 }
 
@@ -218,6 +271,12 @@ func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, er
 	return buf, nil
 }
 
+var (
+	CborBoolFalse = []byte{0xf4}
+	CborBoolTrue  = []byte{0xf5}
+	CborNull      = []byte{0xf6}
+)
+
 func EncodeBool(b bool) []byte {
 	if b {
 		return []byte{0xf5}
@@ -237,7 +296,7 @@ func ReadString(r io.Reader) (string, error) {
 	}
 
 	if maj != MajTextString {
-		return "", fmt.Errorf("got tag %d while reading string value", maj)
+		return "", fmt.Errorf("got tag %d while reading string value (l = %d)", maj, l)
 	}
 
 	if l > MaxLength {
@@ -581,6 +640,10 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
 	if _, err := w.Write({{ .HeaderAsByteString }}); err != nil {
 		return err
 	}
@@ -695,11 +758,28 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 `)
 	default:
 		return doTemplate(w, f, `
+	{
 {{ if .Pointer }}
-	{{ .Name }} = new({{ .Type }})
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+			var nbuf [1]byte
+			if _, err := br.Read(nbuf[:]); err != nil {
+				return err
+			}
+		} else {
+			{{ .Name }} = new({{ .Type }})
+			if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
+				return err
+			}
+		}
+{{ else }}
+		if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
+			return err
+		}
 {{ end }}
-	if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
-		return err
 	}
 `)
 	}
@@ -922,7 +1002,8 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(br io.Reader) error {
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
+	br := cbg.GetPeeker(r)
 
 	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
@@ -949,13 +1030,10 @@ func (t *{{ .Name}}) UnmarshalCBOR(br io.Reader) error {
 				return err
 			}
 		case reflect.Struct:
-
 			if err := emitCborUnmarshalStructField(w, f); err != nil {
 				return err
 			}
-
 		case reflect.Uint64:
-
 			if err := emitCborUnmarshalUint64Field(w, f); err != nil {
 				return err
 			}
