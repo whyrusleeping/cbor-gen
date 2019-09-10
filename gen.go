@@ -218,17 +218,16 @@ func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, er
 	return buf, nil
 }
 
-func WriteBool(w io.Writer, b bool) error {
+func EncodeBool(b bool) []byte {
 	if b {
-		if _, err := w.Write([]byte{0xf5}); err != nil {
-			return err
-		}
-	} else {
-		if _, err := w.Write([]byte{0xf4}); err != nil {
-			return err
-		}
+		return []byte{0xf5}
 	}
-	return nil
+	return []byte{0xf4}
+}
+
+func WriteBool(w io.Writer, b bool) error {
+	_, err := w.Write(EncodeBool(b))
+	return err
 }
 
 func ReadString(r io.Reader) (string, error) {
