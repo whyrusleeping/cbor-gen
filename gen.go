@@ -680,6 +680,8 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 			return err
 		}
 		{{ .Name }} = big.NewInt(0).SetBytes(buf)
+	} else {
+		{{ .Name }} = big.NewInt(0)
 	}
 `)
 	case "github.com/ipfs/go-cid.Cid":
