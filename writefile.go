@@ -13,7 +13,7 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	}
 	defer fi.Close()
 
-	if err := PrintHeaderAndUtilityMethods(fi, "types"); err != nil {
+	if err := PrintHeaderAndUtilityMethods(fi, pkg); err != nil {
 		return xerrors.Errorf("failed to write header: %w", err)
 	}
 
