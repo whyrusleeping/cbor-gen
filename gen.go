@@ -389,8 +389,26 @@ type Field struct {
 	Name    string
 	Pointer bool
 	Type    reflect.Type
+	Pkg     string
 
 	IterLabel string
+}
+
+func typeName(pkg string, t reflect.Type) string {
+	switch t.Kind() {
+	case reflect.Slice:
+		return "[]" + typeName(pkg, t.Elem())
+	case reflect.Ptr:
+		return "*" + typeName(pkg, t.Elem())
+	case reflect.Map:
+		return "map[" + typeName(pkg, t.Key()) + "]" + typeName(pkg, t.Elem())
+	default:
+		return strings.TrimPrefix(t.String(), pkg+".")
+	}
+}
+
+func (f Field) TypeName() string {
+	return typeName(f.Pkg, f.Type)
 }
 
 type GenTypeInfo struct {
@@ -402,7 +420,7 @@ func nameIsExported(name string) bool {
 	return strings.ToUpper(name[0:1]) == name[0:1]
 }
 
-func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
+func ParseTypeInfo(pkg string, i interface{}) (*GenTypeInfo, error) {
 	t := reflect.TypeOf(i)
 
 	out := GenTypeInfo{
@@ -426,6 +444,7 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			Name:    "t." + f.Name,
 			Pointer: pointer,
 			Type:    ft,
+			Pkg:     pkg,
 		})
 	}
 
@@ -549,7 +568,7 @@ func emitCborMarshalMapField(w io.Writer, f Field) error {
 
 		fallthrough
 	case reflect.Struct:
-		if err := emitCborMarshalStructField(w, Field{Name: "v", Type: f.Type.Elem()}); err != nil {
+		if err := emitCborMarshalStructField(w, Field{Name: "v", Type: f.Type.Elem(), Pkg: f.Pkg}); err != nil {
 			return err
 		}
 	default:
@@ -627,7 +646,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 			return err
 		}
 	case reflect.Slice:
-		subf := Field{Name: "v", Type: e}
+		subf := Field{Name: "v", Type: e, Pkg: f.Pkg}
 		if err := emitCborMarshalSliceField(w, subf); err != nil {
 			return err
 		}
@@ -703,7 +722,7 @@ func emitCborUnmarshalStringField(w io.Writer, f Field) error {
 			return err
 		}
 
-		{{ .Name }} = {{ .Type }}(sval)
+		{{ .Name }} = {{ .TypeName }}(sval)
 	}
 `)
 }
@@ -770,7 +789,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 				return err
 			}
 		} else {
-			{{ .Name }} = new({{ .Type }})
+			{{ .Name }} = new({{ .TypeName }})
 			if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
 				return err
 			}
@@ -831,7 +850,7 @@ func emitCborUnmarshalMapField(w io.Writer, f Field) error {
 		return fmt.Errorf("map too large")
 	}
 
-	{{ .Name }} = make({{ .Type }}, extra)
+	{{ .Name }} = make({{ .TypeName }}, extra)
 
 
 	for i, l := 0, int(extra); i < l; i++ {
@@ -862,16 +881,20 @@ func emitCborUnmarshalMapField(w io.Writer, f Field) error {
 			return fmt.Errorf("unsupported map elem ptr type: %s", t)
 		}
 
-		t = t.Elem()
 		pointer = true
 		fallthrough
 	case reflect.Struct:
-		if err := doTemplate(w, f, `
-	var v {{ .Type.Elem }}
+		subf := Field{Name: "v", Pointer: pointer, Type: t, Pkg: f.Pkg}
+		if err := doTemplate(w, subf, `
+	var v {{ .TypeName }}
 `); err != nil {
 			return err
 		}
-		if err := emitCborUnmarshalStructField(w, Field{Name: "v", Pointer: pointer, Type: t}); err != nil {
+
+		if pointer {
+			subf.Type = subf.Type.Elem()
+		}
+		if err := emitCborUnmarshalStructField(w, subf); err != nil {
 			return err
 		}
 		if err := doTemplate(w, f, `
@@ -930,9 +953,9 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return fmt.Errorf("expected cbor array")
 	}
 	if extra > 0 {
-		{{ .Name }} = make({{ .Type }}, extra)
+		{{ .Name }} = make({{ .TypeName }}, extra)
 	}
-	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel}}++ {
+	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
 `)
 	if err != nil {
 		return err
@@ -954,14 +977,24 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 				return err
 			}
 		default:
-			fmt.Fprintf(w, "\t\tvar v %s\n", e.Name())
-			fmt.Fprintf(w, "\t\tif err := v.UnmarshalCBOR(br); err != nil {\n\t\t\treturn err\n\t\t}\n\n")
-
-			var ptrfix string
-			if pointer {
-				ptrfix = "&"
+			subf := Field{
+				Type:    e,
+				Pkg:     f.Pkg,
+				Pointer: pointer,
+				Name:    f.Name + "[" + f.IterLabel + "]",
 			}
-			fmt.Fprintf(w, "\t\t%s[%s] = %sv\n", f.Name, f.IterLabel, ptrfix)
+
+			err := doTemplate(w, subf, `
+		var v {{ .TypeName }}
+		if err := v.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		{{ .Name }} = {{ if .Pointer }}&{{ end }}v
+`)
+			if err != nil {
+				return err
+			}
 		}
 	case reflect.Uint64:
 		err := doTemplate(w, f, `
@@ -985,6 +1018,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			Name:      fmt.Sprintf("%s[%s]", f.Name, f.IterLabel),
 			Type:      e,
 			IterLabel: nextIter,
+			Pkg:       f.Pkg,
 		}
 		fmt.Fprintf(w, "\t\t{\n\t\t\tvar maj byte\n\t\tvar extra uint64\n\t\tvar err error\n")
 		if err := emitCborUnmarshalSliceField(w, subf); err != nil {
@@ -1060,8 +1094,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 }
 
 // Generates 'tuple representation' cbor encoders for the given type
-func GenTupleEncodersForType(i interface{}, w io.Writer) error {
-	gti, err := ParseTypeInfo(i)
+func GenTupleEncodersForType(inpkg string, i interface{}, w io.Writer) error {
+	gti, err := ParseTypeInfo(inpkg, i)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	}
 
 	for _, t := range types {
-		if err := GenTupleEncodersForType(t, fi); err != nil {
+		if err := GenTupleEncodersForType(pkg, t, fi); err != nil {
 			return xerrors.Errorf("failed to generate encoders: %w", err)
 		}
 	}
