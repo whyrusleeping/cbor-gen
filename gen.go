@@ -529,6 +529,17 @@ func emitCborMarshalUint64Field(w io.Writer, f Field) error {
 `)
 }
 
+func emitCborMarshalUint8Field(w io.Writer, f Field) error {
+	if f.Pointer {
+		return fmt.Errorf("pointers to integers not supported")
+	}
+	return doTemplate(w, f, `
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
+		return err
+	}
+`)
+}
+
 func emitCborMarshalBoolField(w io.Writer, f Field) error {
 	return doTemplate(w, f, `
 	if err := cbg.WriteBool(w, {{ .Name }}); err != nil {
@@ -645,6 +656,16 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		if err != nil {
 			return err
 		}
+	case reflect.Uint8:
+		err := doTemplate(w, f, `
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+			return err
+		}
+`)
+		if err != nil {
+			return err
+		}
+
 	case reflect.Slice:
 		subf := Field{Name: "v", Type: e, Pkg: f.Pkg}
 		if err := emitCborMarshalSliceField(w, subf); err != nil {
@@ -685,6 +706,10 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 			}
 		case reflect.Uint64:
 			if err := emitCborMarshalUint64Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Uint8:
+			if err := emitCborMarshalUint8Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Slice:
@@ -814,6 +839,22 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
 	{{ .Name }} = extra
+`)
+}
+
+func emitCborUnmarshalUint8Field(w io.Writer, f Field) error {
+	return doTemplate(w, f, `
+	maj, extra, err = cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajUnsignedInt {
+		return fmt.Errorf("wrong type for uint8 field")
+	}
+	if extra > math.MaxUint8 {
+		return fmt.Errorf("integer in input was too large for uint8 field")
+	}
+	{{ .Name }} = uint8(extra)
 `)
 }
 
@@ -1069,6 +1110,10 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 			}
 		case reflect.Uint64:
 			if err := emitCborUnmarshalUint64Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Uint8:
+			if err := emitCborUnmarshalUint8Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Slice:
