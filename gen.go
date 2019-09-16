@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"strings"
 	"text/template"
@@ -178,25 +179,40 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 		if err != nil {
 			return 0, 0, err
 		}
+		if next < 24 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 24 with value < 24)")
+		}
 		return maj, uint64(next), nil
 	case low == 25:
 		buf := make([]byte, 2)
 		if _, err := io.ReadFull(br, buf); err != nil {
 			return 0, 0, err
 		}
-		return maj, uint64(binary.BigEndian.Uint16(buf)), nil
+		val := uint64(binary.BigEndian.Uint16(buf))
+		if val <= math.MaxUint8 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 25 with value <= MaxUint8)")
+		}
+		return maj, val, nil
 	case low == 26:
 		buf := make([]byte, 4)
 		if _, err := io.ReadFull(br, buf); err != nil {
 			return 0, 0, err
 		}
-		return maj, uint64(binary.BigEndian.Uint32(buf)), nil
+		val := uint64(binary.BigEndian.Uint32(buf))
+		if val <= math.MaxUint16 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
+		}
+		return maj, val, nil
 	case low == 27:
 		buf := make([]byte, 8)
 		if _, err := io.ReadFull(br, buf); err != nil {
 			return 0, 0, err
 		}
-		return maj, binary.BigEndian.Uint64(buf), nil
+		val := binary.BigEndian.Uint64(buf)
+		if val <= math.MaxUint32 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 27 with value <= MaxUint32)")
+		}
+		return maj, val, nil
 	default:
 		return 0, 0, fmt.Errorf("invalid header: (%x)", first)
 	}
