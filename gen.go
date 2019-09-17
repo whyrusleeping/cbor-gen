@@ -520,9 +520,21 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 
 	case "github.com/ipfs/go-cid.Cid":
 		return doTemplate(w, f, `
+{{ if .Pointer }}
+	if {{ .Name }} == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteCid(w, *{{ .Name }}); err != nil {
+			return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
+		}
+	}
+{{ else }}
 	if err := cbg.WriteCid(w, {{ .Name }}); err != nil {
 		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
 	}
+{{ end }}
 `)
 	default:
 		return doTemplate(w, f, `
@@ -809,11 +821,28 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	case "github.com/ipfs/go-cid.Cid":
 		return doTemplate(w, f, `
 	{
+{{ if .Pointer }}
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+			var nbuf [1]byte
+			if _, err := br.Read(nbuf[:]); err != nil {
+				return err
+			}
+		} else {
+{{ end }}
 		c, err := cbg.ReadCid(br)
 		if err != nil {
 			return xerrors.Errorf("failed to read cid field {{ .Name }}: %w", err)
 		}
+{{ if .Pointer }}
+			{{ .Name }} = &c
+		}
+{{ else }}
 		{{ .Name }} = c
+{{ end }}
 	}
 `)
 	default:
