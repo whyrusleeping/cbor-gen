@@ -1009,7 +1009,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		e = e.Elem()
 	}
 
-	err := doTemplate(w, nil, `
+	err := doTemplate(w, f, `
 	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
