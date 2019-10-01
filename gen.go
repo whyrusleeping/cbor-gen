@@ -805,7 +805,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	}
 
 	if extra > 256 {
-		return fmt.Errorf("cbor bignum was too large")
+		return fmt.Errorf("{{ .Name }}: cbor bignum was too large")
 	}
 
 	if extra > 0 {
@@ -933,7 +933,7 @@ func emitCborUnmarshalMapField(w io.Writer, f Field) error {
 		return fmt.Errorf("expected a map (major type 5)")
 	}
 	if extra > 4096 {
-		return fmt.Errorf("map too large")
+		return fmt.Errorf("{{ .Name }}: map too large")
 	}
 
 	{{ .Name }} = make({{ .TypeName }}, extra)
@@ -1015,7 +1015,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return err
 	}
 	if extra > 8192 {
-		return fmt.Errorf("array too large")
+		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
 	}
 `)
 	if err != nil {
