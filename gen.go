@@ -551,7 +551,7 @@ func emitCborMarshalUint64Field(w io.Writer, f Field) error {
 		return fmt.Errorf("pointers to integers not supported")
 	}
 	return doTemplate(w, f, `
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, {{ .Name }})); err != nil {
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
 		return err
 	}
 `)
@@ -721,7 +721,7 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\n\t// t.%s (%s)", f.Name, f.Type)
+		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -883,7 +883,7 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 	if maj != cbg.MajUnsignedInt {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
-	{{ .Name }} = extra
+	{{ .Name }} = {{ .TypeName }}(extra)
 `)
 }
 
@@ -899,7 +899,7 @@ func emitCborUnmarshalUint8Field(w io.Writer, f Field) error {
 	if extra > math.MaxUint8 {
 		return fmt.Errorf("integer in input was too large for uint8 field")
 	}
-	{{ .Name }} = uint8(extra)
+	{{ .Name }} = {{ .TypeName }}(extra)
 `)
 }
 
@@ -1143,7 +1143,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\t// t.%s (%s)\n", f.Name, f.Type)
+		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 		switch f.Type.Kind() {
 		case reflect.String:
 			if err := emitCborUnmarshalStringField(w, f); err != nil {
