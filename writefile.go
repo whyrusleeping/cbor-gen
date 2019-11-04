@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/format"
 	"os"
+	"os/exec"
 
 	"golang.org/x/xerrors"
 )
@@ -30,10 +31,15 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	if err != nil {
 		return xerrors.Errorf("failed to open file: %w", err)
 	}
-	defer fi.Close()
 
 	_, err = fi.Write(data)
 	if err != nil {
+		_ = fi.Close()
+		return err
+	}
+	_ = fi.Close()
+
+	if err := exec.Command("goimports", "-w", fname).Run(); err != nil {
 		return err
 	}
 
