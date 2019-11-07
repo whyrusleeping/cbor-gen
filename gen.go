@@ -578,11 +578,19 @@ func emitCborMarshalBoolField(w io.Writer, f Field) error {
 
 func emitCborMarshalMapField(w io.Writer, f Field) error {
 	err := doTemplate(w, f, `
+{
 	if err := cbg.CborWriteHeader(w, cbg.MajMap, uint64(len({{ .Name }}))); err != nil {
 		return err
 	}
 
-	for k, v := range {{ .Name }} {
+	keys := make([]string, 0, len({{ .Name }}))
+	for k := range {{ .Name }} {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := {{ .Name }}[k]
+
 `)
 	if err != nil {
 		return err
@@ -615,6 +623,7 @@ func emitCborMarshalMapField(w io.Writer, f Field) error {
 	}
 
 	return doTemplate(w, f, `
+	}
 	}
 `)
 }
