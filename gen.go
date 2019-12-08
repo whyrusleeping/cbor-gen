@@ -10,6 +10,8 @@ import (
 
 const MaxLength = 8192
 
+const ByteArrayMaxLen = 2 << 20
+
 func doTemplate(w io.Writer, info interface{}, templ string) error {
 	t := template.Must(template.New("").
 		Funcs(template.FuncMap{}).Parse(templ))
@@ -659,9 +661,6 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	if err != nil {
 		return err
 	}
-	if extra > 8192 {
-		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
-	}
 `)
 	if err != nil {
 		return err
@@ -669,6 +668,9 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
+	if extra > cbg.ByteArrayMaxLen {
+		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
+	}
 	if maj != cbg.MajByteString {
 		return fmt.Errorf("expected byte array")
 	}
@@ -677,6 +679,14 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return err
 	}
 `)
+	}
+
+	if err := doTemplate(w, f, `
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
+	}
+`); err != nil {
+		return err
 	}
 
 	err = doTemplate(w, f, `
