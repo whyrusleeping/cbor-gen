@@ -95,7 +95,7 @@ func ParseTypeInfo(pkg string, i interface{}) (*GenTypeInfo, error) {
 		}
 
 		out.Fields = append(out.Fields, Field{
-			Name:    "t." + f.Name,
+			Name:    f.Name,
 			Pointer: pointer,
 			Type:    ft,
 			Pkg:     pkg,
@@ -105,12 +105,26 @@ func ParseTypeInfo(pkg string, i interface{}) (*GenTypeInfo, error) {
 	return &out, nil
 }
 
-func (gti GenTypeInfo) Header() []byte {
+func (gti GenTypeInfo) TupleHeader() []byte {
 	return CborEncodeMajorType(MajArray, uint64(len(gti.Fields)))
 }
 
-func (gti GenTypeInfo) HeaderAsByteString() string {
-	h := gti.Header()
+func (gti GenTypeInfo) TupleHeaderAsByteString() string {
+	h := gti.TupleHeader()
+	s := "[]byte{"
+	for _, b := range h {
+		s += fmt.Sprintf("%d,", b)
+	}
+	s += "}"
+	return s
+}
+
+func (gti GenTypeInfo) MapHeader() []byte {
+	return CborEncodeMajorType(MajMap, uint64(len(gti.Fields)))
+}
+
+func (gti GenTypeInfo) MapHeaderAsByteString() string {
+	h := gti.MapHeader()
 	s := "[]byte{"
 	for _, b := range h {
 		s += fmt.Sprintf("%d,", b)
@@ -359,7 +373,7 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write({{ .HeaderAsByteString }}); err != nil {
+	if _, err := w.Write({{ .TupleHeaderAsByteString }}); err != nil {
 		return err
 	}
 `)
@@ -369,6 +383,7 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+		f.Name = "t." + f.Name
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -799,6 +814,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
+		f.Name = "t." + f.Name
+
 		switch f.Type.Kind() {
 		case reflect.String:
 			if err := emitCborUnmarshalStringField(w, f); err != nil {
@@ -850,6 +867,168 @@ func GenTupleEncodersForType(inpkg string, i interface{}, w io.Writer) error {
 	}
 
 	if err := emitCborUnmarshalStructTuple(w, gti); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
+	err := doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write({{ .MapHeaderAsByteString }}); err != nil {
+		return err
+	}
+`)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range gti.Fields {
+		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+
+		if err := emitCborMarshalStringField(w, Field{
+			Name: `"` + f.Name + `"`,
+		}); err != nil {
+			return err
+		}
+
+		f.Name = "t." + f.Name
+
+		switch f.Type.Kind() {
+		case reflect.String:
+			if err := emitCborMarshalStringField(w, f); err != nil {
+				return err
+			}
+		case reflect.Struct:
+			if err := emitCborMarshalStructField(w, f); err != nil {
+				return err
+			}
+		case reflect.Uint64:
+			if err := emitCborMarshalUint64Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Uint8:
+			if err := emitCborMarshalUint8Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Slice:
+			if err := emitCborMarshalSliceField(w, f); err != nil {
+				return err
+			}
+		case reflect.Bool:
+			if err := emitCborMarshalBoolField(w, f); err != nil {
+				return err
+			}
+		case reflect.Map:
+			if err := emitCborMarshalMapField(w, f); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
+		}
+	}
+
+	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+	return nil
+}
+
+func emitCborUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
+	err := doTemplate(w, gti, `
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
+	br := cbg.GetPeeker(r)
+
+	maj, extra, err := cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra != {{ len .Fields }} {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	var name string
+
+`)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range gti.Fields {
+		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
+
+		if err := emitCborUnmarshalStringField(w, Field{Name: "name"}); err != nil {
+			return err
+		}
+
+		err := doTemplate(w, f, `
+		if name != "{{ .Name }}" {
+			return fmt.Errorf("expected struct map entry %s to be {{ .Name }}", name)
+		}
+`)
+		if err != nil {
+			return err
+		}
+
+		f.Name = "t." + f.Name
+
+		switch f.Type.Kind() {
+		case reflect.String:
+			if err := emitCborUnmarshalStringField(w, f); err != nil {
+				return err
+			}
+		case reflect.Struct:
+			if err := emitCborUnmarshalStructField(w, f); err != nil {
+				return err
+			}
+		case reflect.Uint64:
+			if err := emitCborUnmarshalUint64Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Uint8:
+			if err := emitCborUnmarshalUint8Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Slice:
+			if err := emitCborUnmarshalSliceField(w, f); err != nil {
+				return err
+			}
+		case reflect.Bool:
+			if err := emitCborUnmarshalBoolField(w, f); err != nil {
+				return err
+			}
+		case reflect.Map:
+			if err := emitCborUnmarshalMapField(w, f); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
+		}
+	}
+
+	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+
+	return nil
+}
+
+// Generates 'tuple representation' cbor encoders for the given type
+func GenMapEncodersForType(inpkg string, i interface{}, w io.Writer) error {
+	gti, err := ParseTypeInfo(inpkg, i)
+	if err != nil {
+		return err
+	}
+
+	if err := emitCborMarshalStructMap(w, gti); err != nil {
+		return err
+	}
+
+	if err := emitCborUnmarshalStructMap(w, gti); err != nil {
 		return err
 	}
 
