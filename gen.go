@@ -231,6 +231,10 @@ func emitCborMarshalBoolField(w io.Writer, f Field) error {
 func emitCborMarshalMapField(w io.Writer, f Field) error {
 	err := doTemplate(w, f, `
 {
+	if len({{ .Name }}) > 4096 {
+		return xerrors.Errorf("cannot marshal {{ .Name }} map too large")
+	}
+
 	if err := cbg.CborWriteHeader(w, cbg.MajMap, uint64(len({{ .Name }}))); err != nil {
 		return err
 	}
