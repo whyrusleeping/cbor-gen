@@ -139,6 +139,10 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	return doTemplate(w, f, `
+	if len({{ .Name }}) > cbg.MaxLength {
+		return xerrors.Errorf("Value in field {{ .Name }} was too long")
+	}
+
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
@@ -292,6 +296,10 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
+	if len({{ .Name }}) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
+	}
+
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
@@ -306,6 +314,10 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	err := doTemplate(w, f, `
+	if len({{ .Name }}) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
+	}
+
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len({{ .Name }})))); err != nil {
 		return err
 	}
