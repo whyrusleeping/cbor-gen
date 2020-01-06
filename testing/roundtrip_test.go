@@ -1,4 +1,4 @@
-package types
+package testing
 
 import (
 	"bytes"
@@ -16,6 +16,10 @@ func TestSimpleTypeOne(t *testing.T) {
 
 func TestSimpleTypeTwo(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeTwo{}))
+}
+
+func TestSimpleTypeTree(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeTree{}))
 }
 
 func testTypeRoundtrips(t *testing.T, typ reflect.Type) {

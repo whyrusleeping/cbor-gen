@@ -1,4 +1,4 @@
-package types
+package testing
 
 type SimpleTypeOne struct {
 	Foo    string
@@ -8,6 +8,14 @@ type SimpleTypeOne struct {
 
 type SimpleTypeTwo struct {
 	Stuff  *SimpleTypeTwo
+	Others []uint64
+	Test   [][]byte
+	Dog    string
+}
+
+type SimpleTypeTree struct {
+	Stuff  *SimpleTypeTree
+	Stufff *SimpleTypeTwo
 	Others []uint64
 	Test   [][]byte
 	Dog    string
