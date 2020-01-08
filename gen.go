@@ -140,7 +140,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 
 	return doTemplate(w, f, `
 	if len({{ .Name }}) > cbg.MaxLength {
-		return xerrors.Errorf("Value in field {{ .Name }} was too long")
+		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len({{ .Name }})))); err != nil {
