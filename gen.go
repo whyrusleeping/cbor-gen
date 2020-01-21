@@ -965,28 +965,35 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 		return fmt.Errorf("cbor input should be of type map")
 	}
 
-	if extra != {{ len .Fields }} {
-		return fmt.Errorf("cbor input had wrong number of fields")
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("{{ .Name }}: map struct too large (%d)", extra)
 	}
 
 	var name string
+	n := extra
 
+	for i := uint64(0); i < n; i++ {
+`)
+	if err != nil {
+		return err
+	}
+
+	if err := emitCborUnmarshalStringField(w, Field{Name: "name"}); err != nil {
+		return err
+	}
+
+	err = doTemplate(w, gti, `
+		switch name {
 `)
 	if err != nil {
 		return err
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
-
-		if err := emitCborUnmarshalStringField(w, Field{Name: "name"}); err != nil {
-			return err
-		}
+		fmt.Fprintf(w, "// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		err := doTemplate(w, f, `
-		if name != "{{ .Name }}" {
-			return fmt.Errorf("expected struct map entry %s to be {{ .Name }}", name)
-		}
+		case "{{ .Name }}":
 `)
 		if err != nil {
 			return err
@@ -1028,9 +1035,15 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 		}
 	}
 
-	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+	return doTemplate(w, gti, `
+		default:
+			return fmt.Errorf("unknown struct field %d: '%s'", i, name)
+		}
+	}
 
 	return nil
+}
+`)
 }
 
 // Generates 'tuple representation' cbor encoders for the given type
