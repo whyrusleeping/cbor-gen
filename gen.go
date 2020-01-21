@@ -224,6 +224,28 @@ func emitCborMarshalUint8Field(w io.Writer, f Field) error {
 `)
 }
 
+func emitCborMarshalInt64Field(w io.Writer, f Field) error {
+	if f.Pointer {
+		return fmt.Errorf("pointers to integers not supported")
+	}
+
+	// if negative
+	// val = -1 - cbor
+	// cbor = -val -1
+
+	return doTemplate(w, f, `
+	if {{ .Name }} >= 0 {
+	    if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
+		    return err
+	    }
+	} else {
+	    if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-{{ .Name }})-1)); err != nil {
+		    return err
+	    }
+	}
+`)
+}
+
 func emitCborMarshalBoolField(w io.Writer, f Field) error {
 	return doTemplate(w, f, `
 	if err := cbg.WriteBool(w, {{ .Name }}); err != nil {
@@ -370,6 +392,21 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		if err != nil {
 			return err
 		}
+	case reflect.Int64:
+		err := doTemplate(w, f, `
+        if v >= 0 {
+			if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+				return err
+			}
+		} else {
+			if err := cbg.CborWriteHeader(w, cbg.MajNegativeInt, uint64(-v) - 1); err != nil {
+				return err
+			}
+		}
+`)
+		if err != nil {
+			return err
+		}
 
 	case reflect.Slice:
 		subf := Field{Name: "v", Type: e, Pkg: f.Pkg}
@@ -416,6 +453,10 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 			}
 		case reflect.Uint8:
 			if err := emitCborMarshalUint8Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Int64:
+			if err := emitCborMarshalInt64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Slice:
@@ -550,6 +591,35 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	}
 `)
 	}
+}
+
+var decodeInt = `
+	var extraI int64
+	if err != nil {
+		return err
+	}
+	switch maj {
+	case cbg.MajUnsignedInt:
+		extraI = int64(extra)
+		if extraI < 0 {
+			return fmt.Errorf("int64 positive overflow")
+	   }
+	case cbg.MajNegativeInt:
+		extraI = int64(extra)
+		if extraI < 0 {
+			return fmt.Errorf("int64 negative oveflow")
+		}
+		extraI = -1 - extraI
+	default:
+		return fmt.Errorf("wrong type for uint64 field")
+	}
+`
+
+func emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
+	return doTemplate(w, f, ` 
+	maj, extra, err = cbg.CborReadHeader(br)`+decodeInt+`
+	{{ .Name }} = {{ .TypeName }}(extraI)
+`)
 }
 
 func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
@@ -784,6 +854,21 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		if err != nil {
 			return err
 		}
+	case reflect.Int64:
+		err := doTemplate(w, f, `
+		maj, extra, err := cbg.CborReadHeader(br)
+		if err != nil {
+			return xerrors.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
+		}
+
+		if maj != cbg.MajUnsignedInt && maj != cbg.MajNegativeInt {
+			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
+		}`+decodeInt+`
+		{{ .Name }}[{{ .IterLabel}}] = extraI
+`)
+		if err != nil {
+			return err
+		}
 	case reflect.Slice:
 		nextIter := string([]byte{f.IterLabel[0] + 1})
 		subf := Field{
@@ -847,6 +932,10 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 			}
 		case reflect.Uint8:
 			if err := emitCborUnmarshalUint8Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Int64:
+			if err := emitCborUnmarshalInt64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Slice:
