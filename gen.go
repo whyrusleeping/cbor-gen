@@ -1037,6 +1037,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 
 	return doTemplate(w, gti, `
 		default:
+			return fmt.Errorf("unknown struct field %d: '%s'", i, name)
 		}
 	}
 
