@@ -7,8 +7,23 @@ import (
 	"testing"
 	"testing/quick"
 
+	"github.com/google/go-cmp/cmp"
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
+
+var alwaysEqual = cmp.Comparer(func(_, _ interface{}) bool { return true })
+
+// This option handles slices and maps of any type.
+var alwaysEqualOpt = cmp.FilterValues(func(x, y interface{}) bool {
+	vx, vy := reflect.ValueOf(x), reflect.ValueOf(y)
+	return (vx.IsValid() && vy.IsValid() && vx.Type() == vy.Type()) &&
+		(vx.Kind() == reflect.Slice || vx.Kind() == reflect.Map) &&
+		(vx.Len() == 0 && vy.Len() == 0)
+}, alwaysEqual)
+
+func TestSimpleSigned(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(SignedArray{}))
+}
 
 func TestSimpleTypeOne(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeOne{}))
@@ -45,7 +60,7 @@ func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 			t.Fatal("failed to round trip object: ", err)
 		}
 
-		if !reflect.DeepEqual(obj, nobj) {
+		if !cmp.Equal(obj, nobj, alwaysEqualOpt) {
 			t.Logf("%#v != %#v", obj, nobj)
 			t.Log("not equal after round trip!")
 		}

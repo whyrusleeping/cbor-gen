@@ -7,6 +7,7 @@ import (
 
 func main() {
 	if err := cbg.WriteTupleEncodersToFile("testing/cbor_gen.go", "testing",
+		types.SignedArray{},
 		types.SimpleTypeOne{},
 		types.SimpleTypeTwo{},
 	); err != nil {
