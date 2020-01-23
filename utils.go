@@ -436,3 +436,72 @@ func WriteCid(w io.Writer, c cid.Cid) error {
 
 	return nil
 }
+
+type CborBool bool
+
+func (cb *CborBool) MarshalCBOR(w io.Writer) error {
+	return WriteBool(w, bool(*cb))
+}
+
+func (cb *CborBool) UnmarshalCBOR(r io.Reader) error {
+	t, val, err := CborReadHeader(r)
+	if err != nil {
+		return err
+	}
+
+	if t != MajOther {
+		return fmt.Errorf("booleans should be major type 7")
+	}
+
+	switch val {
+	case 20:
+		*cb = false
+	case 21:
+		*cb = true
+	default:
+		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", val)
+	}
+	return nil
+}
+
+type CborInt int64
+
+func (ci *CborInt) MarshalCBOR(w io.Writer) error {
+	v := int64(*ci)
+	if v >= 0 {
+		if _, err := w.Write(CborEncodeMajorType(MajUnsignedInt, uint64(v))); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(CborEncodeMajorType(MajNegativeInt, uint64(-v)-1)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
+	maj, extra, err := CborReadHeader(r)
+	if err != nil {
+		return err
+	}
+	var extraI int64
+	switch maj {
+	case MajUnsignedInt:
+		extraI = int64(extra)
+		if extraI < 0 {
+			return fmt.Errorf("int64 positive overflow")
+		}
+	case MajNegativeInt:
+		extraI = int64(extra)
+		if extraI < 0 {
+			return fmt.Errorf("int64 negative oveflow")
+		}
+		extraI = -1 - extraI
+	default:
+		return fmt.Errorf("wrong type for int64 field: %d", maj)
+	}
+
+	*ci = CborInt(extraI)
+	return nil
+}
