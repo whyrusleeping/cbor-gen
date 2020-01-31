@@ -63,6 +63,9 @@ func typeName(pkg string, t reflect.Type) string {
 }
 
 func (f Field) TypeName() string {
+	if f.Type == reflect.TypeOf(Deferred{}) {
+		f.Pkg = "cbg"
+	}
 	return typeName(f.Pkg, f.Type)
 }
 
