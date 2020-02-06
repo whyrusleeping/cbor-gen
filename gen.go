@@ -69,6 +69,11 @@ func (f Field) TypeName() string {
 	return typeName(f.Pkg, f.Type)
 }
 
+func (f Field) ElemName() string {
+	return typeName(f.Pkg, f.Type.Elem())
+}
+
+
 type GenTypeInfo struct {
 	Name   string
 	Fields []Field
@@ -380,7 +385,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		}
 	case reflect.Uint64:
 		err := doTemplate(w, f, `
-		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, v); err != nil {
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
 `)
@@ -587,7 +592,8 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	}
 }
 
-func emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
+func
+emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 	return doTemplate(w, f, `{
 	maj, extra, err := cbg.CborReadHeader(br)
 	var extraI int64
@@ -842,7 +848,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
 		}
 		
-		{{ .Name }}[{{ .IterLabel}}] = val
+		{{ .Name }}[{{ .IterLabel}}] = {{ .ElemName }}(val)
 `)
 		if err != nil {
 			return err

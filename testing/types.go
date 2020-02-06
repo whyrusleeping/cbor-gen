@@ -1,5 +1,7 @@
 package testing
 
+type NaturalNumber uint64
+
 type SignedArray struct {
 	Signed []uint64
 }
@@ -17,6 +19,7 @@ type SimpleTypeTwo struct {
 	SignedOthers []int64
 	Test         [][]byte
 	Dog          string
+	Numbers      []NaturalNumber
 }
 
 type SimpleTypeTree struct {
