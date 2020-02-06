@@ -30,7 +30,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Signed {
-		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, v); err != nil {
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
 	}
@@ -80,7 +80,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 			return xerrors.Errorf("value read for array t.Signed was not a uint, instead got %d", maj)
 		}
 
-		t.Signed[i] = val
+		t.Signed[i] = uint64(val)
 	}
 
 	return nil
@@ -240,7 +240,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Others {
-		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, v); err != nil {
+		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
 	}
@@ -364,7 +364,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			return xerrors.Errorf("value read for array t.Others was not a uint, instead got %d", maj)
 		}
 
-		t.Others[i] = val
+		t.Others[i] = uint64(val)
 	}
 
 	// t.SignedOthers ([]int64) (slice)
