@@ -63,6 +63,9 @@ func typeName(pkg string, t reflect.Type) string {
 }
 
 func (f Field) TypeName() string {
+	if f.Type.PkgPath() == "github.com/whyrusleeping/cbor-gen" {
+		return "cbg" + strings.TrimPrefix(typeName(f.Pkg, f.Type), "typegen")
+	}
 	return typeName(f.Pkg, f.Type)
 }
 
