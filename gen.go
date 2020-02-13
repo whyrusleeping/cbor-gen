@@ -73,7 +73,6 @@ func (f Field) ElemName() string {
 	return typeName(f.Pkg, f.Type.Elem())
 }
 
-
 type GenTypeInfo struct {
 	Name   string
 	Fields []Field
@@ -592,8 +591,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	}
 }
 
-func
-emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
+func emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 	return doTemplate(w, f, `{
 	maj, extra, err := cbg.CborReadHeader(br)
 	var extraI int64
@@ -1010,6 +1008,10 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			if err := emitCborMarshalUint64Field(w, f); err != nil {
 				return err
 			}
+		case reflect.Int64:
+			if err := emitCborMarshalInt64Field(w, f); err != nil {
+				return err
+			}
 		case reflect.Uint8:
 			if err := emitCborMarshalUint8Field(w, f); err != nil {
 				return err
@@ -1095,6 +1097,10 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 			}
 		case reflect.Uint64:
 			if err := emitCborUnmarshalUint64Field(w, f); err != nil {
+				return err
+			}
+		case reflect.Int64:
+			if err := emitCborUnmarshalInt64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Uint8:
