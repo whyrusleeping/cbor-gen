@@ -23,9 +23,10 @@ type SimpleTypeTwo struct {
 }
 
 type SimpleTypeTree struct {
-	Stuff  *SimpleTypeTree
-	Stufff *SimpleTypeTwo
-	Others []uint64
-	Test   [][]byte
-	Dog    string
+	Stuff                            *SimpleTypeTree
+	Stufff                           *SimpleTypeTwo
+	Others                           []uint64
+	Test                             [][]byte
+	SixtyThreeBitIntegerWithASignBit int64
+	Dog                              string
 }

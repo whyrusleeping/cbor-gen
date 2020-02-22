@@ -17,7 +17,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{165}); err != nil {
+	if _, err := w.Write([]byte{166}); err != nil {
 		return err
 	}
 
@@ -106,6 +106,28 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 		if _, err := w.Write(v); err != nil {
+			return err
+		}
+	}
+
+	// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
+	if len("SixtyThreeBitIntegerWithASignBit") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"SixtyThreeBitIntegerWithASignBit\" was too long")
+	}
+
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit")))); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte("SixtyThreeBitIntegerWithASignBit")); err != nil {
+		return err
+	}
+
+	if t.SixtyThreeBitIntegerWithASignBit >= 0 {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.SixtyThreeBitIntegerWithASignBit))); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-t.SixtyThreeBitIntegerWithASignBit)-1)); err != nil {
 			return err
 		}
 	}
@@ -283,6 +305,32 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 				}
 			}
 
+			// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
+		case "SixtyThreeBitIntegerWithASignBit":
+			{
+				maj, extra, err := cbg.CborReadHeader(br)
+				var extraI int64
+				if err != nil {
+					return err
+				}
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative oveflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
+				}
+
+				t.SixtyThreeBitIntegerWithASignBit = int64(extraI)
+			}
 			// t.Dog (string) (string)
 		case "Dog":
 
