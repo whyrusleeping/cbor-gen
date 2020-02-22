@@ -211,13 +211,22 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 }
 
 func emitCborMarshalUint64Field(w io.Writer, f Field) error {
-	if f.Pointer {
-		return fmt.Errorf("pointers to integers not supported")
-	}
 	return doTemplate(w, f, `
+{{ if .Pointer }}
+	if {{ .Name }} == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*{{ .Name }}))); err != nil {
+			return err
+		}
+	}
+{{ else }}
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
 		return err
 	}
+{{ end }}
 `)
 }
 
@@ -621,6 +630,29 @@ func emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 
 func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 	return doTemplate(w, f, `
+	{
+{{ if .Pointer }}
+	pb, err := br.PeekByte()
+	if err != nil {
+		return err
+	}
+	if pb == cbg.CborNull[0] {
+		var nbuf [1]byte
+		if _, err := br.Read(nbuf[:]); err != nil {
+			return err
+		}
+	} else {
+		maj, extra, err = cbg.CborReadHeader(br)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		typed := {{ .TypeName }}(extra)
+		{{ .Name }} = &typed
+	}
+{{ else }}
 	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
@@ -629,6 +661,8 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
 	{{ .Name }} = {{ .TypeName }}(extra)
+{{ end }}
+	}
 `)
 }
 
