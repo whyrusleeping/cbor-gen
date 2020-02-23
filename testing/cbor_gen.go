@@ -108,6 +108,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Value (uint64) (uint64)
+
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.Value))); err != nil {
 		return err
 	}
@@ -164,14 +165,18 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.Value (uint64) (uint64)
 
-	maj, extra, err = cbg.CborReadHeader(br)
-	if err != nil {
-		return err
+	{
+
+		maj, extra, err = cbg.CborReadHeader(br)
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Value = uint64(extra)
+
 	}
-	if maj != cbg.MajUnsignedInt {
-		return fmt.Errorf("wrong type for uint64 field")
-	}
-	t.Value = uint64(extra)
 	// t.Binary ([]uint8) (slice)
 
 	maj, extra, err = cbg.CborReadHeader(br)
@@ -222,7 +227,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{134}); err != nil {
+	if _, err := w.Write([]byte{136}); err != nil {
 		return err
 	}
 
@@ -311,6 +316,31 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	}
+
+	// t.Pizza (uint64) (uint64)
+
+	if t.Pizza == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*t.Pizza))); err != nil {
+			return err
+		}
+	}
+
+	// t.PointyPizza (testing.NaturalNumber) (uint64)
+
+	if t.PointyPizza == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*t.PointyPizza))); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -325,7 +355,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 6 {
+	if extra != 8 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -507,5 +537,57 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 		t.Numbers[i] = NaturalNumber(val)
 	}
 
+	// t.Pizza (uint64) (uint64)
+
+	{
+
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+			var nbuf [1]byte
+			if _, err := br.Read(nbuf[:]); err != nil {
+				return err
+			}
+		} else {
+			maj, extra, err = cbg.CborReadHeader(br)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := uint64(extra)
+			t.Pizza = &typed
+		}
+
+	}
+	// t.PointyPizza (testing.NaturalNumber) (uint64)
+
+	{
+
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+			var nbuf [1]byte
+			if _, err := br.Read(nbuf[:]); err != nil {
+				return err
+			}
+		} else {
+			maj, extra, err = cbg.CborReadHeader(br)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := NaturalNumber(extra)
+			t.PointyPizza = &typed
+		}
+
+	}
 	return nil
 }

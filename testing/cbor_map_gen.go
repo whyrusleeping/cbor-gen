@@ -17,7 +17,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{166}); err != nil {
+	if _, err := w.Write([]byte{167}); err != nil {
 		return err
 	}
 
@@ -110,28 +110,6 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
-	if len("SixtyThreeBitIntegerWithASignBit") > cbg.MaxLength {
-		return xerrors.Errorf("Value in field \"SixtyThreeBitIntegerWithASignBit\" was too long")
-	}
-
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit")))); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte("SixtyThreeBitIntegerWithASignBit")); err != nil {
-		return err
-	}
-
-	if t.SixtyThreeBitIntegerWithASignBit >= 0 {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.SixtyThreeBitIntegerWithASignBit))); err != nil {
-			return err
-		}
-	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-t.SixtyThreeBitIntegerWithASignBit)-1)); err != nil {
-			return err
-		}
-	}
-
 	// t.Dog (string) (string)
 	if len("Dog") > cbg.MaxLength {
 		return xerrors.Errorf("Value in field \"Dog\" was too long")
@@ -154,6 +132,51 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if _, err := w.Write([]byte(t.Dog)); err != nil {
 		return err
 	}
+
+	// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
+	if len("SixtyThreeBitIntegerWithASignBit") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"SixtyThreeBitIntegerWithASignBit\" was too long")
+	}
+
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit")))); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte("SixtyThreeBitIntegerWithASignBit")); err != nil {
+		return err
+	}
+
+	if t.SixtyThreeBitIntegerWithASignBit >= 0 {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.SixtyThreeBitIntegerWithASignBit))); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-t.SixtyThreeBitIntegerWithASignBit)-1)); err != nil {
+			return err
+		}
+	}
+
+	// t.NotPizza (uint64) (uint64)
+	if len("NotPizza") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"NotPizza\" was too long")
+	}
+
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("NotPizza")))); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte("NotPizza")); err != nil {
+		return err
+	}
+
+	if t.NotPizza == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*t.NotPizza))); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -305,6 +328,17 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 				}
 			}
 
+			// t.Dog (string) (string)
+		case "Dog":
+
+			{
+				sval, err := cbg.ReadString(br)
+				if err != nil {
+					return err
+				}
+
+				t.Dog = string(sval)
+			}
 			// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
 		case "SixtyThreeBitIntegerWithASignBit":
 			{
@@ -331,16 +365,32 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 
 				t.SixtyThreeBitIntegerWithASignBit = int64(extraI)
 			}
-			// t.Dog (string) (string)
-		case "Dog":
+			// t.NotPizza (uint64) (uint64)
+		case "NotPizza":
 
 			{
-				sval, err := cbg.ReadString(br)
+
+				pb, err := br.PeekByte()
 				if err != nil {
 					return err
 				}
+				if pb == cbg.CborNull[0] {
+					var nbuf [1]byte
+					if _, err := br.Read(nbuf[:]); err != nil {
+						return err
+					}
+				} else {
+					maj, extra, err = cbg.CborReadHeader(br)
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajUnsignedInt {
+						return fmt.Errorf("wrong type for uint64 field")
+					}
+					typed := uint64(extra)
+					t.NotPizza = &typed
+				}
 
-				t.Dog = string(sval)
 			}
 
 		default:

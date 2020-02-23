@@ -20,6 +20,8 @@ type SimpleTypeTwo struct {
 	Test         [][]byte
 	Dog          string
 	Numbers      []NaturalNumber
+	Pizza        *uint64
+	PointyPizza  *NaturalNumber
 }
 
 type SimpleTypeTree struct {
@@ -27,6 +29,7 @@ type SimpleTypeTree struct {
 	Stufff                           *SimpleTypeTwo
 	Others                           []uint64
 	Test                             [][]byte
-	SixtyThreeBitIntegerWithASignBit int64
 	Dog                              string
+	SixtyThreeBitIntegerWithASignBit int64
+	NotPizza                         *uint64
 }
