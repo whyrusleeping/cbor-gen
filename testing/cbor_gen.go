@@ -375,7 +375,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 		} else {
 			t.Stuff = new(SimpleTypeTwo)
 			if err := t.Stuff.UnmarshalCBOR(br); err != nil {
-				return err
+				return xerrors.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
 

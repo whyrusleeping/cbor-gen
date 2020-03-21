@@ -227,7 +227,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 				} else {
 					t.Stuff = new(SimpleTypeTree)
 					if err := t.Stuff.UnmarshalCBOR(br); err != nil {
-						return err
+						return xerrors.Errorf("unmarshaling t.Stuff pointer: %w", err)
 					}
 				}
 
@@ -249,7 +249,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 				} else {
 					t.Stufff = new(SimpleTypeTwo)
 					if err := t.Stufff.UnmarshalCBOR(br); err != nil {
-						return err
+						return xerrors.Errorf("unmarshaling t.Stufff pointer: %w", err)
 					}
 				}
 

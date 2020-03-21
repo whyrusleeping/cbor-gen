@@ -587,12 +587,12 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		} else {
 			{{ .Name }} = new({{ .TypeName }})
 			if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
-				return err
+				return xerrors.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
 			}
 		}
 {{ else }}
 		if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
-			return err
+			return xerrors.Errorf("unmarshaling {{ .Name }}: %w", err)
 		}
 {{ end }}
 	}
