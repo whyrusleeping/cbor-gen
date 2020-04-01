@@ -10,6 +10,7 @@ func main() {
 		types.SignedArray{},
 		types.SimpleTypeOne{},
 		types.SimpleTypeTwo{},
+		types.DeferredContainer{},
 	); err != nil {
 		panic(err)
 	}

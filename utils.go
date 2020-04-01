@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -94,6 +95,13 @@ type Deferred struct {
 }
 
 func (d *Deferred) MarshalCBOR(w io.Writer) error {
+	if d == nil {
+		_, err := w.Write(CborNull)
+		return err
+	}
+	if d.Raw == nil {
+		return errors.New("cannot marshal Deferred with nil value for Raw (will not unmarshal)")
+	}
 	_, err := w.Write(d.Raw)
 	return err
 }

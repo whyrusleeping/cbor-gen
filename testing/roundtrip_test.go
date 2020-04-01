@@ -37,6 +37,36 @@ func TestSimpleTypeTree(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeTree{}))
 }
 
+func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
+
+	buf := new(bytes.Buffer)
+	if err := obj.MarshalCBOR(buf); err != nil {
+		t.Fatal("i guess its fine to fail marshaling")
+	}
+
+	enc := buf.Bytes()
+
+	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+		t.Logf("got bad bytes: %x", enc)
+		t.Fatal("failed to round trip object: ", err)
+	}
+
+	if !cmp.Equal(obj, nobj, alwaysEqualOpt) {
+		t.Logf("%#v != %#v", obj, nobj)
+		t.Log("not equal after round trip!")
+	}
+
+	nbuf := new(bytes.Buffer)
+	if err := nobj.(cbg.CBORMarshaler).MarshalCBOR(nbuf); err != nil {
+		t.Fatal("failed to remarshal object: ", err)
+	}
+
+	if !bytes.Equal(nbuf.Bytes(), enc) {
+		t.Fatalf("objects encodings different: %x != %x", nbuf.Bytes(), enc)
+	}
+
+}
+
 func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 	r := rand.New(rand.NewSource(56887))
 	for i := 0; i < 1000; i++ {
@@ -46,32 +76,13 @@ func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 		}
 
 		obj := val.Addr().Interface().(cbg.CBORMarshaler)
-
-		buf := new(bytes.Buffer)
-		if err := obj.MarshalCBOR(buf); err != nil {
-			t.Fatal("i guess its fine to fail marshaling")
-		}
-
-		enc := buf.Bytes()
-
 		nobj := reflect.New(typ).Interface().(cbg.CBORUnmarshaler)
-		if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
-			t.Logf("got bad bytes: %x", enc)
-			t.Fatal("failed to round trip object: ", err)
-		}
-
-		if !cmp.Equal(obj, nobj, alwaysEqualOpt) {
-			t.Logf("%#v != %#v", obj, nobj)
-			t.Log("not equal after round trip!")
-		}
-
-		nbuf := new(bytes.Buffer)
-		if err := nobj.(cbg.CBORMarshaler).MarshalCBOR(nbuf); err != nil {
-			t.Fatal("failed to remarshal object: ", err)
-		}
-
-		if !bytes.Equal(nbuf.Bytes(), enc) {
-			t.Fatalf("objects encodings different: %x != %x", nbuf.Bytes(), enc)
-		}
+		testValueRoundtrip(t, obj, nobj)
 	}
+}
+
+func TestDeferredContainer(t *testing.T) {
+	zero := &DeferredContainer{}
+	recepticle := &DeferredContainer{}
+	testValueRoundtrip(t, zero, recepticle)
 }
