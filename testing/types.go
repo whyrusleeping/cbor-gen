@@ -1,5 +1,9 @@
 package testing
 
+import (
+	cbg "github.com/whyrusleeping/cbor-gen"
+)
+
 type NaturalNumber uint64
 
 type SignedArray struct {
@@ -32,4 +36,10 @@ type SimpleTypeTree struct {
 	Dog                              string
 	SixtyThreeBitIntegerWithASignBit int64
 	NotPizza                         *uint64
+}
+
+type DeferredContainer struct {
+	Stuff    *SimpleTypeOne
+	Deferred *cbg.Deferred
+	Value    uint64
 }
