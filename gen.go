@@ -51,6 +51,8 @@ type Field struct {
 
 func typeName(pkg string, t reflect.Type) string {
 	switch t.Kind() {
+	case reflect.Array:
+		return fmt.Sprintf("[%d]%s", t.Len(), typeName(pkg, t.Elem()))
 	case reflect.Slice:
 		return "[]" + typeName(pkg, t.Elem())
 	case reflect.Ptr:
@@ -71,6 +73,14 @@ func (f Field) TypeName() string {
 
 func (f Field) ElemName() string {
 	return typeName(f.Pkg, f.Type.Elem())
+}
+
+func (f Field) IsArray() bool {
+	return f.Type.Kind() == reflect.Array
+}
+
+func (f Field) Len() int {
+	return f.Type.Len()
 }
 
 type GenTypeInfo struct {
@@ -466,6 +476,8 @@ func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 			if err := emitCborMarshalInt64Field(w, f); err != nil {
 				return err
 			}
+		case reflect.Array:
+			fallthrough
 		case reflect.Slice:
 			if err := emitCborMarshalSliceField(w, f); err != nil {
 				return err
@@ -825,9 +837,17 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
+	{{if .IsArray}}
+	if extra != {{ .Len }} {
+		return fmt.Errorf("expected array to have {{ .Len }} elements")
+	}
+
+	{{ .Name }} = {{ .TypeName }}{}
+	{{else}}
 	if extra > 0 {
 		{{ .Name }} = make({{ .TypeName }}, extra)
 	}
+	{{end}}
 	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
 `)
 	if err != nil {
@@ -895,6 +915,8 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		if err != nil {
 			return err
 		}
+	case reflect.Array:
+		fallthrough
 	case reflect.Slice:
 		nextIter := string([]byte{f.IterLabel[0] + 1})
 		subf := Field{
@@ -964,6 +986,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 			if err := emitCborUnmarshalInt64Field(w, f); err != nil {
 				return err
 			}
+		case reflect.Array:
+			fallthrough
 		case reflect.Slice:
 			if err := emitCborUnmarshalSliceField(w, f); err != nil {
 				return err
@@ -1050,6 +1074,8 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			if err := emitCborMarshalUint8Field(w, f); err != nil {
 				return err
 			}
+		case reflect.Array:
+			fallthrough
 		case reflect.Slice:
 			if err := emitCborMarshalSliceField(w, f); err != nil {
 				return err
@@ -1141,6 +1167,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 			if err := emitCborUnmarshalUint8Field(w, f); err != nil {
 				return err
 			}
+		case reflect.Array:
+			fallthrough
 		case reflect.Slice:
 			if err := emitCborUnmarshalSliceField(w, f); err != nil {
 				return err

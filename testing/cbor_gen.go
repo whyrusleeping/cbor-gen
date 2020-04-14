@@ -66,9 +66,11 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
+
 	if extra > 0 {
 		t.Signed = make([]uint64, extra)
 	}
+
 	for i := 0; i < int(extra); i++ {
 
 		maj, val, err := cbg.CborReadHeader(br)
@@ -227,7 +229,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{136}); err != nil {
+	if _, err := w.Write([]byte{137}); err != nil {
 		return err
 	}
 
@@ -341,6 +343,19 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
+	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
+	if len(t.Arrrrrghay) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.Arrrrrghay was too long")
+	}
+
+	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Arrrrrghay)))); err != nil {
+		return err
+	}
+	for _, v := range t.Arrrrrghay {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -355,7 +370,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 8 {
+	if extra != 9 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -394,9 +409,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
+
 	if extra > 0 {
 		t.Others = make([]uint64, extra)
 	}
+
 	for i := 0; i < int(extra); i++ {
 
 		maj, val, err := cbg.CborReadHeader(br)
@@ -425,9 +442,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
+
 	if extra > 0 {
 		t.SignedOthers = make([]int64, extra)
 	}
+
 	for i := 0; i < int(extra); i++ {
 		{
 			maj, extra, err := cbg.CborReadHeader(br)
@@ -469,9 +488,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
+
 	if extra > 0 {
 		t.Test = make([][]uint8, extra)
 	}
+
 	for i := 0; i < int(extra); i++ {
 		{
 			var maj byte
@@ -520,9 +541,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
+
 	if extra > 0 {
 		t.Numbers = make([]NaturalNumber, extra)
 	}
+
 	for i := 0; i < int(extra); i++ {
 
 		maj, val, err := cbg.CborReadHeader(br)
@@ -589,6 +612,37 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 		}
 
 	}
+	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
+
+	maj, extra, err = cbg.CborReadHeader(br)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.Arrrrrghay: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("expected array to have 3 elements")
+	}
+
+	t.Arrrrrghay = [3]SimpleTypeOne{}
+
+	for i := 0; i < int(extra); i++ {
+
+		var v SimpleTypeOne
+		if err := v.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		t.Arrrrrghay[i] = v
+	}
+
 	return nil
 }
 
