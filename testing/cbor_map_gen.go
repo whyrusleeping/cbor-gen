@@ -269,9 +269,11 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 			if maj != cbg.MajArray {
 				return fmt.Errorf("expected cbor array")
 			}
+
 			if extra > 0 {
 				t.Others = make([]uint64, extra)
 			}
+
 			for i := 0; i < int(extra); i++ {
 
 				maj, val, err := cbg.CborReadHeader(br)
@@ -301,9 +303,11 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 			if maj != cbg.MajArray {
 				return fmt.Errorf("expected cbor array")
 			}
+
 			if extra > 0 {
 				t.Test = make([][]uint8, extra)
 			}
+
 			for i := 0; i < int(extra); i++ {
 				{
 					var maj byte

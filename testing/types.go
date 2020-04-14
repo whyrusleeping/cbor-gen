@@ -4,6 +4,8 @@ import (
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
+const Thingc = 3
+
 type NaturalNumber uint64
 
 type SignedArray struct {
@@ -26,6 +28,7 @@ type SimpleTypeTwo struct {
 	Numbers      []NaturalNumber
 	Pizza        *uint64
 	PointyPizza  *NaturalNumber
+	Arrrrrghay   [Thingc]SimpleTypeOne
 }
 
 type SimpleTypeTree struct {
