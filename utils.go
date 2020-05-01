@@ -315,11 +315,32 @@ func WriteMajorTypeHeader(w io.Writer, t byte, l uint64) error {
 }
 
 func CborEncodeMajorType(t byte, l uint64) []byte {
-	buf := new(bytes.Buffer)
-	if err := WriteMajorTypeHeader(buf, t, l); err != nil {
-		panic(err)
+	switch {
+	case l < 24:
+		var b [1]byte
+		b[0] = (t << 5) | byte(l)
+		return b[:1]
+	case l < (1 << 8):
+		var b [2]byte
+		b[0] = (t << 5) | 24
+		b[1] = byte(l)
+		return b[:2]
+	case l < (1 << 16):
+		var b [3]byte
+		b[0] = (t << 5) | 25
+		binary.BigEndian.PutUint16(b[1:3], uint16(l))
+		return b[:3]
+	case l < (1 << 32):
+		var b [5]byte
+		b[0] = (t << 5) | 26
+		binary.BigEndian.PutUint32(b[1:5], uint32(l))
+		return b[:5]
+	default:
+		var b [9]byte
+		b[0] = (t << 5) | 27
+		binary.BigEndian.PutUint64(b[1:], uint64(l))
+		return b[:]
 	}
-	return buf.Bytes()
 }
 
 func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, error) {
