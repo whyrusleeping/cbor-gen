@@ -86,3 +86,22 @@ func TestDeferredContainer(t *testing.T) {
 	recepticle := &DeferredContainer{}
 	testValueRoundtrip(t, zero, recepticle)
 }
+
+func TestNilValueDeferredUnmarshaling(t *testing.T) {
+	var zero DeferredContainer
+	zero.Deferred = &cbg.Deferred{Raw: []byte{0xf6}}
+
+	buf := new(bytes.Buffer)
+	if err := zero.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	var n DeferredContainer
+	if err := n.UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	if n.Deferred == nil {
+		t.Fatal("shouldnt be nil!")
+	}
+}

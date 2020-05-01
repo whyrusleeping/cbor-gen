@@ -714,22 +714,11 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
 
 	{
 
-		pb, err := br.PeekByte()
-		if err != nil {
-			return err
-		}
-		if pb == cbg.CborNull[0] {
-			var nbuf [1]byte
-			if _, err := br.Read(nbuf[:]); err != nil {
-				return err
-			}
-		} else {
-			t.Deferred = new(cbg.Deferred)
-			if err := t.Deferred.UnmarshalCBOR(br); err != nil {
-				return xerrors.Errorf("unmarshaling t.Deferred pointer: %w", err)
-			}
-		}
+		t.Deferred = new(cbg.Deferred)
 
+		if err := t.Deferred.UnmarshalCBOR(br); err != nil {
+			return xerrors.Errorf("failed to read deferred field: %w", err)
+		}
 	}
 	// t.Value (uint64) (uint64)
 
