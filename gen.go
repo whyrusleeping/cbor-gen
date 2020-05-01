@@ -14,7 +14,13 @@ const ByteArrayMaxLen = 2 << 20
 
 func doTemplate(w io.Writer, info interface{}, templ string) error {
 	t := template.Must(template.New("").
-		Funcs(template.FuncMap{}).Parse(templ))
+		Funcs(template.FuncMap{
+			"MajorType": func(wname string, tname string, val string) string {
+				return fmt.Sprintf(`if err := cbg.WriteMajorTypeHeader(%s, %s, uint64(%s)); err != nil {
+	return err
+}`, wname, tname, val)
+			},
+		}).Parse(templ))
 
 	return t.Execute(w, info)
 }
@@ -161,9 +167,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len({{ .Name }})))); err != nil {
-		return err
-	}
+	{{ MajorType "w" "cbg.MajTextString" (print "len(" .Name ")") }}
 	if _, err := w.Write([]byte({{ .Name }})); err != nil {
 		return err
 	}
@@ -228,14 +232,10 @@ func emitCborMarshalUint64Field(w io.Writer, f Field) error {
 			return err
 		}
 	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*{{ .Name }}))); err != nil {
-			return err
-		}
+		{{ MajorType "w" "cbg.MajUnsignedInt" (print "*" .Name) }}
 	}
 {{ else }}
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
-		return err
-	}
+	{{ MajorType "w" "cbg.MajUnsignedInt" .Name }}
 {{ end }}
 `)
 }
@@ -245,9 +245,7 @@ func emitCborMarshalUint8Field(w io.Writer, f Field) error {
 		return fmt.Errorf("pointers to integers not supported")
 	}
 	return doTemplate(w, f, `
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
-		return err
-	}
+{{ MajorType "w" "cbg.MajUnsignedInt" .Name }}
 `)
 }
 
@@ -262,13 +260,9 @@ func emitCborMarshalInt64Field(w io.Writer, f Field) error {
 
 	return doTemplate(w, f, `
 	if {{ .Name }} >= 0 {
-	    if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64({{ .Name }}))); err != nil {
-		    return err
-	    }
+	{{ MajorType "w" "cbg.MajUnsignedInt" .Name }}
 	} else {
-	    if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-{{ .Name }})-1)); err != nil {
-		    return err
-	    }
+	{{ MajorType "w" "cbg.MajNegativeInt" (print "-" .Name "-1") }}
 	}
 `)
 }
@@ -288,9 +282,7 @@ func emitCborMarshalMapField(w io.Writer, f Field) error {
 		return xerrors.Errorf("cannot marshal {{ .Name }} map too large")
 	}
 
-	if err := cbg.CborWriteHeader(w, cbg.MajMap, uint64(len({{ .Name }}))); err != nil {
-		return err
-	}
+	{{ MajorType "w" "cbg.MajMap" (print "len(" .Name ")") }}
 
 	keys := make([]string, 0, len({{ .Name }}))
 	for k := range {{ .Name }} {
@@ -349,9 +341,8 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len({{ .Name }})))); err != nil {
-		return err
-	}
+	{{ MajorType "w" "cbg.MajByteString" (print "len(" .Name ")" ) }}
+
 	if _, err := w.Write({{ .Name }}); err != nil {
 		return err
 	}
@@ -367,9 +358,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len({{ .Name }})))); err != nil {
-		return err
-	}
+	{{ MajorType "w" "cbg.MajArray" ( print "len(" .Name ")" ) }}
 	for _, v := range {{ .Name }} {`)
 	if err != nil {
 		return err

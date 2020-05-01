@@ -26,7 +26,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"Stuff\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("Stuff")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("Stuff"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("Stuff")); err != nil {
@@ -42,7 +42,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"Stufff\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("Stufff")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("Stufff"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("Stufff")); err != nil {
@@ -58,7 +58,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"Others\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("Others")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("Others"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("Others")); err != nil {
@@ -69,7 +69,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Others was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Others)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Others))); err != nil {
 		return err
 	}
 	for _, v := range t.Others {
@@ -83,7 +83,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"Test\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("Test")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("Test"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("Test")); err != nil {
@@ -94,7 +94,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Test was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Test)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Test))); err != nil {
 		return err
 	}
 	for _, v := range t.Test {
@@ -102,9 +102,10 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 			return xerrors.Errorf("Byte array in field v was too long")
 		}
 
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len(v)))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(v))); err != nil {
 			return err
 		}
+
 		if _, err := w.Write(v); err != nil {
 			return err
 		}
@@ -115,7 +116,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"Dog\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("Dog")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("Dog"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("Dog")); err != nil {
@@ -126,7 +127,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.Dog was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len(t.Dog)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte(t.Dog)); err != nil {
@@ -138,7 +139,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"SixtyThreeBitIntegerWithASignBit\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("SixtyThreeBitIntegerWithASignBit")); err != nil {
@@ -146,11 +147,11 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	}
 
 	if t.SixtyThreeBitIntegerWithASignBit >= 0 {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.SixtyThreeBitIntegerWithASignBit))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.SixtyThreeBitIntegerWithASignBit)); err != nil {
 			return err
 		}
 	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-t.SixtyThreeBitIntegerWithASignBit)-1)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-t.SixtyThreeBitIntegerWithASignBit-1)); err != nil {
 			return err
 		}
 	}
@@ -160,7 +161,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field \"NotPizza\" was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("NotPizza")))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len("NotPizza"))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte("NotPizza")); err != nil {
@@ -172,7 +173,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*t.NotPizza))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(*t.NotPizza)); err != nil {
 			return err
 		}
 	}

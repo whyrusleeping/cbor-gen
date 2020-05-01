@@ -26,7 +26,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Signed was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Signed)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Signed))); err != nil {
 		return err
 	}
 	for _, v := range t.Signed {
@@ -102,7 +102,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.Foo was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len(t.Foo)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.Foo))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte(t.Foo)); err != nil {
@@ -111,7 +111,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 	// t.Value (uint64) (uint64)
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.Value))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Value)); err != nil {
 		return err
 	}
 
@@ -120,20 +120,21 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Byte array in field t.Binary was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len(t.Binary)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(t.Binary))); err != nil {
 		return err
 	}
+
 	if _, err := w.Write(t.Binary); err != nil {
 		return err
 	}
 
 	// t.Signed (int64) (int64)
 	if t.Signed >= 0 {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.Signed))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Signed)); err != nil {
 			return err
 		}
 	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-t.Signed)-1)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-t.Signed-1)); err != nil {
 			return err
 		}
 	}
@@ -243,7 +244,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Others was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Others)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Others))); err != nil {
 		return err
 	}
 	for _, v := range t.Others {
@@ -257,16 +258,16 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.SignedOthers was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.SignedOthers)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.SignedOthers))); err != nil {
 		return err
 	}
 	for _, v := range t.SignedOthers {
 		if v >= 0 {
-			if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(v))); err != nil {
+			if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
 				return err
 			}
 		} else {
-			if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajNegativeInt, uint64(-v)-1)); err != nil {
+			if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-v-1)); err != nil {
 				return err
 			}
 		}
@@ -277,7 +278,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Test was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Test)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Test))); err != nil {
 		return err
 	}
 	for _, v := range t.Test {
@@ -285,9 +286,10 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return xerrors.Errorf("Byte array in field v was too long")
 		}
 
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajByteString, uint64(len(v)))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(v))); err != nil {
 			return err
 		}
+
 		if _, err := w.Write(v); err != nil {
 			return err
 		}
@@ -298,7 +300,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.Dog was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len(t.Dog)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
 	if _, err := w.Write([]byte(t.Dog)); err != nil {
@@ -310,7 +312,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Numbers was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Numbers)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Numbers))); err != nil {
 		return err
 	}
 	for _, v := range t.Numbers {
@@ -326,7 +328,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*t.Pizza))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(*t.Pizza)); err != nil {
 			return err
 		}
 	}
@@ -338,7 +340,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	} else {
-		if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(*t.PointyPizza))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(*t.PointyPizza)); err != nil {
 			return err
 		}
 	}
@@ -348,7 +350,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Arrrrrghay was too long")
 	}
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajArray, uint64(len(t.Arrrrrghay)))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Arrrrrghay))); err != nil {
 		return err
 	}
 	for _, v := range t.Arrrrrghay {
@@ -667,7 +669,7 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 
 	// t.Value (uint64) (uint64)
 
-	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajUnsignedInt, uint64(t.Value))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Value)); err != nil {
 		return err
 	}
 
