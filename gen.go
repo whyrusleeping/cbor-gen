@@ -583,6 +583,18 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 {{ end }}
 	}
 `)
+	case "github.com/whyrusleeping/cbor-gen.Deferred":
+		return doTemplate(w, f, `
+	{
+{{ if .Pointer }}
+		{{ .Name }} = new(cbg.Deferred)
+{{ end }}
+		if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
+			return xerrors.Errorf("failed to read deferred field: %w", err)
+		}
+	}
+`)
+
 	default:
 		return doTemplate(w, f, `
 	{
