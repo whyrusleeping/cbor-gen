@@ -219,9 +219,9 @@ func readByte(r io.Reader) (byte, error) {
 	if br, ok := r.(io.ByteReader); ok {
 		return br.ReadByte()
 	}
-	var b [1]byte
-	_, err := io.ReadFull(r, b[:])
-	return b[0], err
+	var buf [1]byte
+	_, err := io.ReadFull(r, buf[:1])
+	return buf[0], err
 }
 
 func CborReadHeader(br io.Reader) (byte, uint64, error) {
@@ -246,31 +246,31 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 		}
 		return maj, uint64(next), nil
 	case low == 25:
-		buf := make([]byte, 2)
-		if _, err := io.ReadFull(br, buf); err != nil {
+		scratch := make([]byte, 2)
+		if _, err := io.ReadFull(br, scratch[:2]); err != nil {
 			return 0, 0, err
 		}
-		val := uint64(binary.BigEndian.Uint16(buf))
+		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
 		if val <= math.MaxUint8 {
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 25 with value <= MaxUint8)")
 		}
 		return maj, val, nil
 	case low == 26:
-		buf := make([]byte, 4)
-		if _, err := io.ReadFull(br, buf); err != nil {
+		scratch := make([]byte, 4)
+		if _, err := io.ReadFull(br, scratch[:4]); err != nil {
 			return 0, 0, err
 		}
-		val := uint64(binary.BigEndian.Uint32(buf))
+		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
 		if val <= math.MaxUint16 {
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
 		}
 		return maj, val, nil
 	case low == 27:
-		buf := make([]byte, 8)
-		if _, err := io.ReadFull(br, buf); err != nil {
+		scratch := make([]byte, 8)
+		if _, err := io.ReadFull(br, scratch); err != nil {
 			return 0, 0, err
 		}
-		val := binary.BigEndian.Uint64(buf)
+		val := binary.BigEndian.Uint64(scratch)
 		if val <= math.MaxUint32 {
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 27 with value <= MaxUint32)")
 		}
@@ -280,11 +280,12 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 	}
 }
 
-func CborWriteHeader(w io.Writer, t byte, val uint64) error {
-	return WriteMajorTypeHeader(w, t, val)
+func CborWriteHeader(w io.Writer, t byte, l uint64) error {
+	return WriteMajorTypeHeader(w, t, l)
 }
 
 // TODO: No matter what I do, this function *still* allocates. Its super frustrating.
+// See issue: https://github.com/golang/go/issues/33160
 func WriteMajorTypeHeader(w io.Writer, t byte, l uint64) error {
 	switch {
 	case l < 24:
@@ -310,6 +311,36 @@ func WriteMajorTypeHeader(w io.Writer, t byte, l uint64) error {
 		b[0] = (t << 5) | 27
 		binary.BigEndian.PutUint64(b[1:], uint64(l))
 		_, err := w.Write(b[:])
+		return err
+	}
+}
+
+// Same as the above, but uses a passed in buffer to avoid allocations
+func WriteMajorTypeHeaderBuf(buf []byte, w io.Writer, t byte, l uint64) error {
+	switch {
+	case l < 24:
+		buf[0] = (t << 5) | byte(l)
+		_, err := w.Write(buf[:1])
+		return err
+	case l < (1 << 8):
+		buf[0] = (t << 5) | 24
+		buf[1] = byte(l)
+		_, err := w.Write(buf[:2])
+		return err
+	case l < (1 << 16):
+		buf[0] = (t << 5) | 25
+		binary.BigEndian.PutUint16(buf[1:3], uint16(l))
+		_, err := w.Write(buf[:3])
+		return err
+	case l < (1 << 32):
+		buf[0] = (t << 5) | 26
+		binary.BigEndian.PutUint32(buf[1:5], uint32(l))
+		_, err := w.Write(buf[:5])
+		return err
+	default:
+		buf[0] = (t << 5) | 27
+		binary.BigEndian.PutUint64(buf[1:9], uint64(l))
+		_, err := w.Write(buf[:9])
 		return err
 	}
 }
@@ -390,9 +421,9 @@ var (
 
 func EncodeBool(b bool) []byte {
 	if b {
-		return []byte{0xf5}
+		return CborBoolTrue
 	}
-	return []byte{0xf4}
+	return CborBoolFalse
 }
 
 func WriteBool(w io.Writer, b bool) error {
@@ -449,8 +480,10 @@ func bufToCid(buf []byte) (cid.Cid, error) {
 	return cid.Cast(buf[1:])
 }
 
+var byteArrZero = []byte{0}
+
 func WriteCid(w io.Writer, c cid.Cid) error {
-	if err := CborWriteHeader(w, MajTag, 42); err != nil {
+	if err := WriteMajorTypeHeader(w, MajTag, 42); err != nil {
 		return err
 	}
 	if c == cid.Undef {
@@ -458,12 +491,37 @@ func WriteCid(w io.Writer, c cid.Cid) error {
 		//return CborWriteHeader(w, MajByteString, 0)
 	}
 
-	if err := CborWriteHeader(w, MajByteString, uint64(c.ByteLen()+1)); err != nil {
+	if err := WriteMajorTypeHeader(w, MajByteString, uint64(c.ByteLen()+1)); err != nil {
 		return err
 	}
 
 	// that binary multibase prefix...
-	if _, err := w.Write([]byte{0}); err != nil {
+	if _, err := w.Write(byteArrZero); err != nil {
+		return err
+	}
+
+	if _, err := c.WriteBytes(w); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func WriteCidBuf(buf []byte, w io.Writer, c cid.Cid) error {
+	if err := WriteMajorTypeHeaderBuf(buf, w, MajTag, 42); err != nil {
+		return err
+	}
+	if c == cid.Undef {
+		return fmt.Errorf("undefined cid")
+		//return CborWriteHeader(w, MajByteString, 0)
+	}
+
+	if err := WriteMajorTypeHeaderBuf(buf, w, MajByteString, uint64(c.ByteLen()+1)); err != nil {
+		return err
+	}
+
+	// that binary multibase prefix...
+	if _, err := w.Write(byteArrZero); err != nil {
 		return err
 	}
 
@@ -506,11 +564,11 @@ type CborInt int64
 func (ci *CborInt) MarshalCBOR(w io.Writer) error {
 	v := int64(*ci)
 	if v >= 0 {
-		if _, err := w.Write(CborEncodeMajorType(MajUnsignedInt, uint64(v))); err != nil {
+		if err := WriteMajorTypeHeader(w, MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
 	} else {
-		if _, err := w.Write(CborEncodeMajorType(MajNegativeInt, uint64(-v)-1)); err != nil {
+		if err := WriteMajorTypeHeader(w, MajNegativeInt, uint64(-v)-1); err != nil {
 			return err
 		}
 	}

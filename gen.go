@@ -427,12 +427,13 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 }
 
 func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
-	err := doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
+	err := doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
+func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write({{ .TupleHeaderAsByteString }}); err != nil {
+	if _, err := w.Write(lengthBuf{{ .Name }}); err != nil {
 		return err
 	}
 `)

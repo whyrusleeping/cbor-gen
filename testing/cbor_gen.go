@@ -12,12 +12,14 @@ import (
 
 var _ = xerrors.Errorf
 
+var lengthBufSignedArray = []byte{129}
+
 func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{129}); err != nil {
+	if _, err := w.Write(lengthBufSignedArray); err != nil {
 		return err
 	}
 
@@ -88,12 +90,14 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 	return nil
 }
 
+var lengthBufSimpleTypeOne = []byte{132}
+
 func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{132}); err != nil {
+	if _, err := w.Write(lengthBufSimpleTypeOne); err != nil {
 		return err
 	}
 
@@ -225,12 +229,14 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	return nil
 }
 
+var lengthBufSimpleTypeTwo = []byte{137}
+
 func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{137}); err != nil {
+	if _, err := w.Write(lengthBufSimpleTypeTwo); err != nil {
 		return err
 	}
 
@@ -648,12 +654,14 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	return nil
 }
 
+var lengthBufDeferredContainer = []byte{131}
+
 func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{131}); err != nil {
+	if _, err := w.Write(lengthBufDeferredContainer); err != nil {
 		return err
 	}
 
