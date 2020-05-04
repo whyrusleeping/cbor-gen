@@ -458,6 +458,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 }
 
 func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
+	// 9 byte buffer to accomodate for the maximum header length (cbor varints are maximum 9 bytes_
 	err := doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
 func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if t == nil {
