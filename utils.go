@@ -247,7 +247,7 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 		return maj, uint64(next), nil
 	case low == 25:
 		scratch := make([]byte, 2)
-		if _, err := io.ReadFull(br, scratch[:2]); err != nil {
+		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
@@ -257,7 +257,7 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 		return maj, val, nil
 	case low == 26:
 		scratch := make([]byte, 4)
-		if _, err := io.ReadFull(br, scratch[:4]); err != nil {
+		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
@@ -267,10 +267,75 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 		return maj, val, nil
 	case low == 27:
 		scratch := make([]byte, 8)
-		if _, err := io.ReadFull(br, scratch); err != nil {
+		if _, err := io.ReadAtLeast(br, scratch, 8); err != nil {
 			return 0, 0, err
 		}
 		val := binary.BigEndian.Uint64(scratch)
+		if val <= math.MaxUint32 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 27 with value <= MaxUint32)")
+		}
+		return maj, val, nil
+	default:
+		return 0, 0, fmt.Errorf("invalid header: (%x)", first)
+	}
+}
+
+func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
+	n, err := r.Read(scratch[:1])
+	if err != nil {
+		return 0, err
+	}
+	if n != 1 {
+		return 0, fmt.Errorf("failed to read a byte")
+	}
+	return scratch[0], err
+}
+
+// same as the above, just tries to allocate less by using a passed in scratch buffer
+func CborReadHeaderBuf(br io.Reader, scratch []byte) (byte, uint64, error) {
+	first, err := readByteBuf(br, scratch)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	maj := (first & 0xe0) >> 5
+	low := first & 0x1f
+
+	switch {
+	case low < 24:
+		return maj, uint64(low), nil
+	case low == 24:
+		next, err := readByteBuf(br, scratch)
+		if err != nil {
+			return 0, 0, err
+		}
+		if next < 24 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 24 with value < 24)")
+		}
+		return maj, uint64(next), nil
+	case low == 25:
+		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
+			return 0, 0, err
+		}
+		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
+		if val <= math.MaxUint8 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 25 with value <= MaxUint8)")
+		}
+		return maj, val, nil
+	case low == 26:
+		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
+			return 0, 0, err
+		}
+		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
+		if val <= math.MaxUint16 {
+			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
+		}
+		return maj, val, nil
+	case low == 27:
+		if _, err := io.ReadAtLeast(br, scratch[:8], 8); err != nil {
+			return 0, 0, err
+		}
+		val := binary.BigEndian.Uint64(scratch[:8])
 		if val <= math.MaxUint32 {
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 27 with value <= MaxUint32)")
 		}
@@ -406,7 +471,7 @@ func ReadByteArray(br io.Reader, maxlen uint64) ([]byte, error) {
 	}
 
 	buf := make([]byte, extra)
-	if _, err := io.ReadFull(br, buf); err != nil {
+	if _, err := io.ReadAtLeast(br, buf, int(extra)); err != nil {
 		return nil, err
 	}
 
@@ -446,7 +511,30 @@ func ReadString(r io.Reader) (string, error) {
 	}
 
 	buf := make([]byte, l)
-	_, err = io.ReadFull(r, buf)
+	_, err = io.ReadAtLeast(r, buf, int(l))
+	if err != nil {
+		return "", err
+	}
+
+	return string(buf), nil
+}
+
+func ReadStringBuf(r io.Reader, scratch []byte) (string, error) {
+	maj, l, err := CborReadHeaderBuf(r, scratch)
+	if err != nil {
+		return "", err
+	}
+
+	if maj != MajTextString {
+		return "", fmt.Errorf("got tag %d while reading string value (l = %d)", maj, l)
+	}
+
+	if l > MaxLength {
+		return "", fmt.Errorf("string in input was too long")
+	}
+
+	buf := make([]byte, l)
+	_, err = io.ReadAtLeast(r, buf, int(l))
 	if err != nil {
 		return "", err
 	}

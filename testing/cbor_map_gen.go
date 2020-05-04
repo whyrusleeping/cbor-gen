@@ -185,8 +185,9 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 
 func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -204,7 +205,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(br)
+			sval, err := cbg.ReadStringBuf(br, scratch)
 			if err != nil {
 				return err
 			}
@@ -260,7 +261,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 			// t.Others ([]uint64) (slice)
 		case "Others":
 
-			maj, extra, err = cbg.CborReadHeader(br)
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
 				return err
 			}
@@ -279,7 +280,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 
 			for i := 0; i < int(extra); i++ {
 
-				maj, val, err := cbg.CborReadHeader(br)
+				maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
 				if err != nil {
 					return xerrors.Errorf("failed to read uint64 for t.Others slice: %w", err)
 				}
@@ -294,7 +295,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 			// t.Test ([][]uint8) (slice)
 		case "Test":
 
-			maj, extra, err = cbg.CborReadHeader(br)
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
 				return err
 			}
@@ -317,7 +318,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 					var extra uint64
 					var err error
 
-					maj, extra, err = cbg.CborReadHeader(br)
+					maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 					if err != nil {
 						return err
 					}
@@ -339,7 +340,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 		case "Dog":
 
 			{
-				sval, err := cbg.ReadString(br)
+				sval, err := cbg.ReadStringBuf(br, scratch)
 				if err != nil {
 					return err
 				}
@@ -349,7 +350,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 			// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
 		case "SixtyThreeBitIntegerWithASignBit":
 			{
-				maj, extra, err := cbg.CborReadHeader(br)
+				maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 				var extraI int64
 				if err != nil {
 					return err
@@ -387,7 +388,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 						return err
 					}
 				} else {
-					maj, extra, err = cbg.CborReadHeader(br)
+					maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 					if err != nil {
 						return err
 					}

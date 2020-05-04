@@ -43,8 +43,9 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 
 func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 
 	// t.Signed ([]uint64) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeader(br)
+		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Signed slice: %w", err)
 		}
@@ -151,8 +152,9 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -167,7 +169,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	// t.Foo (string) (string)
 
 	{
-		sval, err := cbg.ReadString(br)
+		sval, err := cbg.ReadStringBuf(br, scratch)
 		if err != nil {
 			return err
 		}
@@ -178,7 +180,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 
 	{
 
-		maj, extra, err = cbg.CborReadHeader(br)
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return err
 		}
@@ -190,7 +192,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.Binary ([]uint8) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -207,7 +209,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.Signed (int64) (int64)
 	{
-		maj, extra, err := cbg.CborReadHeader(br)
+		maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 		var extraI int64
 		if err != nil {
 			return err
@@ -375,8 +377,9 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -411,7 +414,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.Others ([]uint64) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -430,7 +433,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeader(br)
+		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Others slice: %w", err)
 		}
@@ -444,7 +447,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 
 	// t.SignedOthers ([]int64) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -463,7 +466,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 
 	for i := 0; i < int(extra); i++ {
 		{
-			maj, extra, err := cbg.CborReadHeader(br)
+			maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 			var extraI int64
 			if err != nil {
 				return err
@@ -490,7 +493,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 
 	// t.Test ([][]uint8) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -513,7 +516,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			var extra uint64
 			var err error
 
-			maj, extra, err = cbg.CborReadHeader(br)
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
 				return err
 			}
@@ -534,7 +537,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	// t.Dog (string) (string)
 
 	{
-		sval, err := cbg.ReadString(br)
+		sval, err := cbg.ReadStringBuf(br, scratch)
 		if err != nil {
 			return err
 		}
@@ -543,7 +546,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.Numbers ([]testing.NaturalNumber) (slice)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -562,7 +565,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeader(br)
+		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Numbers slice: %w", err)
 		}
@@ -588,7 +591,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 				return err
 			}
 		} else {
-			maj, extra, err = cbg.CborReadHeader(br)
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
 				return err
 			}
@@ -614,7 +617,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 				return err
 			}
 		} else {
-			maj, extra, err = cbg.CborReadHeader(br)
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
 				return err
 			}
@@ -628,7 +631,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	}
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
-	maj, extra, err = cbg.CborReadHeader(br)
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -694,8 +697,9 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 
 func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
 	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeader(br)
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -742,7 +746,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
 
 	{
 
-		maj, extra, err = cbg.CborReadHeader(br)
+		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return err
 		}
