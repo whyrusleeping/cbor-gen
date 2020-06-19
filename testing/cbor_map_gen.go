@@ -184,6 +184,8 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
+	*t = SimpleTypeTree{}
+
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
