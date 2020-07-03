@@ -13,19 +13,15 @@ import (
 	cid "github.com/ipfs/go-cid"
 )
 
-func ScanForLinks(br io.Reader) ([]cid.Cid, error) {
-	var out []cid.Cid
-	if err := scanForLinksRec(br, func(c cid.Cid) {
-		out = append(out, c)
-	}); err != nil {
-		return nil, err
-	}
+const maxCidLength = 100
 
-	return out, nil
+func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
+	buf := make([]byte, maxCidLength)
+	return scanForLinksRec(br, cb, buf)
 }
 
-func scanForLinksRec(br io.Reader, cb func(cid.Cid)) error {
-	maj, extra, err := CborReadHeader(br)
+func scanForLinksRec(br io.Reader, cb func(cid.Cid), scratch []byte) error {
+	maj, extra, err := CborReadHeaderBuf(br, scratch)
 	if err != nil {
 		return err
 	}
@@ -39,29 +35,43 @@ func scanForLinksRec(br io.Reader, cb func(cid.Cid)) error {
 		}
 	case MajTag:
 		if extra == 42 {
-			buf, err := ReadByteArray(br, 1000)
+			maj, extra, err = CborReadHeaderBuf(br, scratch)
 			if err != nil {
 				return err
 			}
-			c, err := cid.Cast(buf[1:])
+
+			if maj != MajByteString {
+				return fmt.Errorf("expected cbor type 'byte string' in input")
+			}
+
+			if extra > maxCidLength {
+				return fmt.Errorf("string in cbor input too long")
+			}
+
+			if _, err := io.ReadAtLeast(br, scratch, int(extra)); err != nil {
+				return err
+			}
+
+			c, err := cid.Cast(scratch[1:extra])
 			if err != nil {
 				return err
 			}
 			cb(c)
+
 		} else {
-			if err := scanForLinksRec(br, cb); err != nil {
+			if err := scanForLinksRec(br, cb, scratch); err != nil {
 				return err
 			}
 		}
 	case MajArray:
 		for i := 0; i < int(extra); i++ {
-			if err := scanForLinksRec(br, cb); err != nil {
+			if err := scanForLinksRec(br, cb, scratch); err != nil {
 				return err
 			}
 		}
 	case MajMap:
 		for i := 0; i < int(extra*2); i++ {
-			if err := scanForLinksRec(br, cb); err != nil {
+			if err := scanForLinksRec(br, cb, scratch); err != nil {
 				return err
 			}
 		}
