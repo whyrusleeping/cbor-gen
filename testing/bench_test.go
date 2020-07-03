@@ -9,6 +9,9 @@ import (
 	"reflect"
 	"testing"
 	"testing/quick"
+
+	"github.com/ipfs/go-cid"
+	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
 func BenchmarkMarshaling(b *testing.B) {
@@ -50,4 +53,28 @@ func BenchmarkUnmarshaling(b *testing.B) {
 		}
 	}
 
+}
+
+func BenchmarkLinkScan(b *testing.B) {
+	r := rand.New(rand.NewSource(123456))
+	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
+	if !ok {
+		b.Fatal("failed to construct type")
+	}
+
+	tt := val.Interface().(SimpleTypeTwo)
+
+	buf := new(bytes.Buffer)
+	if err := tt.MarshalCBOR(buf); err != nil {
+		b.Fatal(err)
+	}
+
+	b.ReportAllocs()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		if err := cbg.ScanForLinks(bytes.NewReader(buf.Bytes()), func(cid.Cid) {}); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
