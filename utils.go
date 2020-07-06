@@ -92,6 +92,8 @@ const (
 	MajOther       = 7
 )
 
+var maxLengthError = fmt.Errorf("length beyond maximum allowed")
+
 type CBORUnmarshaler interface {
 	UnmarshalCBOR(io.Reader) error
 }
@@ -102,6 +104,14 @@ type CBORMarshaler interface {
 
 type Deferred struct {
 	Raw []byte
+	nestedLevel int
+}
+
+func (d *Deferred) Child() Deferred {
+	return Deferred{
+		Raw:         nil,
+		nestedLevel: d.nestedLevel + 1,
+	}
 }
 
 func (d *Deferred) MarshalCBOR(w io.Writer) error {
@@ -126,10 +136,20 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 	header := CborEncodeMajorType(maj, extra)
 
 	switch maj {
+	case MajTag, MajArray, MajMap:
+		if d.nestedLevel >= MaxLength {
+			return maxLengthError
+		}
+	}
+
+	switch maj {
 	case MajUnsignedInt, MajNegativeInt, MajOther:
 		d.Raw = header
 		return nil
 	case MajByteString, MajTextString:
+		if extra > ByteArrayMaxLen {
+			return maxLengthError
+		}
 		buf := make([]byte, int(extra)+len(header))
 		copy(buf, header)
 		if _, err := io.ReadFull(br, buf[len(header):]); err != nil {
@@ -140,33 +160,42 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 
 		return nil
 	case MajTag:
-		sub := new(Deferred)
+		sub := d.Child()
 		if err := sub.UnmarshalCBOR(br); err != nil {
 			return err
 		}
 
 		d.Raw = append(header, sub.Raw...)
+		if len(d.Raw) > ByteArrayMaxLen {
+			return maxLengthError
+		}
 		return nil
 	case MajArray:
 		d.Raw = header
 		for i := 0; i < int(extra); i++ {
-			sub := new(Deferred)
+			sub := d.Child()
 			if err := sub.UnmarshalCBOR(br); err != nil {
 				return err
 			}
 
 			d.Raw = append(d.Raw, sub.Raw...)
+			if len(d.Raw) > ByteArrayMaxLen {
+				return maxLengthError
+			}
 		}
 		return nil
 	case MajMap:
 		d.Raw = header
-		sub := new(Deferred)
+		sub := d.Child()
 		for i := 0; i < int(extra*2); i++ {
 			sub.Raw = sub.Raw[:0]
 			if err := sub.UnmarshalCBOR(br); err != nil {
 				return err
 			}
 			d.Raw = append(d.Raw, sub.Raw...)
+			if len(d.Raw) > ByteArrayMaxLen {
+				return maxLengthError
+			}
 		}
 		return nil
 	default:
