@@ -42,6 +42,8 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
+	*t = SignedArray{}
+
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
@@ -151,6 +153,8 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
+	*t = SimpleTypeOne{}
+
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
@@ -376,6 +380,8 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
+	*t = SimpleTypeTwo{}
+
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
@@ -696,6 +702,8 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
+	*t = DeferredContainer{}
+
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
