@@ -48,7 +48,7 @@ func scanForLinksRec(br io.Reader, cb func(cid.Cid), scratch []byte) error {
 				return fmt.Errorf("string in cbor input too long")
 			}
 
-			if _, err := io.ReadAtLeast(br, scratch, int(extra)); err != nil {
+			if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
 				return err
 			}
 
@@ -103,7 +103,7 @@ type CBORMarshaler interface {
 }
 
 type Deferred struct {
-	Raw []byte
+	Raw         []byte
 	nestedLevel int
 }
 
