@@ -3,7 +3,6 @@ package typegen
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"testing"
 
 	cid "github.com/ipfs/go-cid"
@@ -22,7 +21,7 @@ func TestLinkScan(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(cids)
+	t.Log(cids)
 }
 
 func TestDeferredMaxLengthSingle(t *testing.T) {
