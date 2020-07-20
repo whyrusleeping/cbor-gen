@@ -369,17 +369,28 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 	e := f.Type.Elem()
 
-	if e.Kind() == reflect.Uint8 {
-		return doTemplate(w, f, `
-	if len({{ .Name }}) > cbg.ByteArrayMaxLen {
-		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
-	}
-
-	{{ MajorType "w" "cbg.MajByteString" (print "len(" .Name ")" ) }}
-
-	if _, err := w.Write({{ .Name }}); err != nil {
+	err := doTemplate(w, f, `
+	if {{ .Name }} == nil {
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {`)
+	if err != nil {
 		return err
 	}
+	defer fmt.Fprintf(w, "\t}\n")
+
+	if e.Kind() == reflect.Uint8 {
+		return doTemplate(w, f, `
+		if len({{ .Name }}) > cbg.ByteArrayMaxLen {
+			return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
+		}
+	
+		{{ MajorType "w" "cbg.MajByteString" (print "len(" .Name ")" ) }}
+	
+		if _, err := w.Write({{ .Name }}); err != nil {
+			return err
+		}
 `)
 	}
 
@@ -387,13 +398,13 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		e = e.Elem()
 	}
 
-	err := doTemplate(w, f, `
-	if len({{ .Name }}) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
-	}
-
-	{{ MajorType "w" "cbg.MajArray" ( print "len(" .Name ")" ) }}
-	for _, v := range {{ .Name }} {`)
+	err = doTemplate(w, f, `
+		if len({{ .Name }}) > cbg.MaxLength {
+			return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
+		}
+	
+		{{ MajorType "w" "cbg.MajArray" ( print "len(" .Name ")" ) }}
+		for _, v := range {{ .Name }} {`)
 	if err != nil {
 		return err
 	}
@@ -406,9 +417,9 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		switch fname {
 		case "github.com/ipfs/go-cid.Cid":
 			err := doTemplate(w, f, `
-		if err := cbg.WriteCidBuf(scratch, w, v); err != nil {
-			return xerrors.Errorf("failed writing cid field {{ .Name }}: %w", err)
-		}
+			if err := cbg.WriteCidBuf(scratch, w, v); err != nil {
+				return xerrors.Errorf("failed writing cid field {{ .Name }}: %w", err)
+			}
 `)
 			if err != nil {
 				return err
@@ -416,9 +427,9 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 		default:
 			err := doTemplate(w, f, `
-		if err := v.MarshalCBOR(w); err != nil {
-			return err
-		}
+			if err := v.MarshalCBOR(w); err != nil {
+				return err
+			}
 `)
 			if err != nil {
 				return err
@@ -426,18 +437,18 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		}
 	case reflect.Uint64:
 		err := doTemplate(w, f, `
-		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
-			return err
-		}
+			if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+				return err
+			}
 `)
 		if err != nil {
 			return err
 		}
 	case reflect.Uint8:
 		err := doTemplate(w, f, `
-		if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
-			return err
-		}
+			if err := cbg.CborWriteHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+				return err
+			}
 `)
 		if err != nil {
 			return err
@@ -456,7 +467,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	// array end
-	fmt.Fprintf(w, "\t}\n")
+	fmt.Fprintf(w, "\t\t}\n")
 	return nil
 }
 
@@ -845,50 +856,54 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	if err != nil {
 		return err
 	}
-`)
+
+	if maj == cbg.MajOther && extra == 22 {
+		{{ .Name }} = nil
+	} else {`)
 	if err != nil {
 		return err
 	}
+	defer fmt.Fprintf(w, "\t}\n")
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if extra > cbg.ByteArrayMaxLen {
-		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	{{ .Name }} = make([]byte, extra)
-	if _, err := io.ReadFull(br, {{ .Name }}); err != nil {
-		return err
-	}
+		if extra > cbg.ByteArrayMaxLen {
+			return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
+		{{ .Name }} = make([]byte, extra)
+		if _, err := io.ReadFull(br, {{ .Name }}); err != nil {
+			return err
+		}
 `)
 	}
 
 	if err := doTemplate(w, f, `
-	if extra > cbg.MaxLength {
-		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
-	}
+		if extra > cbg.MaxLength {
+			return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
+		}
 `); err != nil {
 		return err
 	}
 
 	err = doTemplate(w, f, `
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-	{{if .IsArray}}
-	if extra != {{ .Len }} {
-		return fmt.Errorf("expected array to have {{ .Len }} elements")
-	}
-
-	{{ .Name }} = {{ .TypeName }}{}
-	{{else}}
-	if extra > 0 {
-		{{ .Name }} = make({{ .TypeName }}, extra)
-	}
-	{{end}}
-	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
+		{{if .IsArray}}
+		if extra != {{ .Len }} {
+			return fmt.Errorf("expected array to have {{ .Len }} elements")
+		}
+	
+		{{ .Name }} = {{ .TypeName }}{}
+		{{else}}
+		if extra > 0 {
+			{{ .Name }} = make({{ .TypeName }}, extra)
+		}
+		{{end}}
+		for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
 `)
 	if err != nil {
 		return err
@@ -900,11 +915,11 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		switch fname {
 		case "github.com/ipfs/go-cid.Cid":
 			err := doTemplate(w, f, `
-		c, err := cbg.ReadCid(br)
-		if err != nil {
-			return xerrors.Errorf("reading cid field {{ .Name }} failed: %w", err)
-		}
-		{{ .Name }}[{{ .IterLabel }}] = c
+			c, err := cbg.ReadCid(br)
+			if err != nil {
+				return xerrors.Errorf("reading cid field {{ .Name }} failed: %w", err)
+			}
+			{{ .Name }}[{{ .IterLabel }}] = c
 `)
 			if err != nil {
 				return err
@@ -918,12 +933,12 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			}
 
 			err := doTemplate(w, subf, `
-		var v {{ .TypeName }}
-		if err := v.UnmarshalCBOR(br); err != nil {
-			return err
-		}
-
-		{{ .Name }} = {{ if .Pointer }}&{{ end }}v
+			var v {{ .TypeName }}
+			if err := v.UnmarshalCBOR(br); err != nil {
+				return err
+			}
+	
+			{{ .Name }} = {{ if .Pointer }}&{{ end }}v
 `)
 			if err != nil {
 				return err
@@ -931,16 +946,16 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		}
 	case reflect.Uint64:
 		err := doTemplate(w, f, `
-		maj, val, err := {{ ReadHeader "br" }}
-		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
-		}
-
-		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
-		}
-		
-		{{ .Name }}[{{ .IterLabel}}] = {{ .ElemName }}(val)
+			maj, val, err := {{ ReadHeader "br" }}
+			if err != nil {
+				return xerrors.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
+			}
+	
+			if maj != cbg.MajUnsignedInt {
+				return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
+			}
+			
+			{{ .Name }}[{{ .IterLabel}}] = {{ .ElemName }}(val)
 `)
 		if err != nil {
 			return err
