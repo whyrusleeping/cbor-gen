@@ -108,7 +108,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 
-		if _, err := w.Write(v); err != nil {
+		if _, err := w.Write(v[:]); err != nil {
 			return err
 		}
 	}
@@ -331,8 +331,12 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 					if maj != cbg.MajByteString {
 						return fmt.Errorf("expected byte array")
 					}
-					t.Test[i] = make([]byte, extra)
-					if _, err := io.ReadFull(br, t.Test[i]); err != nil {
+
+					if extra > 0 {
+						t.Test[i] = make([]uint8, extra)
+					}
+
+					if _, err := io.ReadFull(br, t.Test[i][:]); err != nil {
 						return err
 					}
 				}

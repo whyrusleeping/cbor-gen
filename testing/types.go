@@ -46,3 +46,9 @@ type DeferredContainer struct {
 	Deferred *cbg.Deferred
 	Value    uint64
 }
+
+type FixedArrays struct {
+	Bytes  [20]byte
+	Uint8  [20]uint8
+	Uint64 [20]uint64
+}
