@@ -105,3 +105,9 @@ func TestNilValueDeferredUnmarshaling(t *testing.T) {
 		t.Fatal("shouldnt be nil!")
 	}
 }
+
+func TestFixedArrays(t *testing.T) {
+	zero := &FixedArrays{}
+	recepticle := &FixedArrays{}
+	testValueRoundtrip(t, zero, recepticle)
+}
