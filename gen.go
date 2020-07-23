@@ -202,7 +202,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	{{ MajorType "w" "cbg.MajTextString" (print "len(" .Name ")") }}
-	if _, err := io.WriteString(w, {{ .Name }}); err != nil {
+	if _, err := io.WriteString(w, string({{ .Name }})); err != nil {
 		return err
 	}
 `)

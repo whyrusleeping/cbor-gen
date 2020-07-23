@@ -95,7 +95,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 	return nil
 }
 
-var lengthBufSimpleTypeOne = []byte{132}
+var lengthBufSimpleTypeOne = []byte{133}
 
 func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -116,7 +116,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.Foo))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, t.Foo); err != nil {
+	if _, err := io.WriteString(w, string(t.Foo)); err != nil {
 		return err
 	}
 
@@ -149,6 +149,18 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	}
+
+	// t.NString (testing.NamedString) (string)
+	if len(t.NString) > cbg.MaxLength {
+		return xerrors.Errorf("Value in field t.NString was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.NString))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string(t.NString)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -166,7 +178,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 4 {
+	if extra != 5 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -239,6 +251,16 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 		}
 
 		t.Signed = int64(extraI)
+	}
+	// t.NString (testing.NamedString) (string)
+
+	{
+		sval, err := cbg.ReadStringBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+
+		t.NString = NamedString(sval)
 	}
 	return nil
 }
@@ -325,11 +347,11 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, t.Dog); err != nil {
+	if _, err := io.WriteString(w, string(t.Dog)); err != nil {
 		return err
 	}
 
-	// t.Numbers ([]testing.NaturalNumber) (slice)
+	// t.Numbers ([]testing.NamedNumber) (slice)
 	if len(t.Numbers) > cbg.MaxLength {
 		return xerrors.Errorf("Slice value in field t.Numbers was too long")
 	}
@@ -355,7 +377,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	// t.PointyPizza (testing.NaturalNumber) (uint64)
+	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	if t.PointyPizza == nil {
 		if _, err := w.Write(cbg.CborNull); err != nil {
@@ -558,7 +580,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 
 		t.Dog = string(sval)
 	}
-	// t.Numbers ([]testing.NaturalNumber) (slice)
+	// t.Numbers ([]testing.NamedNumber) (slice)
 
 	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 	if err != nil {
@@ -574,7 +596,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	}
 
 	if extra > 0 {
-		t.Numbers = make([]NaturalNumber, extra)
+		t.Numbers = make([]NamedNumber, extra)
 	}
 
 	for i := 0; i < int(extra); i++ {
@@ -588,7 +610,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			return xerrors.Errorf("value read for array t.Numbers was not a uint, instead got %d", maj)
 		}
 
-		t.Numbers[i] = NaturalNumber(val)
+		t.Numbers[i] = NamedNumber(val)
 	}
 
 	// t.Pizza (uint64) (uint64)
@@ -617,7 +639,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 		}
 
 	}
-	// t.PointyPizza (testing.NaturalNumber) (uint64)
+	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	{
 
@@ -638,7 +660,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			if maj != cbg.MajUnsignedInt {
 				return fmt.Errorf("wrong type for uint64 field")
 			}
-			typed := NaturalNumber(extra)
+			typed := NamedNumber(extra)
 			t.PointyPizza = &typed
 		}
 

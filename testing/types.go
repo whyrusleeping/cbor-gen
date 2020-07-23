@@ -6,17 +6,19 @@ import (
 
 const Thingc = 3
 
-type NaturalNumber uint64
+type NamedNumber uint64
+type NamedString string
 
 type SignedArray struct {
 	Signed []uint64
 }
 
 type SimpleTypeOne struct {
-	Foo    string
-	Value  uint64
-	Binary []byte
-	Signed int64
+	Foo     string
+	Value   uint64
+	Binary  []byte
+	Signed  int64
+	NString NamedString
 }
 
 type SimpleTypeTwo struct {
@@ -25,9 +27,9 @@ type SimpleTypeTwo struct {
 	SignedOthers []int64
 	Test         [][]byte
 	Dog          string
-	Numbers      []NaturalNumber
+	Numbers      []NamedNumber
 	Pizza        *uint64
-	PointyPizza  *NaturalNumber
+	PointyPizza  *NamedNumber
 	Arrrrrghay   [Thingc]SimpleTypeOne
 }
 
