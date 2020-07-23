@@ -31,7 +31,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("Stuff"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "Stuff"); err != nil {
+	if _, err := io.WriteString(w, string("Stuff")); err != nil {
 		return err
 	}
 
@@ -47,7 +47,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("Stufff"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "Stufff"); err != nil {
+	if _, err := io.WriteString(w, string("Stufff")); err != nil {
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("Others"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "Others"); err != nil {
+	if _, err := io.WriteString(w, string("Others")); err != nil {
 		return err
 	}
 
@@ -88,7 +88,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("Test"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "Test"); err != nil {
+	if _, err := io.WriteString(w, string("Test")); err != nil {
 		return err
 	}
 
@@ -121,7 +121,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("Dog"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "Dog"); err != nil {
+	if _, err := io.WriteString(w, string("Dog")); err != nil {
 		return err
 	}
 
@@ -132,7 +132,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, t.Dog); err != nil {
+	if _, err := io.WriteString(w, string(t.Dog)); err != nil {
 		return err
 	}
 
@@ -144,7 +144,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "SixtyThreeBitIntegerWithASignBit"); err != nil {
+	if _, err := io.WriteString(w, string("SixtyThreeBitIntegerWithASignBit")); err != nil {
 		return err
 	}
 
@@ -166,7 +166,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("NotPizza"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, "NotPizza"); err != nil {
+	if _, err := io.WriteString(w, string("NotPizza")); err != nil {
 		return err
 	}
 
