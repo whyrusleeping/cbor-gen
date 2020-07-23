@@ -150,12 +150,17 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	// t.NString (testing.NamedString) (uint64)
-
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.NString)); err != nil {
-		return err
+	// t.NString (testing.NamedString) (string)
+	if len(t.NString) > cbg.MaxLength {
+		return xerrors.Errorf("Value in field t.NString was too long")
 	}
 
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.NString))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string(t.NString)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -247,19 +252,15 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 
 		t.Signed = int64(extraI)
 	}
-	// t.NString (testing.NamedString) (uint64)
+	// t.NString (testing.NamedString) (string)
 
 	{
-
-		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		sval, err := cbg.ReadStringBuf(br, scratch)
 		if err != nil {
 			return err
 		}
-		if maj != cbg.MajUnsignedInt {
-			return fmt.Errorf("wrong type for uint64 field")
-		}
-		t.NString = NamedString(extra)
 
+		t.NString = NamedString(sval)
 	}
 	return nil
 }

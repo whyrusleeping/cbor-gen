@@ -7,7 +7,7 @@ import (
 const Thingc = 3
 
 type NamedNumber uint64
-type NamedString uint64
+type NamedString string
 
 type SignedArray struct {
 	Signed []uint64
