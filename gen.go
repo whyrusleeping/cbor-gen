@@ -55,6 +55,7 @@ type Field struct {
 	Type    reflect.Type
 	Pkg     string
 
+	Nullable  bool
 	IterLabel string
 }
 
@@ -152,11 +153,25 @@ func ParseTypeInfo(pkg string, i interface{}) (*GenTypeInfo, error) {
 			pointer = true
 		}
 
+		var nullable bool
+		if value, ok := f.Tag.Lookup("cbg"); ok {
+			tags := strings.Split(value, ",")
+			for _, tag := range tags {
+				switch tag {
+				case "nullable":
+					nullable = true
+				default:
+					return nil, fmt.Errorf("unexpected tag: %s", tag)
+				}
+			}
+		}
+
 		out.Fields = append(out.Fields, Field{
-			Name:    f.Name,
-			Pointer: pointer,
-			Type:    ft,
-			Pkg:     pkg,
+			Name:     f.Name,
+			Pointer:  pointer,
+			Type:     ft,
+			Pkg:      pkg,
+			Nullable: nullable,
 		})
 	}
 
@@ -234,9 +249,13 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 		return doTemplate(w, f, `
 {{ if .Pointer }}
 	if {{ .Name }} == nil {
+  {{ if .Nullable }}
 		if _, err := w.Write(cbg.CborNull); err != nil {
 			return err
 		}
+  {{ else }}
+		return xerrors.Errorf("attempted to write nil for a non-nullable field {{ .Name }}")
+  {{ end }}
 	} else {
 		if err := cbg.WriteCidBuf(scratch, w, *{{ .Name }}); err != nil {
 			return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
@@ -250,6 +269,11 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 `)
 	default:
 		return doTemplate(w, f, `
+{{ if (and .Pointer (not .Nullable)) }}
+	if {{ .Name }} == nil {
+		return xerrors.Errorf("attempted to write nil for a non-nullable field {{ .Name }}")
+	}
+{{ end }}
 	if err := {{ .Name }}.MarshalCBOR(w); err != nil {
 		return err
 	}
@@ -262,9 +286,13 @@ func emitCborMarshalUint64Field(w io.Writer, f Field) error {
 	return doTemplate(w, f, `
 {{ if .Pointer }}
 	if {{ .Name }} == nil {
+  {{ if .Nullable }}
 		if _, err := w.Write(cbg.CborNull); err != nil {
 			return err
 		}
+  {{ else }}
+		return xerrors.Errorf("attempted to write nil for a non-nullable field {{ .Name }}")
+  {{ end }}
 	} else {
 		{{ MajorType "w" "cbg.MajUnsignedInt" (print "*" .Name) }}
 	}
@@ -594,10 +622,14 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 			return err
 		}
 		if pb == cbg.CborNull[0] {
+  {{ if .Nullable }}
 			var nbuf [1]byte
 			if _, err := br.Read(nbuf[:]); err != nil {
 				return err
 			}
+  {{ else }}
+			return fmt.Errorf("found nil value in non-nullable field {{ .Name }}")
+  {{ end }}
 		} else {
 {{ end }}
 		c, err := cbg.ReadCid(br)
@@ -633,10 +665,14 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 			return err
 		}
 		if pb == cbg.CborNull[0] {
+  {{ if .Nullable }}
 			var nbuf [1]byte
 			if _, err := br.Read(nbuf[:]); err != nil {
 				return err
 			}
+  {{ else }}
+			return fmt.Errorf("found nil value in non-nullable field {{ .Name }}")
+  {{ end }}
 		} else {
 			{{ .Name }} = new({{ .TypeName }})
 			if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
@@ -690,10 +726,14 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		return err
 	}
 	if pb == cbg.CborNull[0] {
+  {{ if .Nullable }}
 		var nbuf [1]byte
 		if _, err := br.Read(nbuf[:]); err != nil {
 			return err
 		}
+  {{ else }}
+		return fmt.Errorf("found nil value in non-nullable field {{ .Name }}")
+  {{ end }}
 	} else {
 		maj, extra, err = {{ ReadHeader "br" }}
 		if err != nil {

@@ -171,9 +171,11 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	}
 
 	if t.NotPizza == nil {
+
 		if _, err := w.Write(cbg.CborNull); err != nil {
 			return err
 		}
+
 	} else {
 		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.NotPizza)); err != nil {
 			return err
@@ -226,10 +228,12 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 					return err
 				}
 				if pb == cbg.CborNull[0] {
+
 					var nbuf [1]byte
 					if _, err := br.Read(nbuf[:]); err != nil {
 						return err
 					}
+
 				} else {
 					t.Stuff = new(SimpleTypeTree)
 					if err := t.Stuff.UnmarshalCBOR(br); err != nil {
@@ -248,10 +252,12 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 					return err
 				}
 				if pb == cbg.CborNull[0] {
+
 					var nbuf [1]byte
 					if _, err := br.Read(nbuf[:]); err != nil {
 						return err
 					}
+
 				} else {
 					t.Stufff = new(SimpleTypeTwo)
 					if err := t.Stufff.UnmarshalCBOR(br); err != nil {
@@ -389,10 +395,12 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 					return err
 				}
 				if pb == cbg.CborNull[0] {
+
 					var nbuf [1]byte
 					if _, err := br.Read(nbuf[:]); err != nil {
 						return err
 					}
+
 				} else {
 					maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 					if err != nil {

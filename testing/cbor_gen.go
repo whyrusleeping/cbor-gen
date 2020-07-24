@@ -5,6 +5,7 @@ package testing
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	cbg "github.com/whyrusleeping/cbor-gen"
 	xerrors "golang.org/x/xerrors"
@@ -279,6 +280,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	scratch := make([]byte, 9)
 
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
+
 	if err := t.Stuff.MarshalCBOR(w); err != nil {
 		return err
 	}
@@ -368,9 +370,11 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	// t.Pizza (uint64) (uint64)
 
 	if t.Pizza == nil {
+
 		if _, err := w.Write(cbg.CborNull); err != nil {
 			return err
 		}
+
 	} else {
 		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.Pizza)); err != nil {
 			return err
@@ -380,9 +384,11 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	if t.PointyPizza == nil {
+
 		if _, err := w.Write(cbg.CborNull); err != nil {
 			return err
 		}
+
 	} else {
 		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.PointyPizza)); err != nil {
 			return err
@@ -432,10 +438,12 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			return err
 		}
 		if pb == cbg.CborNull[0] {
+
 			var nbuf [1]byte
 			if _, err := br.Read(nbuf[:]); err != nil {
 				return err
 			}
+
 		} else {
 			t.Stuff = new(SimpleTypeTwo)
 			if err := t.Stuff.UnmarshalCBOR(br); err != nil {
@@ -622,10 +630,12 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			return err
 		}
 		if pb == cbg.CborNull[0] {
+
 			var nbuf [1]byte
 			if _, err := br.Read(nbuf[:]); err != nil {
 				return err
 			}
+
 		} else {
 			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
@@ -648,10 +658,12 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			return err
 		}
 		if pb == cbg.CborNull[0] {
+
 			var nbuf [1]byte
 			if _, err := br.Read(nbuf[:]); err != nil {
 				return err
 			}
+
 		} else {
 			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
 			if err != nil {
@@ -713,11 +725,13 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 	scratch := make([]byte, 9)
 
 	// t.Stuff (testing.SimpleTypeOne) (struct)
+
 	if err := t.Stuff.MarshalCBOR(w); err != nil {
 		return err
 	}
 
 	// t.Deferred (typegen.Deferred) (struct)
+
 	if err := t.Deferred.MarshalCBOR(w); err != nil {
 		return err
 	}
@@ -758,10 +772,12 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
 			return err
 		}
 		if pb == cbg.CborNull[0] {
+
 			var nbuf [1]byte
 			if _, err := br.Read(nbuf[:]); err != nil {
 				return err
 			}
+
 		} else {
 			t.Stuff = new(SimpleTypeOne)
 			if err := t.Stuff.UnmarshalCBOR(br); err != nil {
@@ -951,5 +967,477 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
 		t.Uint64[i] = uint64(val)
 	}
 
+	return nil
+}
+
+var lengthBufNotNull = []byte{132}
+
+func (t *NotNull) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufNotNull); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Always (testing.SimpleTypeOne) (struct)
+
+	if t.Always == nil {
+		return xerrors.Errorf("attempted to write nil for a non-nullable field t.Always")
+	}
+
+	if err := t.Always.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Value (uint64) (uint64)
+
+	if t.Value == nil {
+
+		return xerrors.Errorf("attempted to write nil for a non-nullable field t.Value")
+
+	} else {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.Value)); err != nil {
+			return err
+		}
+	}
+
+	// t.Slice ([]*testing.NotNull) (slice)
+	if len(t.Slice) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.Slice was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Slice))); err != nil {
+		return err
+	}
+	for _, v := range t.Slice {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+
+	// t.Map (map[string]*testing.NotNull) (map)
+	{
+		if len(t.Map) > 4096 {
+			return xerrors.Errorf("cannot marshal t.Map map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.Map))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.Map))
+		for k := range t.Map {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.Map[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, k); err != nil {
+				return err
+			}
+
+			if err := v.MarshalCBOR(w); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
+func (t *NotNull) UnmarshalCBOR(r io.Reader) error {
+	*t = NotNull{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 4 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Always (testing.SimpleTypeOne) (struct)
+
+	{
+
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+
+			return fmt.Errorf("found nil value in non-nullable field t.Always")
+
+		} else {
+			t.Always = new(SimpleTypeOne)
+			if err := t.Always.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.Always pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Value (uint64) (uint64)
+
+	{
+
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+
+			return fmt.Errorf("found nil value in non-nullable field t.Value")
+
+		} else {
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := uint64(extra)
+			t.Value = &typed
+		}
+
+	}
+	// t.Slice ([]*testing.NotNull) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.Slice: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.Slice = make([]*NotNull, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+
+		var v NotNull
+		if err := v.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		t.Slice[i] = &v
+	}
+
+	// t.Map (map[string]*testing.NotNull) (map)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("expected a map (major type 5)")
+	}
+	if extra > 4096 {
+		return fmt.Errorf("t.Map: map too large")
+	}
+
+	t.Map = make(map[string]*NotNull, extra)
+
+	for i, l := 0, int(extra); i < l; i++ {
+
+		var k string
+
+		{
+			sval, err := cbg.ReadStringBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			k = string(sval)
+		}
+
+		var v *NotNull
+
+		{
+
+			pb, err := br.PeekByte()
+			if err != nil {
+				return err
+			}
+			if pb == cbg.CborNull[0] {
+
+				return fmt.Errorf("found nil value in non-nullable field v")
+
+			} else {
+				v = new(NotNull)
+				if err := v.UnmarshalCBOR(br); err != nil {
+					return xerrors.Errorf("unmarshaling v pointer: %w", err)
+				}
+			}
+
+		}
+
+		t.Map[k] = v
+
+	}
+	return nil
+}
+
+var lengthBufYesNull = []byte{132}
+
+func (t *YesNull) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufYesNull); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Always (testing.SimpleTypeOne) (struct)
+
+	if err := t.Always.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Value (uint64) (uint64)
+
+	if t.Value == nil {
+
+		if _, err := w.Write(cbg.CborNull); err != nil {
+			return err
+		}
+
+	} else {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.Value)); err != nil {
+			return err
+		}
+	}
+
+	// t.Slice ([]*testing.YesNull) (slice)
+	if len(t.Slice) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.Slice was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Slice))); err != nil {
+		return err
+	}
+	for _, v := range t.Slice {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+
+	// t.Map (map[string]*testing.YesNull) (map)
+	{
+		if len(t.Map) > 4096 {
+			return xerrors.Errorf("cannot marshal t.Map map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.Map))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.Map))
+		for k := range t.Map {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.Map[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, k); err != nil {
+				return err
+			}
+
+			if err := v.MarshalCBOR(w); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
+func (t *YesNull) UnmarshalCBOR(r io.Reader) error {
+	*t = YesNull{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 4 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Always (testing.SimpleTypeOne) (struct)
+
+	{
+
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+
+			var nbuf [1]byte
+			if _, err := br.Read(nbuf[:]); err != nil {
+				return err
+			}
+
+		} else {
+			t.Always = new(SimpleTypeOne)
+			if err := t.Always.UnmarshalCBOR(br); err != nil {
+				return xerrors.Errorf("unmarshaling t.Always pointer: %w", err)
+			}
+		}
+
+	}
+	// t.Value (uint64) (uint64)
+
+	{
+
+		pb, err := br.PeekByte()
+		if err != nil {
+			return err
+		}
+		if pb == cbg.CborNull[0] {
+
+			var nbuf [1]byte
+			if _, err := br.Read(nbuf[:]); err != nil {
+				return err
+			}
+
+		} else {
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := uint64(extra)
+			t.Value = &typed
+		}
+
+	}
+	// t.Slice ([]*testing.YesNull) (slice)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.Slice: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.Slice = make([]*YesNull, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+
+		var v YesNull
+		if err := v.UnmarshalCBOR(br); err != nil {
+			return err
+		}
+
+		t.Slice[i] = &v
+	}
+
+	// t.Map (map[string]*testing.YesNull) (map)
+
+	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("expected a map (major type 5)")
+	}
+	if extra > 4096 {
+		return fmt.Errorf("t.Map: map too large")
+	}
+
+	t.Map = make(map[string]*YesNull, extra)
+
+	for i, l := 0, int(extra); i < l; i++ {
+
+		var k string
+
+		{
+			sval, err := cbg.ReadStringBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			k = string(sval)
+		}
+
+		var v *YesNull
+
+		{
+
+			pb, err := br.PeekByte()
+			if err != nil {
+				return err
+			}
+			if pb == cbg.CborNull[0] {
+
+				return fmt.Errorf("found nil value in non-nullable field v")
+
+			} else {
+				v = new(YesNull)
+				if err := v.UnmarshalCBOR(br); err != nil {
+					return xerrors.Errorf("unmarshaling v pointer: %w", err)
+				}
+			}
+
+		}
+
+		t.Map[k] = v
+
+	}
 	return nil
 }

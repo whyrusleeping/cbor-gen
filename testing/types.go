@@ -22,31 +22,45 @@ type SimpleTypeOne struct {
 }
 
 type SimpleTypeTwo struct {
-	Stuff        *SimpleTypeTwo
+	Stuff        *SimpleTypeTwo `cbg:"nullable"`
 	Others       []uint64
 	SignedOthers []int64
 	Test         [][]byte
 	Dog          string
 	Numbers      []NamedNumber
-	Pizza        *uint64
-	PointyPizza  *NamedNumber
+	Pizza        *uint64      `cbg:"nullable"`
+	PointyPizza  *NamedNumber `cbg:"nullable"`
 	Arrrrrghay   [Thingc]SimpleTypeOne
 }
 
 type SimpleTypeTree struct {
-	Stuff                            *SimpleTypeTree
-	Stufff                           *SimpleTypeTwo
+	Stuff                            *SimpleTypeTree `cbg:"nullable"`
+	Stufff                           *SimpleTypeTwo  `cbg:"nullable"`
 	Others                           []uint64
 	Test                             [][]byte
 	Dog                              string
 	SixtyThreeBitIntegerWithASignBit int64
-	NotPizza                         *uint64
+	NotPizza                         *uint64 `cbg:"nullable"`
 }
 
 type DeferredContainer struct {
-	Stuff    *SimpleTypeOne
-	Deferred *cbg.Deferred
+	Stuff    *SimpleTypeOne `cbg:"nullable"`
+	Deferred *cbg.Deferred  `cbg:"nullable"`
 	Value    uint64
+}
+
+type NotNull struct {
+	Always *SimpleTypeOne
+	Value  *uint64
+	Slice  []*NotNull
+	Map    map[string]*NotNull
+}
+
+type YesNull struct {
+	Always *SimpleTypeOne      `cbg:"nullable"`
+	Value  *uint64             `cbg:"nullable"`
+	Slice  []*YesNull          `cbg:"nullable"`
+	Map    map[string]*YesNull `cbg:"nullable"`
 }
 
 type FixedArrays struct {
