@@ -1,6 +1,8 @@
 package typegen
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -202,8 +204,19 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 }
 
 func readByte(r io.Reader) (byte, error) {
-	if br, ok := r.(io.ByteReader); ok {
-		return br.ReadByte()
+	// try to cast to a concrete type, it's much faster than casting to an
+	// interface.
+	switch r := r.(type) {
+	case *bytes.Buffer:
+		return r.ReadByte()
+	case *bytes.Reader:
+		return r.ReadByte()
+	case *bufio.Reader:
+		return r.ReadByte()
+	case *peeker:
+		return r.ReadByte()
+	case io.ByteReader:
+		return r.ReadByte()
 	}
 	var buf [1]byte
 	_, err := io.ReadFull(r, buf[:1])
