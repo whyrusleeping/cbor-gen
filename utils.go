@@ -17,67 +17,55 @@ const maxCidLength = 100
 const maxHeaderSize = 9
 
 func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
-	buf := make([]byte, maxCidLength)
-	return scanForLinksRec(br, cb, buf)
-}
-
-func scanForLinksRec(br io.Reader, cb func(cid.Cid), scratch []byte) error {
-	maj, extra, err := CborReadHeaderBuf(br, scratch)
-	if err != nil {
-		return err
-	}
-
-	switch maj {
-	case MajUnsignedInt, MajNegativeInt, MajOther:
-	case MajByteString, MajTextString:
-		_, err := io.CopyN(ioutil.Discard, br, int64(extra))
+	scratch := make([]byte, maxCidLength)
+	for remaining := uint64(1); remaining > 0; remaining-- {
+		maj, extra, err := CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return err
 		}
-	case MajTag:
-		if extra == 42 {
-			maj, extra, err = CborReadHeaderBuf(br, scratch)
+
+		switch maj {
+		case MajUnsignedInt, MajNegativeInt, MajOther:
+		case MajByteString, MajTextString:
+			_, err := io.CopyN(ioutil.Discard, br, int64(extra))
 			if err != nil {
 				return err
 			}
+		case MajTag:
+			if extra == 42 {
+				maj, extra, err = CborReadHeaderBuf(br, scratch)
+				if err != nil {
+					return err
+				}
 
-			if maj != MajByteString {
-				return fmt.Errorf("expected cbor type 'byte string' in input")
-			}
+				if maj != MajByteString {
+					return fmt.Errorf("expected cbor type 'byte string' in input")
+				}
 
-			if extra > maxCidLength {
-				return fmt.Errorf("string in cbor input too long")
-			}
+				if extra > maxCidLength {
+					return fmt.Errorf("string in cbor input too long")
+				}
 
-			if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
-				return err
-			}
+				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
+					return err
+				}
 
-			c, err := cid.Cast(scratch[1:extra])
-			if err != nil {
-				return err
-			}
-			cb(c)
+				c, err := cid.Cast(scratch[1:extra])
+				if err != nil {
+					return err
+				}
+				cb(c)
 
-		} else {
-			if err := scanForLinksRec(br, cb, scratch); err != nil {
-				return err
+			} else {
+				remaining++
 			}
+		case MajArray:
+			remaining += extra
+		case MajMap:
+			remaining += (extra * 2)
+		default:
+			return fmt.Errorf("unhandled cbor type: %d", maj)
 		}
-	case MajArray:
-		for i := 0; i < int(extra); i++ {
-			if err := scanForLinksRec(br, cb, scratch); err != nil {
-				return err
-			}
-		}
-	case MajMap:
-		for i := 0; i < int(extra*2); i++ {
-			if err := scanForLinksRec(br, cb, scratch); err != nil {
-				return err
-			}
-		}
-	default:
-		return fmt.Errorf("unhandled cbor type: %d", maj)
 	}
 	return nil
 }
