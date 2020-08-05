@@ -589,16 +589,14 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		return doTemplate(w, f, `
 	{
 {{ if .Pointer }}
-		pb, err := br.PeekByte()
+		b, err := br.ReadByte()
 		if err != nil {
 			return err
 		}
-		if pb == cbg.CborNull[0] {
-			var nbuf [1]byte
-			if _, err := br.Read(nbuf[:]); err != nil {
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
 				return err
 			}
-		} else {
 {{ end }}
 		c, err := cbg.ReadCid(br)
 		if err != nil {
@@ -628,16 +626,14 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		return doTemplate(w, f, `
 	{
 {{ if .Pointer }}
-		pb, err := br.PeekByte()
+		b, err := br.ReadByte()
 		if err != nil {
 			return err
 		}
-		if pb == cbg.CborNull[0] {
-			var nbuf [1]byte
-			if _, err := br.Read(nbuf[:]); err != nil {
+		if b != cbg.CborNull[0] {
+			if err := br.UnreadByte(); err != nil {
 				return err
 			}
-		} else {
 			{{ .Name }} = new({{ .TypeName }})
 			if err := {{ .Name }}.UnmarshalCBOR(br); err != nil {
 				return xerrors.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
@@ -685,16 +681,14 @@ func emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 	return doTemplate(w, f, `
 	{
 {{ if .Pointer }}
-	pb, err := br.PeekByte()
+	b, err := br.ReadByte()
 	if err != nil {
 		return err
 	}
-	if pb == cbg.CborNull[0] {
-		var nbuf [1]byte
-		if _, err := br.Read(nbuf[:]); err != nil {
+	if b != cbg.CborNull[0] {
+		if err := br.UnreadByte(); err != nil {
 			return err
 		}
-	} else {
 		maj, extra, err = {{ ReadHeader "br" }}
 		if err != nil {
 			return err

@@ -1,8 +1,6 @@
 package typegen
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -200,57 +198,6 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 		return nil
 	default:
 		return fmt.Errorf("unhandled deferred cbor type: %d", maj)
-	}
-}
-
-// this is a bit gnarly i should just switch to taking in a byte array at the top level
-type BytePeeker interface {
-	io.Reader
-	PeekByte() (byte, error)
-}
-
-type peeker struct {
-	io.Reader
-}
-
-func (p *peeker) PeekByte() (byte, error) {
-	switch r := p.Reader.(type) {
-	case *bytes.Reader:
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-		return b, r.UnreadByte()
-	case *bytes.Buffer:
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-		return b, r.UnreadByte()
-	case *bufio.Reader:
-		o, err := r.Peek(1)
-		if err != nil {
-			return 0, err
-		}
-
-		return o[0], nil
-	default:
-		panic("invariant violated")
-	}
-}
-
-func GetPeeker(r io.Reader) BytePeeker {
-	switch r := r.(type) {
-	case *bytes.Reader:
-		return &peeker{r}
-	case *bytes.Buffer:
-		return &peeker{r}
-	case *bufio.Reader:
-		return &peeker{r}
-	case *peeker:
-		return r
-	default:
-		return &peeker{bufio.NewReaderSize(r, 16)}
 	}
 }
 
