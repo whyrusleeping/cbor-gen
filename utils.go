@@ -14,69 +14,58 @@ import (
 )
 
 const maxCidLength = 100
+const maxHeaderSize = 9
 
 func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
-	buf := make([]byte, maxCidLength)
-	return scanForLinksRec(br, cb, buf)
-}
-
-func scanForLinksRec(br io.Reader, cb func(cid.Cid), scratch []byte) error {
-	maj, extra, err := CborReadHeaderBuf(br, scratch)
-	if err != nil {
-		return err
-	}
-
-	switch maj {
-	case MajUnsignedInt, MajNegativeInt, MajOther:
-	case MajByteString, MajTextString:
-		_, err := io.CopyN(ioutil.Discard, br, int64(extra))
+	scratch := make([]byte, maxCidLength)
+	for remaining := uint64(1); remaining > 0; remaining-- {
+		maj, extra, err := CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return err
 		}
-	case MajTag:
-		if extra == 42 {
-			maj, extra, err = CborReadHeaderBuf(br, scratch)
+
+		switch maj {
+		case MajUnsignedInt, MajNegativeInt, MajOther:
+		case MajByteString, MajTextString:
+			_, err := io.CopyN(ioutil.Discard, br, int64(extra))
 			if err != nil {
 				return err
 			}
+		case MajTag:
+			if extra == 42 {
+				maj, extra, err = CborReadHeaderBuf(br, scratch)
+				if err != nil {
+					return err
+				}
 
-			if maj != MajByteString {
-				return fmt.Errorf("expected cbor type 'byte string' in input")
-			}
+				if maj != MajByteString {
+					return fmt.Errorf("expected cbor type 'byte string' in input")
+				}
 
-			if extra > maxCidLength {
-				return fmt.Errorf("string in cbor input too long")
-			}
+				if extra > maxCidLength {
+					return fmt.Errorf("string in cbor input too long")
+				}
 
-			if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
-				return err
-			}
+				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
+					return err
+				}
 
-			c, err := cid.Cast(scratch[1:extra])
-			if err != nil {
-				return err
-			}
-			cb(c)
+				c, err := cid.Cast(scratch[1:extra])
+				if err != nil {
+					return err
+				}
+				cb(c)
 
-		} else {
-			if err := scanForLinksRec(br, cb, scratch); err != nil {
-				return err
+			} else {
+				remaining++
 			}
+		case MajArray:
+			remaining += extra
+		case MajMap:
+			remaining += (extra * 2)
+		default:
+			return fmt.Errorf("unhandled cbor type: %d", maj)
 		}
-	case MajArray:
-		for i := 0; i < int(extra); i++ {
-			if err := scanForLinksRec(br, cb, scratch); err != nil {
-				return err
-			}
-		}
-	case MajMap:
-		for i := 0; i < int(extra*2); i++ {
-			if err := scanForLinksRec(br, cb, scratch); err != nil {
-				return err
-			}
-		}
-	default:
-		return fmt.Errorf("unhandled cbor type: %d", maj)
 	}
 	return nil
 }
@@ -103,15 +92,7 @@ type CBORMarshaler interface {
 }
 
 type Deferred struct {
-	Raw         []byte
-	nestedLevel int
-}
-
-func (d *Deferred) Child() Deferred {
-	return Deferred{
-		Raw:         nil,
-		nestedLevel: d.nestedLevel + 1,
-	}
+	Raw []byte
 }
 
 func (d *Deferred) MarshalCBOR(w io.Writer) error {
@@ -127,136 +108,82 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 }
 
 func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
-	// TODO: theres a more efficient way to implement this method, but for now
-	// this is fine
-	maj, extra, err := CborReadHeader(br)
-	if err != nil {
-		return err
-	}
-	header := CborEncodeMajorType(maj, extra)
+	// Reuse any existing buffers.
+	reusedBuf := d.Raw[:0]
+	d.Raw = nil
+	buf := bytes.NewBuffer(reusedBuf)
 
-	switch maj {
-	case MajTag, MajArray, MajMap:
-		if d.nestedLevel >= MaxLength {
-			return maxLengthError
-		}
-	}
+	// Allocate some scratch space.
+	scratch := make([]byte, maxHeaderSize)
 
-	switch maj {
-	case MajUnsignedInt, MajNegativeInt, MajOther:
-		d.Raw = header
-		return nil
-	case MajByteString, MajTextString:
-		if extra > ByteArrayMaxLen {
-			return maxLengthError
+	// Algorithm:
+	//
+	// 1. We start off expecting to read one element.
+	// 2. If we see a tag, we expect to read one more element so we increment "remaining".
+	// 3. If see an array, we expect to read "extra" elements so we add "extra" to "remaining".
+	// 4. If see a map, we expect to read "2*extra" elements so we add "2*extra" to "remaining".
+	// 5. While "remaining" is non-zero, read more elements.
+
+	// define this once so we don't keep allocating it.
+	limitedReader := io.LimitedReader{R: br}
+	for remaining := uint64(1); remaining > 0; remaining-- {
+		maj, extra, err := CborReadHeaderBuf(br, scratch)
+		if err != nil {
+			return err
 		}
-		buf := make([]byte, int(extra)+len(header))
-		copy(buf, header)
-		if _, err := io.ReadFull(br, buf[len(header):]); err != nil {
+		if err := WriteMajorTypeHeaderBuf(scratch, buf, maj, extra); err != nil {
 			return err
 		}
 
-		d.Raw = buf
-
-		return nil
-	case MajTag:
-		sub := d.Child()
-		if err := sub.UnmarshalCBOR(br); err != nil {
-			return err
-		}
-
-		d.Raw = append(header, sub.Raw...)
-		if len(d.Raw) > ByteArrayMaxLen {
-			return maxLengthError
-		}
-		return nil
-	case MajArray:
-		d.Raw = header
-		for i := 0; i < int(extra); i++ {
-			sub := d.Child()
-			if err := sub.UnmarshalCBOR(br); err != nil {
-				return err
-			}
-
-			d.Raw = append(d.Raw, sub.Raw...)
-			if len(d.Raw) > ByteArrayMaxLen {
+		switch maj {
+		case MajUnsignedInt, MajNegativeInt, MajOther:
+			// nothing fancy to do
+		case MajByteString, MajTextString:
+			if extra > ByteArrayMaxLen {
 				return maxLengthError
 			}
-		}
-		return nil
-	case MajMap:
-		d.Raw = header
-		sub := d.Child()
-		for i := 0; i < int(extra*2); i++ {
-			sub.Raw = sub.Raw[:0]
-			if err := sub.UnmarshalCBOR(br); err != nil {
+			// Copy the bytes
+			limitedReader.N = int64(extra)
+			buf.Grow(int(extra))
+			if n, err := buf.ReadFrom(&limitedReader); err != nil {
 				return err
+			} else if n < int64(extra) {
+				return io.ErrUnexpectedEOF
 			}
-			d.Raw = append(d.Raw, sub.Raw...)
-			if len(d.Raw) > ByteArrayMaxLen {
+		case MajTag:
+			remaining++
+		case MajArray:
+			if extra > MaxLength {
 				return maxLengthError
 			}
+			remaining += extra
+		case MajMap:
+			if extra > MaxLength {
+				return maxLengthError
+			}
+			remaining += extra * 2
+		default:
+			return fmt.Errorf("unhandled deferred cbor type: %d", maj)
 		}
-		return nil
-	default:
-		return fmt.Errorf("unhandled deferred cbor type: %d", maj)
 	}
-}
-
-// this is a bit gnarly i should just switch to taking in a byte array at the top level
-type BytePeeker interface {
-	io.Reader
-	PeekByte() (byte, error)
-}
-
-type peeker struct {
-	io.Reader
-}
-
-func (p *peeker) PeekByte() (byte, error) {
-	switch r := p.Reader.(type) {
-	case *bytes.Reader:
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-		return b, r.UnreadByte()
-	case *bytes.Buffer:
-		b, err := r.ReadByte()
-		if err != nil {
-			return 0, err
-		}
-		return b, r.UnreadByte()
-	case *bufio.Reader:
-		o, err := r.Peek(1)
-		if err != nil {
-			return 0, err
-		}
-
-		return o[0], nil
-	default:
-		panic("invariant violated")
-	}
-}
-
-func GetPeeker(r io.Reader) BytePeeker {
-	switch r := r.(type) {
-	case *bytes.Reader:
-		return &peeker{r}
-	case *bytes.Buffer:
-		return &peeker{r}
-	case *bufio.Reader:
-		return &peeker{r}
-	case *peeker:
-		return r
-	default:
-		return &peeker{bufio.NewReaderSize(r, 16)}
-	}
+	d.Raw = buf.Bytes()
+	return nil
 }
 
 func readByte(r io.Reader) (byte, error) {
-	if br, ok := r.(io.ByteReader); ok {
-		return br.ReadByte()
+	// try to cast to a concrete type, it's much faster than casting to an
+	// interface.
+	switch r := r.(type) {
+	case *bytes.Buffer:
+		return r.ReadByte()
+	case *bytes.Reader:
+		return r.ReadByte()
+	case *bufio.Reader:
+		return r.ReadByte()
+	case *peeker:
+		return r.ReadByte()
+	case io.ByteReader:
+		return r.ReadByte()
 	}
 	var buf [1]byte
 	_, err := io.ReadFull(r, buf[:1])
