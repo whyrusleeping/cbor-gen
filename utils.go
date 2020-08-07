@@ -247,6 +247,16 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 }
 
 func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
+	// Reading a single byte from these buffers is much faster than copying
+	// into a slice.
+	switch r := r.(type) {
+	case *bytes.Buffer:
+		return r.ReadByte()
+	case *bytes.Reader:
+		return r.ReadByte()
+	case *bufio.Reader:
+		return r.ReadByte()
+	}
 	n, err := r.Read(scratch[:1])
 	if err != nil {
 		return 0, err
