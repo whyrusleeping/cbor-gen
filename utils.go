@@ -16,6 +16,33 @@ import (
 const maxCidLength = 100
 const maxHeaderSize = 9
 
+// discard is a helper function to discard data from a reader, special-casing
+// the most common readers we encounter in this library for a significant
+// performance boost.
+func discard(br io.Reader, n int) error {
+	switch r := br.(type) {
+	case *bytes.Buffer:
+		buf := r.Next(n)
+		if len(buf) < n {
+			return io.ErrUnexpectedEOF
+		}
+		return nil
+	case *bytes.Reader:
+		if r.Len() < n {
+			_, _ = r.Seek(0, io.SeekEnd)
+			return io.ErrUnexpectedEOF
+		}
+		_, err := r.Seek(int64(n), io.SeekCurrent)
+		return err
+	case *bufio.Reader:
+		_, err := r.Discard(n)
+		return err
+	default:
+		_, err := io.CopyN(ioutil.Discard, br, int64(n))
+		return err
+	}
+}
+
 func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 	scratch := make([]byte, maxCidLength)
 	for remaining := uint64(1); remaining > 0; remaining-- {
@@ -27,7 +54,7 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 		switch maj {
 		case MajUnsignedInt, MajNegativeInt, MajOther:
 		case MajByteString, MajTextString:
-			_, err := io.CopyN(ioutil.Discard, br, int64(extra))
+			err := discard(br, int(extra))
 			if err != nil {
 				return err
 			}
