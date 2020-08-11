@@ -1085,9 +1085,8 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	if _, err := w.Write({{ .MapHeaderAsByteString }}); err != nil {
 		return err
 	}
-{{ if .NeedsScratch }}
+
 	scratch := make([]byte, 9)
-{{ end }}
 `)
 	if err != nil {
 		return err

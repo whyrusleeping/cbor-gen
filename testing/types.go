@@ -54,3 +54,8 @@ type FixedArrays struct {
 	Uint8  [20]uint8
 	Uint64 [20]uint64
 }
+
+// Do not add fields to this type.
+type NeedScratchForMap struct {
+	Thing bool
+}

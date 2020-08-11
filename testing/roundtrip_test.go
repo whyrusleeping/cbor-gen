@@ -37,6 +37,10 @@ func TestSimpleTypeTree(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeTree{}))
 }
 
+func TestNeedScratchForMap(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(NeedScratchForMap{}))
+}
+
 func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
 
 	buf := new(bytes.Buffer)

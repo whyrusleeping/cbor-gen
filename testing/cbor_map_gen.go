@@ -408,3 +408,91 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+func (t *NeedScratchForMap) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write([]byte{161}); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Thing (bool) (bool)
+	if len("Thing") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"Thing\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("Thing"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("Thing")); err != nil {
+		return err
+	}
+
+	if err := cbg.WriteBool(w, t.Thing); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) error {
+	*t = NeedScratchForMap{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("NeedScratchForMap: map struct too large (%d)", extra)
+	}
+
+	var name string
+	n := extra
+
+	for i := uint64(0); i < n; i++ {
+
+		{
+			sval, err := cbg.ReadStringBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			name = string(sval)
+		}
+
+		switch name {
+		// t.Thing (bool) (bool)
+		case "Thing":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajOther {
+				return fmt.Errorf("booleans must be major type 7")
+			}
+			switch extra {
+			case 20:
+				t.Thing = false
+			case 21:
+				t.Thing = true
+			default:
+				return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+			}
+
+		default:
+			return fmt.Errorf("unknown struct field %d: '%s'", i, name)
+		}
+	}
+
+	return nil
+}
