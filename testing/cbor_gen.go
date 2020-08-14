@@ -945,3 +945,111 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
+var lengthBufThingWithSomeTime = []byte{131}
+
+func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write(lengthBufThingWithSomeTime); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.When (typegen.CborTime) (struct)
+	if err := t.When.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.Stuff (int64) (int64)
+	if t.Stuff >= 0 {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Stuff)); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajNegativeInt, uint64(-t.Stuff-1)); err != nil {
+			return err
+		}
+	}
+
+	// t.CatName (string) (string)
+	if len(t.CatName) > cbg.MaxLength {
+		return xerrors.Errorf("Value in field t.CatName was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.CatName))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string(t.CatName)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) error {
+	*t = ThingWithSomeTime{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.When (typegen.CborTime) (struct)
+
+	{
+
+		if err := t.When.UnmarshalCBOR(br); err != nil {
+			return xerrors.Errorf("unmarshaling t.When: %w", err)
+		}
+
+	}
+	// t.Stuff (int64) (int64)
+	{
+		maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+		var extraI int64
+		if err != nil {
+			return err
+		}
+		switch maj {
+		case cbg.MajUnsignedInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 positive overflow")
+			}
+		case cbg.MajNegativeInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 negative oveflow")
+			}
+			extraI = -1 - extraI
+		default:
+			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		}
+
+		t.Stuff = int64(extraI)
+	}
+	// t.CatName (string) (string)
+
+	{
+		sval, err := cbg.ReadStringBuf(br, scratch)
+		if err != nil {
+			return err
+		}
+
+		t.CatName = string(sval)
+	}
+	return nil
+}

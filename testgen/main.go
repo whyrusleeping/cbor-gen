@@ -12,6 +12,7 @@ func main() {
 		types.SimpleTypeTwo{},
 		types.DeferredContainer{},
 		types.FixedArrays{},
+		types.ThingWithSomeTime{},
 	); err != nil {
 		panic(err)
 	}

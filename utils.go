@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"time"
 
 	cid "github.com/ipfs/go-cid"
 )
@@ -690,4 +691,51 @@ func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
 
 	*ci = CborInt(extraI)
 	return nil
+}
+
+type CborTime time.Time
+
+func (ct *CborTime) MarshalCBOR(w io.Writer) error {
+	b, err := (*time.Time)(ct).MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	if err := CborWriteHeader(w, MajByteString, uint64(len(b))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ct *CborTime) UnmarshalCBOR(r io.Reader) error {
+	t, l, err := CborReadHeader(r)
+	if err != nil {
+		return err
+	}
+
+	if t != MajByteString {
+		return fmt.Errorf("CborTime expects to find a byte array (got %d)", t)
+	}
+
+	buf := make([]byte, l)
+	if _, err := io.ReadFull(r, buf); err != nil {
+		return err
+	}
+
+	tm := time.Time{}
+	if err := tm.UnmarshalBinary(buf); err != nil {
+		return err
+	}
+
+	*ct = (CborTime)(tm)
+	return nil
+}
+
+func (ct CborTime) Time() time.Time {
+	return (time.Time)(ct)
 }

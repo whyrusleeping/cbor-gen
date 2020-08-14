@@ -55,6 +55,12 @@ type FixedArrays struct {
 	Uint64 [20]uint64
 }
 
+type ThingWithSomeTime struct {
+	When    cbg.CborTime
+	Stuff   int64
+	CatName string
+}
+
 // Do not add fields to this type.
 type NeedScratchForMap struct {
 	Thing bool
