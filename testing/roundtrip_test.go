@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 	"testing/quick"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -114,4 +115,35 @@ func TestFixedArrays(t *testing.T) {
 	zero := &FixedArrays{}
 	recepticle := &FixedArrays{}
 	testValueRoundtrip(t, zero, recepticle)
+}
+
+func TestTimeIsh(t *testing.T) {
+	val := &ThingWithSomeTime{
+		When:    cbg.CborTime(time.Now()),
+		Stuff:   1234,
+		CatName: "hank",
+	}
+
+	buf := new(bytes.Buffer)
+	if err := val.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	out := ThingWithSomeTime{}
+	if err := out.UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	if out.When.Time().UnixNano() != val.When.Time().UnixNano() {
+		t.Fatal("time didnt round trip properly", out.When.Time(), val.When.Time())
+	}
+
+	if out.Stuff != val.Stuff {
+		t.Fatal("no")
+	}
+
+	if out.CatName != val.CatName {
+		t.Fatal("no")
+	}
+
 }
