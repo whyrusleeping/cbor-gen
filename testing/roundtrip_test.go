@@ -2,6 +2,7 @@ package testing
 
 import (
 	"bytes"
+	"encoding/json"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -144,6 +145,20 @@ func TestTimeIsh(t *testing.T) {
 
 	if out.CatName != val.CatName {
 		t.Fatal("no")
+	}
+
+	b, err := json.Marshal(val)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var out2 ThingWithSomeTime
+	if err := json.Unmarshal(b, &out2); err != nil {
+		t.Fatal(err)
+	}
+
+	if out2.When != out.When {
+		t.Fatal(err)
 	}
 
 }

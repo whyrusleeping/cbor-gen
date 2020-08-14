@@ -739,3 +739,16 @@ func (ct *CborTime) UnmarshalCBOR(r io.Reader) error {
 func (ct CborTime) Time() time.Time {
 	return (time.Time)(ct)
 }
+
+func (ct CborTime) MarshalJSON() ([]byte, error) {
+	return ct.Time().MarshalJSON()
+}
+
+func (ct *CborTime) UnmarshalJSON(b []byte) error {
+	var t time.Time
+	if err := t.UnmarshalJSON(b); err != nil {
+		return err
+	}
+	*(*time.Time)(ct) = t
+	return nil
+}
