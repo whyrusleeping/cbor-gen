@@ -363,7 +363,7 @@ func emitCborMarshalMapField(w io.Writer, f Field) error {
 	for k := range {{ .Name }} {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	cbg.MapKeySort_RFC7049(keys)
 	for _, k := range keys {
 		v := {{ .Name }}[k]
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/format"
 	"os"
+	"sort"
 
 	"golang.org/x/xerrors"
 )
@@ -69,6 +70,9 @@ func WriteMapEncodersToFile(fname, pkg string, types ...interface{}) error {
 		if err != nil {
 			return xerrors.Errorf("failed to parse type info: %w", err)
 		}
+		sort.Slice(gti.Fields, func(i, j int) bool {
+			return mapKeySort_RFC7049Less(gti.Fields[i].Name, gti.Fields[j].Name)
+		})
 		typeInfos[i] = gti
 	}
 
