@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"sort"
 	"time"
 
 	cid "github.com/ipfs/go-cid"
@@ -730,4 +731,18 @@ func (ct *CborTime) UnmarshalJSON(b []byte) error {
 	}
 	*(*time.Time)(ct) = t
 	return nil
+}
+
+func MapKeySort_RFC7049(keys []string) {
+	sort.Slice(keys, func(i, j int) bool {
+		return mapKeySort_RFC7049Less(keys[i], keys[j])
+	})
+}
+
+func mapKeySort_RFC7049Less(k1 string, k2 string) bool {
+	li, lj := len(k1), len(k2)
+	if li == lj {
+		return k1 < k2
+	}
+	return li < lj
 }
