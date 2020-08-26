@@ -471,7 +471,7 @@ func ReadByteArray(br io.Reader, maxlen uint64) ([]byte, error) {
 	}
 
 	if extra > maxlen {
-		return nil, fmt.Errorf("string in cbor input too long")
+		return nil, fmt.Errorf("string in cbor input too long, maxlen: %d", maxlen)
 	}
 
 	buf := make([]byte, extra)
