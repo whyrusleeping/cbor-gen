@@ -470,7 +470,7 @@ func ReadByteArray(br io.Reader, maxlen uint64) ([]byte, error) {
 		return nil, fmt.Errorf("expected cbor type 'byte string' in input")
 	}
 
-	if extra > 256*1024 {
+	if extra > maxlen {
 		return nil, fmt.Errorf("string in cbor input too long")
 	}
 
