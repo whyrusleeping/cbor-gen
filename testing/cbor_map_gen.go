@@ -333,6 +333,9 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 					}
 
 					if _, err := io.ReadFull(br, t.Test[i][:]); err != nil {
+						if err == io.EOF {
+							err = io.ErrUnexpectedEOF
+						}
 						return err
 					}
 				}

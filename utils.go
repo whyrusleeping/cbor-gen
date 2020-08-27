@@ -20,27 +20,29 @@ const maxHeaderSize = 9
 // the most common readers we encounter in this library for a significant
 // performance boost.
 func discard(br io.Reader, n int) error {
+	var err error
 	switch r := br.(type) {
 	case *bytes.Buffer:
 		buf := r.Next(n)
 		if len(buf) < n {
-			return io.ErrUnexpectedEOF
+			err = io.ErrUnexpectedEOF
 		}
-		return nil
 	case *bytes.Reader:
 		if r.Len() < n {
 			_, _ = r.Seek(0, io.SeekEnd)
-			return io.ErrUnexpectedEOF
+			err = io.ErrUnexpectedEOF
+		} else {
+			_, err = r.Seek(int64(n), io.SeekCurrent)
 		}
-		_, err := r.Seek(int64(n), io.SeekCurrent)
-		return err
 	case *bufio.Reader:
-		_, err := r.Discard(n)
-		return err
+		_, err = r.Discard(n)
 	default:
-		_, err := io.CopyN(ioutil.Discard, br, int64(n))
-		return err
+		_, err = io.CopyN(ioutil.Discard, br, int64(n))
 	}
+	if err == io.EOF {
+		err = io.ErrUnexpectedEOF
+	}
+	return err
 }
 
 func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
@@ -74,6 +76,10 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 				}
 
 				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
+					if err == io.EOF {
+						err = io.ErrUnexpectedEOF
+					}
+
 					return err
 				}
 
@@ -172,7 +178,7 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 			// Copy the bytes
 			limitedReader.N = int64(extra)
 			buf.Grow(int(extra))
-			if n, err := buf.ReadFrom(&limitedReader); err != nil {
+			if n, err := buf.ReadFrom(&limitedReader); err != nil && err != io.EOF {
 				return err
 			} else if n < int64(extra) {
 				return io.ErrUnexpectedEOF
@@ -214,6 +220,9 @@ func readByte(r io.Reader) (byte, error) {
 	}
 	var buf [1]byte
 	_, err := io.ReadFull(r, buf[:1])
+	if err == io.EOF {
+		err = io.ErrUnexpectedEOF
+	}
 	return buf[0], err
 }
 
@@ -241,6 +250,9 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 	case low == 25:
 		scratch := make([]byte, 2)
 		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
@@ -251,6 +263,9 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 	case low == 26:
 		scratch := make([]byte, 4)
 		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
@@ -261,6 +276,9 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 	case low == 27:
 		scratch := make([]byte, 8)
 		if _, err := io.ReadAtLeast(br, scratch, 8); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, err
 		}
 		val := binary.BigEndian.Uint64(scratch)
@@ -276,6 +294,7 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	// Reading a single byte from these buffers is much faster than copying
 	// into a slice.
+	// None of these will return EOF if they also read a byte.
 	switch r := r.(type) {
 	case *bytes.Buffer:
 		return r.ReadByte()
@@ -285,13 +304,23 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 		return r.ReadByte()
 	}
 	n, err := r.Read(scratch[:1])
+	if err == io.EOF {
+		// Read can return EOF, even if it reads data. Furthermore, we
+		// never want to return EOF on actual error cases (so we return
+		// "unexpected eof").
+		if n == 1 {
+			err = nil
+		} else {
+			err = io.ErrUnexpectedEOF
+		}
+	}
 	if err != nil {
 		return 0, err
 	}
 	if n != 1 {
 		return 0, fmt.Errorf("failed to read a byte")
 	}
-	return scratch[0], err
+	return scratch[0], nil
 }
 
 // same as the above, just tries to allocate less by using a passed in scratch buffer
@@ -318,6 +347,9 @@ func CborReadHeaderBuf(br io.Reader, scratch []byte) (byte, uint64, error) {
 		return maj, uint64(next), nil
 	case low == 25:
 		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
@@ -327,15 +359,24 @@ func CborReadHeaderBuf(br io.Reader, scratch []byte) (byte, uint64, error) {
 		return maj, val, nil
 	case low == 26:
 		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
 		if val <= math.MaxUint16 {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
 		}
 		return maj, val, nil
 	case low == 27:
 		if _, err := io.ReadAtLeast(br, scratch[:8], 8); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return 0, 0, err
 		}
 		val := binary.BigEndian.Uint64(scratch[:8])
@@ -475,6 +516,9 @@ func ReadByteArray(br io.Reader, maxlen uint64) ([]byte, error) {
 
 	buf := make([]byte, extra)
 	if _, err := io.ReadAtLeast(br, buf, int(extra)); err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return nil, err
 	}
 
@@ -516,6 +560,9 @@ func ReadString(r io.Reader) (string, error) {
 	buf := make([]byte, l)
 	_, err = io.ReadAtLeast(r, buf, int(l))
 	if err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return "", err
 	}
 
@@ -539,6 +586,9 @@ func ReadStringBuf(r io.Reader, scratch []byte) (string, error) {
 	buf := make([]byte, l)
 	_, err = io.ReadAtLeast(r, buf, int(l))
 	if err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return "", err
 	}
 

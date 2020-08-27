@@ -225,6 +225,9 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	}
 
 	if _, err := io.ReadFull(br, t.Binary[:]); err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return err
 	}
 	// t.Signed (int64) (int64)
@@ -563,6 +566,9 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 			}
 
 			if _, err := io.ReadFull(br, t.Test[i][:]); err != nil {
+				if err == io.EOF {
+					err = io.ErrUnexpectedEOF
+				}
 				return err
 			}
 		}
@@ -883,6 +889,9 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
 	t.Bytes = [20]uint8{}
 
 	if _, err := io.ReadFull(br, t.Bytes[:]); err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return err
 	}
 	// t.Uint8 ([20]uint8) (array)
@@ -906,6 +915,9 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
 	t.Uint8 = [20]uint8{}
 
 	if _, err := io.ReadFull(br, t.Uint8[:]); err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return err
 	}
 	// t.Uint64 ([20]uint64) (array)

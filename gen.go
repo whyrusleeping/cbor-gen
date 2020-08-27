@@ -611,6 +611,9 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	if extra > 0 {
 		buf := make([]byte, extra)
 		if _, err := io.ReadFull(br, buf); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
 			return err
 		}
 		{{ .Name }} = big.NewInt(0).SetBytes(buf)
@@ -898,6 +901,9 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	}
 	{{end}}
 	if _, err := io.ReadFull(br, {{ .Name }}[:]); err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		return err
 	}
 `)
