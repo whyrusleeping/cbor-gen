@@ -43,6 +43,10 @@ func TestNeedScratchForMap(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(NeedScratchForMap{}))
 }
 
+func TestMapWithRenames(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(MapWithRenames{}))
+}
+
 func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
 
 	buf := new(bytes.Buffer)

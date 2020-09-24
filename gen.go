@@ -69,10 +69,11 @@ var _ = xerrors.Errorf
 }
 
 type Field struct {
-	Name    string
-	Pointer bool
-	Type    reflect.Type
-	Pkg     string
+	Name       string
+	Serialized string
+	Pointer    bool
+	Type       reflect.Type
+	Pkg        string
 
 	IterLabel string
 }
@@ -189,11 +190,16 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			pointer = true
 		}
 
+		serialized, hasSerialized := f.Tag.Lookup("json")
+		if !hasSerialized {
+			serialized = f.Name
+		}
 		out.Fields = append(out.Fields, Field{
-			Name:    f.Name,
-			Pointer: pointer,
-			Type:    ft,
-			Pkg:     pkg,
+			Name:       f.Name,
+			Serialized: serialized,
+			Pointer:    pointer,
+			Type:       ft,
+			Pkg:        pkg,
 		})
 	}
 
@@ -1124,7 +1130,7 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		if err := emitCborMarshalStringField(w, Field{
-			Name: `"` + f.Name + `"`,
+			Name: `"` + f.Serialized + `"`,
 		}); err != nil {
 			return err
 		}
@@ -1219,7 +1225,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 		fmt.Fprintf(w, "// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		err := doTemplate(w, f, `
-		case "{{ .Name }}":
+		case "{{ .Serialized }}":
 `)
 		if err != nil {
 			return err
