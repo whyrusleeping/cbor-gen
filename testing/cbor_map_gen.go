@@ -496,3 +496,168 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+func (t *MapWithRenames) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write([]byte{163}); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.String (string) (string)
+	if len("s") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"s\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("s"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("s")); err != nil {
+		return err
+	}
+
+	if len(t.String) > cbg.MaxLength {
+		return xerrors.Errorf("Value in field t.String was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.String))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string(t.String)); err != nil {
+		return err
+	}
+
+	// t.Int (uint64) (uint64)
+	if len("i") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"i\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("i"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("i")); err != nil {
+		return err
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Int)); err != nil {
+		return err
+	}
+
+	// t.Bytes ([]uint8) (slice)
+	if len("b") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"b\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("b"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("b")); err != nil {
+		return err
+	}
+
+	if len(t.Bytes) > cbg.ByteArrayMaxLen {
+		return xerrors.Errorf("Byte array in field t.Bytes was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Bytes))); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(t.Bytes[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *MapWithRenames) UnmarshalCBOR(r io.Reader) error {
+	*t = MapWithRenames{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("MapWithRenames: map struct too large (%d)", extra)
+	}
+
+	var name string
+	n := extra
+
+	for i := uint64(0); i < n; i++ {
+
+		{
+			sval, err := cbg.ReadStringBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			name = string(sval)
+		}
+
+		switch name {
+		// t.String (string) (string)
+		case "s":
+
+			{
+				sval, err := cbg.ReadStringBuf(br, scratch)
+				if err != nil {
+					return err
+				}
+
+				t.String = string(sval)
+			}
+			// t.Int (uint64) (uint64)
+		case "i":
+
+			{
+
+				maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+				if err != nil {
+					return err
+				}
+				if maj != cbg.MajUnsignedInt {
+					return fmt.Errorf("wrong type for uint64 field")
+				}
+				t.Int = uint64(extra)
+
+			}
+			// t.Bytes ([]uint8) (slice)
+		case "b":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			if extra > cbg.ByteArrayMaxLen {
+				return fmt.Errorf("t.Bytes: byte array too large (%d)", extra)
+			}
+			if maj != cbg.MajByteString {
+				return fmt.Errorf("expected byte array")
+			}
+
+			if extra > 0 {
+				t.Bytes = make([]uint8, extra)
+			}
+
+			if _, err := io.ReadFull(br, t.Bytes[:]); err != nil {
+				return err
+			}
+
+		default:
+			return fmt.Errorf("unknown struct field %d: '%s'", i, name)
+		}
+	}
+
+	return nil
+}

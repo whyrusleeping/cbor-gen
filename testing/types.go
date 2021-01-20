@@ -65,3 +65,9 @@ type ThingWithSomeTime struct {
 type NeedScratchForMap struct {
 	Thing bool
 }
+
+type MapWithRenames struct {
+	String string `json:"s"`
+	Int    uint64 `json:"i"`
+	Bytes  []byte `json:"b"`
+}

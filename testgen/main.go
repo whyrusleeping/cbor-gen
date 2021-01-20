@@ -20,6 +20,7 @@ func main() {
 	if err := cbg.WriteMapEncodersToFile("testing/cbor_map_gen.go", "testing",
 		types.SimpleTypeTree{},
 		types.NeedScratchForMap{},
+		types.MapWithRenames{},
 	); err != nil {
 		panic(err)
 	}
