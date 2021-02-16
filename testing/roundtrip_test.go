@@ -3,6 +3,7 @@ package testing
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/ipfs/go-cid"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -161,4 +162,96 @@ func TestTimeIsh(t *testing.T) {
 		t.Fatal(err)
 	}
 
+}
+
+func TestLessToMoreFieldsRoundTrip(t *testing.T) {
+	dummyCid, _ := cid.Parse("bafkqaaa")
+	obj := &SimpleStructV1{
+		OldStr: "hello",
+		OldBytes: []byte("bytes"),
+		OldNum: 10,
+		OldPtr: &dummyCid,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := obj.MarshalCBOR(buf); err != nil {
+		t.Fatal("failed marshaling", err)
+	}
+
+	enc := buf.Bytes()
+
+	nobj := SimpleStructV2{}
+	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+		t.Logf("got bad bytes: %x", enc)
+		t.Fatal("failed to round trip object: ", err)
+	}
+
+	if obj.OldStr != nobj.OldStr {
+		t.Fatal("mismatch ", obj.OldStr, " != ", nobj.OldStr)
+	}
+	if nobj.NewStr != "" {
+		t.Fatal("expected field to be zero value")
+	}
+
+	if obj.OldNum != nobj.OldNum {
+		t.Fatal("mismatch ", obj.OldNum, " != ", nobj.OldNum)
+	}
+	if nobj.NewNum != 0 {
+		t.Fatal("expected field to be zero value")
+	}
+
+	if !bytes.Equal(obj.OldBytes, nobj.OldBytes) {
+		t.Fatal("mismatch ", obj.OldBytes, " != ", nobj.OldBytes)
+	}
+	if nobj.NewBytes != nil {
+		t.Fatal("expected field to be zero value")
+	}
+
+	if *obj.OldPtr != *nobj.OldPtr {
+		t.Fatal("mismatch ", obj.OldPtr, " != ", nobj.OldPtr)
+	}
+	if nobj.NewPtr != nil {
+		t.Fatal("expected field to be zero value")
+	}
+}
+
+func TestMoreToLessFieldsRoundTrip(t *testing.T) {
+	dummyCid1, _ := cid.Parse("bafkqaaa")
+	dummyCid2, _ := cid.Parse("bafkqaab")
+	obj := &SimpleStructV2{
+		OldStr: "oldstr",
+		NewStr: "newstr",
+		OldBytes: []byte("oldbytes"),
+		NewBytes: []byte("newbytes"),
+		OldNum: 10,
+		NewNum: 11,
+		OldPtr: &dummyCid1,
+		NewPtr: &dummyCid2,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := obj.MarshalCBOR(buf); err != nil {
+		t.Fatal("failed marshaling", err)
+	}
+
+	enc := buf.Bytes()
+
+	nobj := SimpleStructV1{}
+	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+		t.Logf("got bad bytes: %x", enc)
+		t.Fatal("failed to round trip object: ", err)
+	}
+
+	if obj.OldStr != nobj.OldStr {
+		t.Fatal("mismatch", obj.OldStr, " != ", nobj.OldStr)
+	}
+	if obj.OldNum != nobj.OldNum {
+		t.Fatal("mismatch ", obj.OldNum, " != ", nobj.OldNum)
+	}
+	if !bytes.Equal(obj.OldBytes, nobj.OldBytes) {
+		t.Fatal("mismatch ", obj.OldBytes, " != ", nobj.OldBytes)
+	}
+	if *obj.OldPtr != *nobj.OldPtr {
+		t.Fatal("mismatch ", obj.OldPtr, " != ", nobj.OldPtr)
+	}
 }

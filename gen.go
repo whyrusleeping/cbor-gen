@@ -64,6 +64,7 @@ import (
 
 
 var _ = xerrors.Errorf
+var _ = cid.Undef
 
 `)
 }
@@ -1269,7 +1270,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
 
 	return doTemplate(w, gti, `
 		default:
-			return fmt.Errorf("unknown struct field %d: '%s'", i, name)
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(r, func(cid.Cid){})
 		}
 	}
 
