@@ -5,6 +5,7 @@ package testing
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	cid "github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -13,6 +14,7 @@ import (
 
 var _ = xerrors.Errorf
 var _ = cid.Undef
+var _ = sort.Sort
 
 var lengthBufSignedArray = []byte{129}
 

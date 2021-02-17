@@ -166,11 +166,21 @@ func TestTimeIsh(t *testing.T) {
 
 func TestLessToMoreFieldsRoundTrip(t *testing.T) {
 	dummyCid, _ := cid.Parse("bafkqaaa")
+	simpleTypeOne := SimpleTypeOne{
+		Foo:     "foo",
+		Value:   1,
+		Binary:  []byte("bin"),
+		Signed:  -1,
+		NString: "namedstr",
+	}
 	obj := &SimpleStructV1{
 		OldStr: "hello",
 		OldBytes: []byte("bytes"),
 		OldNum: 10,
 		OldPtr: &dummyCid,
+		OldMap: map[string]SimpleTypeOne{"first": simpleTypeOne},
+		OldArray: []SimpleTypeOne{simpleTypeOne},
+		OldStruct: simpleTypeOne,
 	}
 
 	buf := new(bytes.Buffer)
@@ -213,20 +223,61 @@ func TestLessToMoreFieldsRoundTrip(t *testing.T) {
 	if nobj.NewPtr != nil {
 		t.Fatal("expected field to be zero value")
 	}
+
+	if !cmp.Equal(obj.OldMap, nobj.OldMap) {
+		t.Fatal("mismatch map marshal / unmarshal")
+	}
+	if len(nobj.NewMap) != 0 {
+		t.Fatal("expected field to be zero value")
+	}
+
+	if !cmp.Equal(obj.OldArray, nobj.OldArray) {
+		t.Fatal("mismatch array marshal / unmarshal")
+	}
+	if len(nobj.NewArray) != 0 {
+		t.Fatal("expected field to be zero value")
+	}
+
+	if !cmp.Equal(obj.OldStruct, nobj.OldStruct) {
+		t.Fatal("mismatch struct marshal / unmarshal")
+	}
+	if !cmp.Equal(nobj.NewStruct, SimpleTypeOne{}) {
+		t.Fatal("expected field to be zero value")
+	}
 }
 
 func TestMoreToLessFieldsRoundTrip(t *testing.T) {
 	dummyCid1, _ := cid.Parse("bafkqaaa")
 	dummyCid2, _ := cid.Parse("bafkqaab")
+	simpleType1 := SimpleTypeOne{
+		Foo:     "foo",
+		Value:   1,
+		Binary:  []byte("bin"),
+		Signed:  -1,
+		NString: "namedstr",
+	}
+	simpleType2 := SimpleTypeOne{
+		Foo:     "bar",
+		Value:   2,
+		Binary:  []byte("bin2"),
+		Signed:  -2,
+		NString: "namedstr2",
+	}
 	obj := &SimpleStructV2{
-		OldStr: "oldstr",
-		NewStr: "newstr",
-		OldBytes: []byte("oldbytes"),
-		NewBytes: []byte("newbytes"),
-		OldNum: 10,
-		NewNum: 11,
-		OldPtr: &dummyCid1,
-		NewPtr: &dummyCid2,
+		OldStr:    "oldstr",
+		NewStr:    "newstr",
+		OldBytes:  []byte("oldbytes"),
+		NewBytes:  []byte("newbytes"),
+		OldNum:    10,
+		NewNum:    11,
+		OldPtr:    &dummyCid1,
+		NewPtr:    &dummyCid2,
+		OldMap:    map[string]SimpleTypeOne{"foo": simpleType1},
+		NewMap:    map[string]SimpleTypeOne{"bar": simpleType2},
+		OldArray: []SimpleTypeOne{simpleType1},
+		NewArray: []SimpleTypeOne{simpleType1, simpleType2},
+		OldStruct: simpleType1,
+		NewStruct: simpleType2,
 	}
 
 	buf := new(bytes.Buffer)
@@ -253,5 +304,14 @@ func TestMoreToLessFieldsRoundTrip(t *testing.T) {
 	}
 	if *obj.OldPtr != *nobj.OldPtr {
 		t.Fatal("mismatch ", obj.OldPtr, " != ", nobj.OldPtr)
+	}
+	if !cmp.Equal(obj.OldMap, nobj.OldMap) {
+		t.Fatal("mismatch map marshal / unmarshal")
+	}
+	if !cmp.Equal(obj.OldArray, nobj.OldArray) {
+		t.Fatal("mismatch array marshal / unmarshal")
+	}
+	if !cmp.Equal(obj.OldStruct, nobj.OldStruct) {
+		t.Fatal("mismatch struct marshal / unmarshal")
 	}
 }

@@ -5,6 +5,7 @@ package testing
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	cid "github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -13,6 +14,7 @@ import (
 
 var _ = xerrors.Errorf
 var _ = cid.Undef
+var _ = sort.Sort
 
 func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -505,7 +507,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{164}); err != nil {
+	if _, err := w.Write([]byte{167}); err != nil {
 		return err
 	}
 
@@ -596,6 +598,93 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
+	// t.OldMap (map[string]testing.SimpleTypeOne) (map)
+	if len("OldMap") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldMap\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldMap"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldMap")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.OldMap) > 4096 {
+			return xerrors.Errorf("cannot marshal t.OldMap map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.OldMap))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.OldMap))
+		for k := range t.OldMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.OldMap[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, string(k)); err != nil {
+				return err
+			}
+
+			if err := v.MarshalCBOR(w); err != nil {
+				return err
+			}
+
+		}
+	}
+
+	// t.OldArray ([]testing.SimpleTypeOne) (slice)
+	if len("OldArray") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldArray\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldArray"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldArray")); err != nil {
+		return err
+	}
+
+	if len(t.OldArray) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.OldArray was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.OldArray))); err != nil {
+		return err
+	}
+	for _, v := range t.OldArray {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+
+	// t.OldStruct (testing.SimpleTypeOne) (struct)
+	if len("OldStruct") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldStruct\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldStruct"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldStruct")); err != nil {
+		return err
+	}
+
+	if err := t.OldStruct.MarshalCBOR(w); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -703,6 +792,88 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) error {
 				}
 
 			}
+			// t.OldMap (map[string]testing.SimpleTypeOne) (map)
+		case "OldMap":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.OldMap: map too large")
+			}
+
+			t.OldMap = make(map[string]SimpleTypeOne, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringBuf(br, scratch)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v SimpleTypeOne
+
+				{
+
+					if err := v.UnmarshalCBOR(br); err != nil {
+						return xerrors.Errorf("unmarshaling v: %w", err)
+					}
+
+				}
+
+				t.OldMap[k] = v
+
+			}
+			// t.OldArray ([]testing.SimpleTypeOne) (slice)
+		case "OldArray":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			if extra > cbg.MaxLength {
+				return fmt.Errorf("t.OldArray: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.OldArray = make([]SimpleTypeOne, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+
+				var v SimpleTypeOne
+				if err := v.UnmarshalCBOR(br); err != nil {
+					return err
+				}
+
+				t.OldArray[i] = v
+			}
+
+			// t.OldStruct (testing.SimpleTypeOne) (struct)
+		case "OldStruct":
+
+			{
+
+				if err := t.OldStruct.UnmarshalCBOR(br); err != nil {
+					return xerrors.Errorf("unmarshaling t.OldStruct: %w", err)
+				}
+
+			}
 
 		default:
 			// Field doesn't exist on this type, so ignore it
@@ -717,7 +888,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{168}); err != nil {
+	if _, err := w.Write([]byte{174}); err != nil {
 		return err
 	}
 
@@ -893,6 +1064,181 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
+	// t.OldMap (map[string]testing.SimpleTypeOne) (map)
+	if len("OldMap") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldMap\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldMap"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldMap")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.OldMap) > 4096 {
+			return xerrors.Errorf("cannot marshal t.OldMap map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.OldMap))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.OldMap))
+		for k := range t.OldMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.OldMap[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, string(k)); err != nil {
+				return err
+			}
+
+			if err := v.MarshalCBOR(w); err != nil {
+				return err
+			}
+
+		}
+	}
+
+	// t.NewMap (map[string]testing.SimpleTypeOne) (map)
+	if len("NewMap") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"NewMap\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("NewMap"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("NewMap")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.NewMap) > 4096 {
+			return xerrors.Errorf("cannot marshal t.NewMap map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.NewMap))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.NewMap))
+		for k := range t.NewMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.NewMap[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, string(k)); err != nil {
+				return err
+			}
+
+			if err := v.MarshalCBOR(w); err != nil {
+				return err
+			}
+
+		}
+	}
+
+	// t.OldArray ([]testing.SimpleTypeOne) (slice)
+	if len("OldArray") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldArray\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldArray"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldArray")); err != nil {
+		return err
+	}
+
+	if len(t.OldArray) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.OldArray was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.OldArray))); err != nil {
+		return err
+	}
+	for _, v := range t.OldArray {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+
+	// t.NewArray ([]testing.SimpleTypeOne) (slice)
+	if len("NewArray") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"NewArray\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("NewArray"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("NewArray")); err != nil {
+		return err
+	}
+
+	if len(t.NewArray) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.NewArray was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.NewArray))); err != nil {
+		return err
+	}
+	for _, v := range t.NewArray {
+		if err := v.MarshalCBOR(w); err != nil {
+			return err
+		}
+	}
+
+	// t.OldStruct (testing.SimpleTypeOne) (struct)
+	if len("OldStruct") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldStruct\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldStruct"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldStruct")); err != nil {
+		return err
+	}
+
+	if err := t.OldStruct.MarshalCBOR(w); err != nil {
+		return err
+	}
+
+	// t.NewStruct (testing.SimpleTypeOne) (struct)
+	if len("NewStruct") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"NewStruct\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("NewStruct"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("NewStruct")); err != nil {
+		return err
+	}
+
+	if err := t.NewStruct.MarshalCBOR(w); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1068,6 +1414,170 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) error {
 					}
 
 					t.NewPtr = &c
+				}
+
+			}
+			// t.OldMap (map[string]testing.SimpleTypeOne) (map)
+		case "OldMap":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.OldMap: map too large")
+			}
+
+			t.OldMap = make(map[string]SimpleTypeOne, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringBuf(br, scratch)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v SimpleTypeOne
+
+				{
+
+					if err := v.UnmarshalCBOR(br); err != nil {
+						return xerrors.Errorf("unmarshaling v: %w", err)
+					}
+
+				}
+
+				t.OldMap[k] = v
+
+			}
+			// t.NewMap (map[string]testing.SimpleTypeOne) (map)
+		case "NewMap":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.NewMap: map too large")
+			}
+
+			t.NewMap = make(map[string]SimpleTypeOne, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringBuf(br, scratch)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v SimpleTypeOne
+
+				{
+
+					if err := v.UnmarshalCBOR(br); err != nil {
+						return xerrors.Errorf("unmarshaling v: %w", err)
+					}
+
+				}
+
+				t.NewMap[k] = v
+
+			}
+			// t.OldArray ([]testing.SimpleTypeOne) (slice)
+		case "OldArray":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			if extra > cbg.MaxLength {
+				return fmt.Errorf("t.OldArray: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.OldArray = make([]SimpleTypeOne, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+
+				var v SimpleTypeOne
+				if err := v.UnmarshalCBOR(br); err != nil {
+					return err
+				}
+
+				t.OldArray[i] = v
+			}
+
+			// t.NewArray ([]testing.SimpleTypeOne) (slice)
+		case "NewArray":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			if extra > cbg.MaxLength {
+				return fmt.Errorf("t.NewArray: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.NewArray = make([]SimpleTypeOne, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+
+				var v SimpleTypeOne
+				if err := v.UnmarshalCBOR(br); err != nil {
+					return err
+				}
+
+				t.NewArray[i] = v
+			}
+
+			// t.OldStruct (testing.SimpleTypeOne) (struct)
+		case "OldStruct":
+
+			{
+
+				if err := t.OldStruct.UnmarshalCBOR(br); err != nil {
+					return xerrors.Errorf("unmarshaling t.OldStruct: %w", err)
+				}
+
+			}
+			// t.NewStruct (testing.SimpleTypeOne) (struct)
+		case "NewStruct":
+
+			{
+
+				if err := t.NewStruct.UnmarshalCBOR(br); err != nil {
+					return xerrors.Errorf("unmarshaling t.NewStruct: %w", err)
 				}
 
 			}

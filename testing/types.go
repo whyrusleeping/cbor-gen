@@ -49,6 +49,9 @@ type SimpleStructV1 struct {
 	OldBytes []byte
 	OldNum uint64
 	OldPtr *cid.Cid
+	OldMap map[string]SimpleTypeOne
+	OldArray []SimpleTypeOne
+	OldStruct SimpleTypeOne
 }
 
 type SimpleStructV2 struct {
@@ -63,6 +66,15 @@ type SimpleStructV2 struct {
 
 	OldPtr *cid.Cid
 	NewPtr *cid.Cid
+
+	OldMap map[string]SimpleTypeOne
+	NewMap map[string]SimpleTypeOne
+
+	OldArray []SimpleTypeOne
+	NewArray []SimpleTypeOne
+
+	OldStruct SimpleTypeOne
+	NewStruct SimpleTypeOne
 }
 
 type DeferredContainer struct {

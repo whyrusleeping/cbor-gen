@@ -57,6 +57,7 @@ package {{ .Package }}
 import (
 	"fmt"
 	"io"
+	"sort"
 
 {{ range .Imports }}{{ .Name }} "{{ .PkgPath }}"
 {{ end }}
@@ -65,6 +66,7 @@ import (
 
 var _ = xerrors.Errorf
 var _ = cid.Undef
+var _ = sort.Sort
 
 `)
 }
