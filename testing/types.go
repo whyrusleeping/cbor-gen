@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
@@ -41,6 +42,39 @@ type SimpleTypeTree struct {
 	Dog                              string
 	SixtyThreeBitIntegerWithASignBit int64
 	NotPizza                         *uint64
+}
+
+type SimpleStructV1 struct {
+	OldStr string
+	OldBytes []byte
+	OldNum uint64
+	OldPtr *cid.Cid
+	OldMap map[string]SimpleTypeOne
+	OldArray []SimpleTypeOne
+	OldStruct SimpleTypeOne
+}
+
+type SimpleStructV2 struct {
+	OldStr string
+	NewStr string
+
+	OldBytes []byte
+	NewBytes []byte
+
+	OldNum uint64
+	NewNum uint64
+
+	OldPtr *cid.Cid
+	NewPtr *cid.Cid
+
+	OldMap map[string]SimpleTypeOne
+	NewMap map[string]SimpleTypeOne
+
+	OldArray []SimpleTypeOne
+	NewArray []SimpleTypeOne
+
+	OldStruct SimpleTypeOne
+	NewStruct SimpleTypeOne
 }
 
 type DeferredContainer struct {
