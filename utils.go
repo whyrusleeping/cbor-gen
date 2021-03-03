@@ -75,11 +75,7 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 					return fmt.Errorf("string in cbor input too long")
 				}
 
-				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
-					if err == io.EOF {
-						err = io.ErrUnexpectedEOF
-					}
-
+				if err := ReadExact(br, scratch[:extra]); err != nil {
 					return err
 				}
 
@@ -219,10 +215,7 @@ func readByte(r io.Reader) (byte, error) {
 		return r.ReadByte()
 	}
 	var buf [1]byte
-	_, err := io.ReadFull(r, buf[:1])
-	if err == io.EOF {
-		err = io.ErrUnexpectedEOF
-	}
+	err := ReadExact(r, buf[:1])
 	return buf[0], err
 }
 
@@ -249,36 +242,27 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 		return maj, uint64(next), nil
 	case low == 25:
 		scratch := make([]byte, 2)
-		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
+		if err := ReadExact(br, scratch); err != nil {
 			return 0, 0, err
 		}
-		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
+		val := uint64(binary.BigEndian.Uint16(scratch))
 		if val <= math.MaxUint8 {
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 25 with value <= MaxUint8)")
 		}
 		return maj, val, nil
 	case low == 26:
 		scratch := make([]byte, 4)
-		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
+		if err := ReadExact(br, scratch); err != nil {
 			return 0, 0, err
 		}
-		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
+		val := uint64(binary.BigEndian.Uint32(scratch))
 		if val <= math.MaxUint16 {
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
 		}
 		return maj, val, nil
 	case low == 27:
 		scratch := make([]byte, 8)
-		if _, err := io.ReadAtLeast(br, scratch, 8); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
+		if err := ReadExact(br, scratch); err != nil {
 			return 0, 0, err
 		}
 		val := binary.BigEndian.Uint64(scratch)
@@ -346,10 +330,7 @@ func CborReadHeaderBuf(br io.Reader, scratch []byte) (byte, uint64, error) {
 		}
 		return maj, uint64(next), nil
 	case low == 25:
-		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
+		if err := ReadExact(br, scratch[:2]); err != nil {
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
@@ -358,25 +339,16 @@ func CborReadHeaderBuf(br io.Reader, scratch []byte) (byte, uint64, error) {
 		}
 		return maj, val, nil
 	case low == 26:
-		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
+		if err := ReadExact(br, scratch[:4]); err != nil {
 			return 0, 0, err
 		}
 		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
 		if val <= math.MaxUint16 {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
 			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
 		}
 		return maj, val, nil
 	case low == 27:
-		if _, err := io.ReadAtLeast(br, scratch[:8], 8); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
+		if err := ReadExact(br, scratch[:8]); err != nil {
 			return 0, 0, err
 		}
 		val := binary.BigEndian.Uint64(scratch[:8])
@@ -515,10 +487,7 @@ func ReadByteArray(br io.Reader, maxlen uint64) ([]byte, error) {
 	}
 
 	buf := make([]byte, extra)
-	if _, err := io.ReadAtLeast(br, buf, int(extra)); err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
+	if err := ReadExact(br, buf); err != nil {
 		return nil, err
 	}
 
@@ -558,11 +527,7 @@ func ReadString(r io.Reader) (string, error) {
 	}
 
 	buf := make([]byte, l)
-	_, err = io.ReadAtLeast(r, buf, int(l))
-	if err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
+	if err := ReadExact(r, buf); err != nil {
 		return "", err
 	}
 
@@ -584,11 +549,7 @@ func ReadStringBuf(r io.Reader, scratch []byte) (string, error) {
 	}
 
 	buf := make([]byte, l)
-	_, err = io.ReadAtLeast(r, buf, int(l))
-	if err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
+	if err := ReadExact(r, buf); err != nil {
 		return "", err
 	}
 
@@ -671,6 +632,16 @@ func WriteCidBuf(buf []byte, w io.Writer, c cid.Cid) error {
 	}
 
 	return nil
+}
+
+// ReadExact is equivalent to ReadFull except that it returns ErrUnexpectedEOF when it reads
+// nothing, instead of just EOF.
+func ReadExact(r io.Reader, buf []byte) error {
+	_, err := io.ReadFull(r, buf)
+	if err == io.EOF {
+		err = io.ErrUnexpectedEOF
+	}
+	return err
 }
 
 type CborBool bool
