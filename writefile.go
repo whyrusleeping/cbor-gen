@@ -8,6 +8,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// WriteTupleFileEncodersToFile generates array backed MarshalCBOR and UnmarshalCBOR implementations for the
+// given types in the specified file, with the specified package name.
+//
+// The MarshalCBOR and UnmarshalCBOR implementations will marshal/unmarshal each type's fields as a
+// fixed-length CBOR array of field values.
 func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	buf := new(bytes.Buffer)
 
@@ -50,6 +55,11 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	return nil
 }
 
+// WriteMapFileEncodersToFile generates map backed MarshalCBOR and UnmarshalCBOR implementations for
+// the given types in the specified file, with the specified package name.
+//
+// The MarshalCBOR and UnmarshalCBOR implementations will marshal/unmarshal each type's fields as a
+// map of field names to field values.
 func WriteMapEncodersToFile(fname, pkg string, types ...interface{}) error {
 	buf := new(bytes.Buffer)
 
