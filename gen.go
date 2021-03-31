@@ -57,6 +57,7 @@ package {{ .Package }}
 import (
 	"fmt"
 	"io"
+	"math"
 	"sort"
 
 {{ range .Imports }}{{ .Name }} "{{ .PkgPath }}"
@@ -66,6 +67,7 @@ import (
 
 var _ = xerrors.Errorf
 var _ = cid.Undef
+var _ = math.E
 var _ = sort.Sort
 
 `)
