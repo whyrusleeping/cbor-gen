@@ -63,7 +63,15 @@ func (p *peeker) ReadByte() (byte, error) {
 	var buf [1]byte
 	n, err := p.reader.Read(buf[:])
 	if n == 0 {
+		if err == nil {
+			err = io.ErrNoProgress
+		}
 		return 0, err
+	}
+	// ReadByte is not allowed to return an EOF when a byte was successfully
+	// read, but the underlying reader is allowed to do so.
+	if err == io.EOF {
+		err = nil
 	}
 	b := buf[0]
 	p.lastByte = b
