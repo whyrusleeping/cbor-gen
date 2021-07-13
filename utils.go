@@ -626,8 +626,8 @@ func WriteCidBuf(buf []byte, w io.Writer, c cid.Cid) error {
 
 type CborBool bool
 
-func (cb *CborBool) MarshalCBOR(w io.Writer) error {
-	return WriteBool(w, bool(*cb))
+func (cb CborBool) MarshalCBOR(w io.Writer) error {
+	return WriteBool(w, bool(cb))
 }
 
 func (cb *CborBool) UnmarshalCBOR(r io.Reader) error {
@@ -653,8 +653,8 @@ func (cb *CborBool) UnmarshalCBOR(r io.Reader) error {
 
 type CborInt int64
 
-func (ci *CborInt) MarshalCBOR(w io.Writer) error {
-	v := int64(*ci)
+func (ci CborInt) MarshalCBOR(w io.Writer) error {
+	v := int64(ci)
 	if v >= 0 {
 		if err := WriteMajorTypeHeader(w, MajUnsignedInt, uint64(v)); err != nil {
 			return err
@@ -695,7 +695,7 @@ func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
 
 type CborTime time.Time
 
-func (ct *CborTime) MarshalCBOR(w io.Writer) error {
+func (ct CborTime) MarshalCBOR(w io.Writer) error {
 	nsecs := ct.Time().UnixNano()
 
 	cbi := CborInt(nsecs)
