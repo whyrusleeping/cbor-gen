@@ -16,9 +16,10 @@ const MaxLength = 8192
 const ByteArrayMaxLen = 2 << 20
 
 var (
-	cidType      = reflect.TypeOf(cid.Cid{})
-	bigIntType   = reflect.TypeOf(big.Int{})
-	deferredType = reflect.TypeOf(Deferred{})
+	cidType         = reflect.TypeOf(cid.Cid{})
+	bigIntType      = reflect.TypeOf(big.Int{})
+	emptyStructType = reflect.TypeOf(struct{}{})
+	deferredType    = reflect.TypeOf(Deferred{})
 )
 
 func doTemplate(w io.Writer, info interface{}, templ string) error {
@@ -288,6 +289,14 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
 	}
 {{ end }}
+`)
+
+	case emptyStructType:
+		return doTemplate(w, f, `
+	if _, err := w.Write(cbg.CborNull); err != nil {
+		return err
+	}
+	_ = {{ .Name }}
 `)
 	default:
 		return doTemplate(w, f, `
@@ -659,7 +668,16 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		}
 	}
 `)
-
+	case emptyStructType:
+		return doTemplate(w, f, `
+	b, err := br.ReadByte()
+	if err != nil {
+		return err
+	}
+	if b != cbg.CborNull[0] {
+		return fmt.Errorf("incorrect empty struct type")
+	}
+`)
 	default:
 		return doTemplate(w, f, `
 	{

@@ -15,11 +15,12 @@ type SignedArray struct {
 }
 
 type SimpleTypeOne struct {
-	Foo     string
-	Value   uint64
-	Binary  []byte
-	Signed  int64
-	NString NamedString
+	Foo         string
+	Value       uint64
+	Binary      []byte
+	Signed      int64
+	NString     NamedString
+	EmptyStruct struct{}
 }
 
 type SimpleTypeTwo struct {
@@ -45,13 +46,14 @@ type SimpleTypeTree struct {
 }
 
 type SimpleStructV1 struct {
-	OldStr string
-	OldBytes []byte
-	OldNum uint64
-	OldPtr *cid.Cid
-	OldMap map[string]SimpleTypeOne
-	OldArray []SimpleTypeOne
-	OldStruct SimpleTypeOne
+	OldStr      string
+	OldBytes    []byte
+	OldNum      uint64
+	OldPtr      *cid.Cid
+	OldMap      map[string]SimpleTypeOne
+	OldEmptyMap map[string]struct{}
+	OldArray    []SimpleTypeOne
+	OldStruct   SimpleTypeOne
 }
 
 type SimpleStructV2 struct {
@@ -69,6 +71,9 @@ type SimpleStructV2 struct {
 
 	OldMap map[string]SimpleTypeOne
 	NewMap map[string]SimpleTypeOne
+
+	OldEmptyMap map[string]struct{}
+	NewEmptyMap map[string]struct{}
 
 	OldArray []SimpleTypeOne
 	NewArray []SimpleTypeOne
