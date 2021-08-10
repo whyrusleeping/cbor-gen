@@ -509,7 +509,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{167}); err != nil {
+	if _, err := w.Write([]byte{168}); err != nil {
 		return err
 	}
 
@@ -643,6 +643,54 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 			if err := v.MarshalCBOR(w); err != nil {
 				return err
 			}
+
+		}
+	}
+
+	// t.OldEmptyMap (map[string]struct {}) (map)
+	if len("OldEmptyMap") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldEmptyMap\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldEmptyMap"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldEmptyMap")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.OldEmptyMap) > 4096 {
+			return xerrors.Errorf("cannot marshal t.OldEmptyMap map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.OldEmptyMap))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.OldEmptyMap))
+		for k := range t.OldEmptyMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.OldEmptyMap[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, string(k)); err != nil {
+				return err
+			}
+
+			if _, err := w.Write(cbg.CborNull); err != nil {
+				return err
+			}
+			_ = v
 
 		}
 	}
@@ -836,6 +884,48 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) error {
 				t.OldMap[k] = v
 
 			}
+			// t.OldEmptyMap (map[string]struct {}) (map)
+		case "OldEmptyMap":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.OldEmptyMap: map too large")
+			}
+
+			t.OldEmptyMap = make(map[string]struct{}, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringBuf(br, scratch)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v struct{}
+
+				b, err := br.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					return fmt.Errorf("incorrect empty struct type")
+				}
+
+				t.OldEmptyMap[k] = v
+
+			}
 			// t.OldArray ([]testing.SimpleTypeOne) (slice)
 		case "OldArray":
 
@@ -890,7 +980,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		_, err := w.Write(cbg.CborNull)
 		return err
 	}
-	if _, err := w.Write([]byte{174}); err != nil {
+	if _, err := w.Write([]byte{176}); err != nil {
 		return err
 	}
 
@@ -1156,6 +1246,102 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 			if err := v.MarshalCBOR(w); err != nil {
 				return err
 			}
+
+		}
+	}
+
+	// t.OldEmptyMap (map[string]struct {}) (map)
+	if len("OldEmptyMap") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldEmptyMap\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("OldEmptyMap"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("OldEmptyMap")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.OldEmptyMap) > 4096 {
+			return xerrors.Errorf("cannot marshal t.OldEmptyMap map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.OldEmptyMap))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.OldEmptyMap))
+		for k := range t.OldEmptyMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.OldEmptyMap[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, string(k)); err != nil {
+				return err
+			}
+
+			if _, err := w.Write(cbg.CborNull); err != nil {
+				return err
+			}
+			_ = v
+
+		}
+	}
+
+	// t.NewEmptyMap (map[string]struct {}) (map)
+	if len("NewEmptyMap") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"NewEmptyMap\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("NewEmptyMap"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("NewEmptyMap")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.NewEmptyMap) > 4096 {
+			return xerrors.Errorf("cannot marshal t.NewEmptyMap map too large")
+		}
+
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajMap, uint64(len(t.NewEmptyMap))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.NewEmptyMap))
+		for k := range t.NewEmptyMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.NewEmptyMap[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, string(k)); err != nil {
+				return err
+			}
+
+			if _, err := w.Write(cbg.CborNull); err != nil {
+				return err
+			}
+			_ = v
 
 		}
 	}
@@ -1501,6 +1687,90 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) error {
 				}
 
 				t.NewMap[k] = v
+
+			}
+			// t.OldEmptyMap (map[string]struct {}) (map)
+		case "OldEmptyMap":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.OldEmptyMap: map too large")
+			}
+
+			t.OldEmptyMap = make(map[string]struct{}, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringBuf(br, scratch)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v struct{}
+
+				b, err := br.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					return fmt.Errorf("incorrect empty struct type")
+				}
+
+				t.OldEmptyMap[k] = v
+
+			}
+			// t.NewEmptyMap (map[string]struct {}) (map)
+		case "NewEmptyMap":
+
+			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.NewEmptyMap: map too large")
+			}
+
+			t.NewEmptyMap = make(map[string]struct{}, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringBuf(br, scratch)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v struct{}
+
+				b, err := br.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					return fmt.Errorf("incorrect empty struct type")
+				}
+
+				t.NewEmptyMap[k] = v
 
 			}
 			// t.OldArray ([]testing.SimpleTypeOne) (slice)
