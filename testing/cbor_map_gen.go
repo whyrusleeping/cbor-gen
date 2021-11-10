@@ -1592,3 +1592,140 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+func (t *RenamedFields) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+	if _, err := w.Write([]byte{162}); err != nil {
+		return err
+	}
+
+	scratch := make([]byte, 9)
+
+	// t.Foo (int64) (int64)
+	if len("foo") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"foo\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("foo"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("foo")); err != nil {
+		return err
+	}
+
+	if t.Foo >= 0 {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Foo)); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajNegativeInt, uint64(-t.Foo-1)); err != nil {
+			return err
+		}
+	}
+
+	// t.Bar (string) (string)
+	if len("beep") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"beep\" was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len("beep"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("beep")); err != nil {
+		return err
+	}
+
+	if len(t.Bar) > cbg.MaxLength {
+		return xerrors.Errorf("Value in field t.Bar was too long")
+	}
+
+	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.Bar))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string(t.Bar)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *RenamedFields) UnmarshalCBOR(r io.Reader) error {
+	*t = RenamedFields{}
+
+	br := cbg.GetPeeker(r)
+	scratch := make([]byte, 8)
+
+	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("RenamedFields: map struct too large (%d)", extra)
+	}
+
+	var name string
+	n := extra
+
+	for i := uint64(0); i < n; i++ {
+
+		{
+			sval, err := cbg.ReadStringBuf(br, scratch)
+			if err != nil {
+				return err
+			}
+
+			name = string(sval)
+		}
+
+		switch name {
+		// t.Foo (int64) (int64)
+		case "foo":
+			{
+				maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+				var extraI int64
+				if err != nil {
+					return err
+				}
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative oveflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
+				}
+
+				t.Foo = int64(extraI)
+			}
+			// t.Bar (string) (string)
+		case "beep":
+
+			{
+				sval, err := cbg.ReadStringBuf(br, scratch)
+				if err != nil {
+					return err
+				}
+
+				t.Bar = string(sval)
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(r, func(cid.Cid) {})
+		}
+	}
+
+	return nil
+}
