@@ -45,12 +45,12 @@ type SimpleTypeTree struct {
 }
 
 type SimpleStructV1 struct {
-	OldStr string
-	OldBytes []byte
-	OldNum uint64
-	OldPtr *cid.Cid
-	OldMap map[string]SimpleTypeOne
-	OldArray []SimpleTypeOne
+	OldStr    string
+	OldBytes  []byte
+	OldNum    uint64
+	OldPtr    *cid.Cid
+	OldMap    map[string]SimpleTypeOne
+	OldArray  []SimpleTypeOne
 	OldStruct SimpleTypeOne
 }
 
@@ -98,4 +98,9 @@ type ThingWithSomeTime struct {
 // Do not add fields to this type.
 type NeedScratchForMap struct {
 	Thing bool
+}
+
+type RenamedFields struct {
+	Foo int64  `cborgen:"foo"`
+	Bar string `cborgen:"beep"`
 }
