@@ -338,7 +338,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 						t.Test[i] = make([]uint8, extra)
 					}
 
-					if _, err := io.ReadFull(br, t.Test[i][:]); err != nil {
+					if err := cbg.ReadExact(br, t.Test[i][:]); err != nil {
 						return err
 					}
 				}
