@@ -1,8 +1,10 @@
 package typegen
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
+	"io"
 	"testing"
 
 	cid "github.com/ipfs/go-cid"
@@ -35,4 +37,58 @@ func TestDeferredMaxLengthSingle(t *testing.T) {
 	if err != maxLengthError {
 		t.Fatal("deferred: allowed more than the maximum allocation supported")
 	}
+}
+
+func TestReadByteBuf(t *testing.T) {
+	type testCase struct {
+		name       string
+		reader     io.Reader
+		shouldFail bool
+	}
+	testCases := []testCase{
+		{name: "Reader that returns EOF and n bytes read", reader: &testReader1Byte{b: 0x01}, shouldFail: false},
+		{name: "Exhausted reader", reader: &testReader1Byte{b: 0x01, emptied: true}, shouldFail: true},
+		{name: "Byte buffer", reader: bytes.NewBuffer([]byte{0x01}), shouldFail: false},
+		{name: "Empty Byte buffer", reader: bytes.NewBuffer([]byte{}), shouldFail: true},
+		{name: "Byte Reader", reader: bytes.NewReader([]byte{0x01}), shouldFail: false},
+		{name: "bufio Reader", reader: bufio.NewReader(bytes.NewReader([]byte{0x01})), shouldFail: false},
+		{name: "bufio Reader with testReader", reader: bufio.NewReader(&testReader1Byte{b: 0x01}), shouldFail: false},
+		{name: "bufio Reader with exhausted testReader", reader: bufio.NewReader(&testReader1Byte{b: 0x01, emptied: true}), shouldFail: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := readByteBuf(tc.reader, []byte{0x00})
+			if tc.shouldFail && err == nil {
+				t.Fatalf("Expected error. Got nil")
+			} else if !tc.shouldFail && err != nil {
+				t.Fatalf("Expected no error. Got %v", err)
+			}
+
+			// readByteBuf should return a nil error with the byte read.
+			if err == nil {
+				if b != 0x01 {
+					t.Fatalf("Expected byte 0x01. Got %x", b)
+				}
+			}
+		})
+	}
+}
+
+type testReader1Byte struct {
+	emptied bool
+	b       byte
+}
+
+func (tr *testReader1Byte) Read(p []byte) (n int, err error) {
+	if tr.emptied {
+		return 0, io.EOF
+	}
+
+	written, err := bytes.NewReader([]byte{tr.b}).Read(p)
+	if written != 1 {
+		panic("unreachable. testReader1Byte has a single byte" + err.Error())
+	}
+	tr.emptied = true
+	return 1, io.EOF
 }

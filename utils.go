@@ -274,6 +274,8 @@ func CborReadHeader(br io.Reader) (byte, uint64, error) {
 	}
 }
 
+// readByteBuf follows the semantics of https://pkg.go.dev/io#ByteReader. If an
+// error is returned the byte value is undefined.
 func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	// Reading a single byte from these buffers is much faster than copying
 	// into a slice.
@@ -286,13 +288,16 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 		return r.ReadByte()
 	}
 	n, err := r.Read(scratch[:1])
-	if err != nil {
-		return 0, err
-	}
-	if n != 1 {
+	// We have to handle the n bytes first before considering the error.
+	// See https://pkg.go.dev/io#Reader
+	if n == 1 {
+		return scratch[0], nil
+	} else if n == 0 && err != nil {
+		return 0, fmt.Errorf("failed to read a byte: %w", err)
+	} else {
+		// Nothing happened. We got n == 0 && err == nil.
 		return 0, fmt.Errorf("failed to read a byte")
 	}
-	return scratch[0], err
 }
 
 // same as the above, just tries to allocate less by using a passed in scratch buffer
