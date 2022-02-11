@@ -284,14 +284,12 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 		return r.ReadByte()
 	case *bufio.Reader:
 		return r.ReadByte()
+	case *peeker:
+		return r.ReadByte()
+	case io.ByteReader:
+		return r.ReadByte()
 	}
-	n, err := r.Read(scratch[:1])
-	if err != nil {
-		return 0, err
-	}
-	if n != 1 {
-		return 0, fmt.Errorf("failed to read a byte")
-	}
+	_, err := io.ReadFull(r, scratch[:1])
 	return scratch[0], err
 }
 
