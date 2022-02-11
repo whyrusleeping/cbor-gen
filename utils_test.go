@@ -42,7 +42,7 @@ func TestDeferredMaxLengthSingle(t *testing.T) {
 
 // TestReadEOFSemantics checks that our helper functions follow this rule when
 // dealing with EOF:
-// If the reader can't read a single byte, it should return err == io.EOF.
+// If the reader can't read a single byte because of EOF, it should return err == io.EOF.
 // If the reader could read _some_ of the bytes but not all because of EOF, it
 // should return err == io.ErrUnexpectedEOF.
 // Take a look at the io.EOF doc for  more info: https://pkg.go.dev/io#EOF
