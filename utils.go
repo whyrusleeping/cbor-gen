@@ -24,22 +24,33 @@ func discard(br io.Reader, n int) error {
 	switch r := br.(type) {
 	case *bytes.Buffer:
 		buf := r.Next(n)
-		if len(buf) < n {
+		if len(buf) == 0 {
+			return io.EOF
+		} else if len(buf) < n {
 			return io.ErrUnexpectedEOF
 		}
 		return nil
 	case *bytes.Reader:
-		if r.Len() < n {
+		if r.Len() == 0 {
+			return io.EOF
+		} else if r.Len() < n {
 			_, _ = r.Seek(0, io.SeekEnd)
 			return io.ErrUnexpectedEOF
 		}
 		_, err := r.Seek(int64(n), io.SeekCurrent)
 		return err
 	case *bufio.Reader:
-		_, err := r.Discard(n)
+		discarded, err := r.Discard(n)
+		if discarded != 0 && discarded < n && err == io.EOF {
+			return io.ErrUnexpectedEOF
+		}
 		return err
 	default:
-		_, err := io.CopyN(ioutil.Discard, br, int64(n))
+		discarded, err := io.CopyN(ioutil.Discard, br, int64(n))
+		if discarded != 0 && discarded < int64(n) && err == io.EOF {
+			return io.ErrUnexpectedEOF
+		}
+
 		return err
 	}
 }
@@ -284,14 +295,12 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 		return r.ReadByte()
 	case *bufio.Reader:
 		return r.ReadByte()
+	case *peeker:
+		return r.ReadByte()
+	case io.ByteReader:
+		return r.ReadByte()
 	}
-	n, err := r.Read(scratch[:1])
-	if err != nil {
-		return 0, err
-	}
-	if n != 1 {
-		return 0, fmt.Errorf("failed to read a byte")
-	}
+	_, err := io.ReadFull(r, scratch[:1])
 	return scratch[0], err
 }
 
