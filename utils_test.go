@@ -55,6 +55,8 @@ func TestReadEOFSemantics(t *testing.T) {
 	newTestCases := func() []testCase {
 		return []testCase{
 			{name: "Reader that returns EOF and n bytes read", reader: &testReader1Byte{b: 0x01}, shouldFail: false},
+			{name: "Peeker with Reader that returns EOF and n bytes read", reader: GetPeeker(&testReader1Byte{b: 0x01}), shouldFail: false},
+			{name: "Peeker with Exhausted Reader", reader: GetPeeker(&testReader1Byte{b: 0x01, emptied: true}), shouldFail: true},
 			{name: "Exhausted reader", reader: &testReader1Byte{b: 0x01, emptied: true}, shouldFail: true},
 			{name: "Byte buffer", reader: bytes.NewBuffer([]byte{0x01}), shouldFail: false},
 			{name: "Empty Byte buffer", reader: bytes.NewBuffer([]byte{}), shouldFail: true},
