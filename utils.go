@@ -21,6 +21,11 @@ const maxHeaderSize = 9
 // the most common readers we encounter in this library for a significant
 // performance boost.
 func discard(br io.Reader, n int) error {
+	// If we're expecting no bytes, don't even try to read. Otherwise, we may read an EOF.
+	if n == 0 {
+		return nil
+	}
+
 	switch r := br.(type) {
 	case *bytes.Buffer:
 		buf := r.Next(n)
