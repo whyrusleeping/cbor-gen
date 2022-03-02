@@ -27,6 +27,22 @@ func TestLinkScan(t *testing.T) {
 	t.Log(cids)
 }
 
+func TestScanForLinksEOFRegression(t *testing.T) {
+	inp := "82442000000081818242005140"
+	inpb, err := hex.DecodeString(inp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cids []cid.Cid
+	if err := ScanForLinks(bytes.NewReader(inpb), func(c cid.Cid) {
+		cids = append(cids, c)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Log(cids)
+}
+
 func TestDeferredMaxLengthSingle(t *testing.T) {
 	var header bytes.Buffer
 	if err := WriteMajorTypeHeader(&header, MajByteString, ByteArrayMaxLen+1); err != nil {
