@@ -1033,6 +1033,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
 func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
+	r = &readerWithEOFContext{r: r}
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
@@ -1191,6 +1192,7 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 func emitCborUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
 func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
+	r = &readerWithEOFContext{r: r}
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)

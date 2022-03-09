@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	cid "github.com/ipfs/go-cid"
@@ -43,6 +44,52 @@ func TestScanForLinksEOFRegression(t *testing.T) {
 	t.Log(cids)
 }
 
+func TestScanForLinksShouldReturnErrUnexpectedEOF(t *testing.T) {
+	inp := "824420000000818182420051"
+	inpb, err := hex.DecodeString(inp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cids []cid.Cid
+	if err := ScanForLinks(bytes.NewReader(inpb), func(c cid.Cid) {
+		cids = append(cids, c)
+	}); err != io.ErrUnexpectedEOF {
+		t.Fatal(err)
+	}
+	t.Log(cids)
+}
+
+func TestScanForLinksShouldReturnEOFWhenNothingRead(t *testing.T) {
+	var cids []cid.Cid
+	if err := ScanForLinks(strings.NewReader(""), func(c cid.Cid) {
+		cids = append(cids, c)
+	}); err != io.EOF {
+		t.Fatal(err)
+	}
+	t.Log(cids)
+}
+
+func TestReaderWithEOFContext(t *testing.T) {
+	emptyReader := &readerWithEOFContext{r: strings.NewReader("")}
+	buf := make([]byte, 1)
+	_, err := emptyReader.Read(buf)
+	if err != io.EOF {
+		t.Fatal(err)
+	}
+
+	oneByteReader := &readerWithEOFContext{r: strings.NewReader("1")}
+	_, err = io.ReadFull(oneByteReader, buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = io.ReadFull(oneByteReader, buf)
+	if err != io.ErrUnexpectedEOF {
+		t.Fatal(err)
+	}
+}
+
 func TestDeferredMaxLengthSingle(t *testing.T) {
 	var header bytes.Buffer
 	if err := WriteMajorTypeHeader(&header, MajByteString, ByteArrayMaxLen+1); err != nil {
@@ -70,6 +117,8 @@ func TestReadEOFSemantics(t *testing.T) {
 	}
 	newTestCases := func() []testCase {
 		return []testCase{
+			{name: "Reader with EOF context that returns EOF and n bytes read", reader: &readerWithEOFContext{r: &testReader1Byte{b: 0x01}}, shouldFail: false},
+			{name: "Reader with EOF context around Empty Byte Reader", reader: &readerWithEOFContext{r: bytes.NewReader([]byte{})}, shouldFail: true},
 			{name: "Reader that returns EOF and n bytes read", reader: &testReader1Byte{b: 0x01}, shouldFail: false},
 			{name: "Peeker with Reader that returns EOF and n bytes read", reader: GetPeeker(&testReader1Byte{b: 0x01}), shouldFail: false},
 			{name: "Peeker with Exhausted Reader", reader: GetPeeker(&testReader1Byte{b: 0x01, emptied: true}), shouldFail: true},
