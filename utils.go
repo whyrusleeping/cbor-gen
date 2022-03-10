@@ -68,24 +68,34 @@ func discard(br io.Reader, n int) error {
 }
 
 func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
-	br = &readerWithEOFContext{r: br}
+	hasReadOnce := false
 	scratch := make([]byte, maxCidLength)
 	for remaining := uint64(1); remaining > 0; remaining-- {
 		maj, extra, err := CborReadHeaderBuf(br, scratch)
+		if err == io.EOF && hasReadOnce {
+			return io.ErrUnexpectedEOF
+		}
 		if err != nil {
 			return err
 		}
+		hasReadOnce = true
 
 		switch maj {
 		case MajUnsignedInt, MajNegativeInt, MajOther:
 		case MajByteString, MajTextString:
 			err := discard(br, int(extra))
+			if err == io.EOF && hasReadOnce {
+				return io.ErrUnexpectedEOF
+			}
 			if err != nil {
 				return err
 			}
 		case MajTag:
 			if extra == 42 {
 				maj, extra, err = CborReadHeaderBuf(br, scratch)
+				if err == io.EOF && hasReadOnce {
+					return io.ErrUnexpectedEOF
+				}
 				if err != nil {
 					return err
 				}
@@ -99,6 +109,9 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 				}
 
 				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
+					if err == io.EOF && hasReadOnce {
+						return io.ErrUnexpectedEOF
+					}
 					return err
 				}
 
