@@ -27,13 +27,6 @@ func discard(br io.Reader, n int) error {
 	}
 
 	switch r := br.(type) {
-	case *ReaderWithEOFContext:
-		err := discard(r.R, n)
-		if err == io.EOF && r.hasReadOnce {
-			err = io.ErrUnexpectedEOF
-		}
-		r.hasReadOnce = true
-		return err
 	case *bytes.Buffer:
 		buf := r.Next(n)
 		if len(buf) == 0 {
@@ -67,14 +60,16 @@ func discard(br io.Reader, n int) error {
 	}
 }
 
-func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
+func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
 	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 	scratch := make([]byte, maxCidLength)
 	for remaining := uint64(1); remaining > 0; remaining-- {
 		maj, extra, err := CborReadHeaderBuf(br, scratch)
-		if err == io.EOF && hasReadOnce {
-			return io.ErrUnexpectedEOF
-		}
 		if err != nil {
 			return err
 		}
@@ -84,18 +79,12 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 		case MajUnsignedInt, MajNegativeInt, MajOther:
 		case MajByteString, MajTextString:
 			err := discard(br, int(extra))
-			if err == io.EOF && hasReadOnce {
-				return io.ErrUnexpectedEOF
-			}
 			if err != nil {
 				return err
 			}
 		case MajTag:
 			if extra == 42 {
 				maj, extra, err = CborReadHeaderBuf(br, scratch)
-				if err == io.EOF && hasReadOnce {
-					return io.ErrUnexpectedEOF
-				}
 				if err != nil {
 					return err
 				}
@@ -109,9 +98,6 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
 				}
 
 				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
-					if err == io.EOF && hasReadOnce {
-						return io.ErrUnexpectedEOF
-					}
 					return err
 				}
 
@@ -174,7 +160,6 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 
 func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 	// Reuse any existing buffers.
-	br = NewReaderWithEOFContext(br)
 	reusedBuf := d.Raw[:0]
 	d.Raw = nil
 	buf := bytes.NewBuffer(reusedBuf)
@@ -240,13 +225,6 @@ func readByte(r io.Reader) (byte, error) {
 	// try to cast to a concrete type, it's much faster than casting to an
 	// interface.
 	switch r := r.(type) {
-	case *ReaderWithEOFContext:
-		b, err := readByte(r.R)
-		if err == io.EOF && r.hasReadOnce {
-			err = io.ErrUnexpectedEOF
-		}
-		r.hasReadOnce = true
-		return b, err
 	case *bytes.Buffer:
 		return r.ReadByte()
 	case *bytes.Reader:
@@ -263,11 +241,18 @@ func readByte(r io.Reader) (byte, error) {
 	return buf[0], err
 }
 
-func CborReadHeader(br io.Reader) (byte, uint64, error) {
+func CborReadHeader(br io.Reader) (_b byte, _ui uint64, err error) {
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 	first, err := readByte(br)
 	if err != nil {
 		return 0, 0, err
 	}
+	hasReadOnce = true
 
 	maj := (first & 0xe0) >> 5
 	low := first & 0x1f
@@ -323,13 +308,6 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	// Reading a single byte from these buffers is much faster than copying
 	// into a slice.
 	switch r := r.(type) {
-	case *ReaderWithEOFContext:
-		b, err := readByteBuf(r.R, scratch)
-		if err == io.EOF && r.hasReadOnce {
-			err = io.ErrUnexpectedEOF
-		}
-		r.hasReadOnce = true
-		return b, err
 	case *bytes.Buffer:
 		return r.ReadByte()
 	case *bytes.Reader:
@@ -493,11 +471,18 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 	}
 }
 
-func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, error) {
+func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) (bs []byte, err error) {
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 	maj, extra, err := CborReadHeader(br)
 	if err != nil {
 		return nil, err
 	}
+	hasReadOnce = true
 
 	if maj != MajTag {
 		return nil, fmt.Errorf("expected cbor type 'tag' in input")
@@ -681,7 +666,6 @@ func (cb CborBool) MarshalCBOR(w io.Writer) error {
 }
 
 func (cb *CborBool) UnmarshalCBOR(r io.Reader) error {
-	r = NewReaderWithEOFContext(r)
 	t, val, err := CborReadHeader(r)
 	if err != nil {
 		return err
@@ -719,7 +703,6 @@ func (ci CborInt) MarshalCBOR(w io.Writer) error {
 }
 
 func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
-	r = NewReaderWithEOFContext(r)
 	maj, extra, err := CborReadHeader(r)
 	if err != nil {
 		return err
@@ -756,7 +739,6 @@ func (ct CborTime) MarshalCBOR(w io.Writer) error {
 }
 
 func (ct *CborTime) UnmarshalCBOR(r io.Reader) error {
-	r = NewReaderWithEOFContext(r)
 	var cbi CborInt
 	if err := cbi.UnmarshalCBOR(r); err != nil {
 		return err
@@ -783,44 +765,4 @@ func (ct *CborTime) UnmarshalJSON(b []byte) error {
 	}
 	*(*time.Time)(ct) = t
 	return nil
-}
-
-// ReaderWithEOFContext keeps track of whether it was able to read at least one
-// byte from the underlying reader. It uses this context to either return EOF or
-// ErrUnexpectedEOF using the following rule:
-// - if we were not able to read a single byte because of EOF, it returns EOF.
-// - if we were able to read at least a single byte, but runs into an EOF
-//   later, then it returns ErrUnexpectedEOF.
-//
-// This reader is useful when a function reads from a reader multiple times and
-// the function should only return EOF if it was not able to read a single byte
-// because of EOF. Otherwise it should return ErrUnexpectedEOF. For example,
-// when we unmarshal a CBOR blob into an object it should only return EOF if the
-// input blob was empty, otherwise it should return an ErrUnexpectedEOF since it
-// started decoding the blob but failed.
-type ReaderWithEOFContext struct {
-	R           io.Reader
-	hasReadOnce bool
-}
-
-func (r *ReaderWithEOFContext) Read(p []byte) (n int, err error) {
-	if !r.hasReadOnce {
-		r.hasReadOnce = true
-		return r.R.Read(p)
-	}
-
-	n, err = r.R.Read(p)
-	if err == io.EOF {
-		err = io.ErrUnexpectedEOF
-	}
-	return n, err
-}
-
-//go:inline
-func NewReaderWithEOFContext(r io.Reader) *ReaderWithEOFContext {
-	if rc, ok := r.(*ReaderWithEOFContext); ok {
-		return rc
-	} else {
-		return &ReaderWithEOFContext{R: r}
-	}
 }

@@ -1032,17 +1032,24 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
-	r = cbg.NewReaderWithEOFContext(r)
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 	maj, extra, err := {{ ReadHeader "br" }}
 	if err != nil {
 		return err
 	}
+	hasReadOnce = true
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
@@ -1191,17 +1198,24 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 
 func emitCborUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) error {
-	r = cbg.NewReaderWithEOFContext(r)
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
 
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 	maj, extra, err := {{ ReadHeader "br" }}
 	if err != nil {
 		return err
 	}
+	hasReadOnce = true
+
 	if maj != cbg.MajMap {
 		return fmt.Errorf("cbor input should be of type map")
 	}
