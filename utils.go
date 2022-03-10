@@ -158,7 +158,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 	return err
 }
 
-func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
+func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 	// Reuse any existing buffers.
 	reusedBuf := d.Raw[:0]
 	d.Raw = nil
@@ -166,6 +166,13 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 
 	// Allocate some scratch space.
 	scratch := make([]byte, maxHeaderSize)
+
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	// Algorithm:
 	//
@@ -182,6 +189,7 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 		if err != nil {
 			return err
 		}
+		hasReadOnce = true
 		if err := WriteMajorTypeHeaderBuf(scratch, buf, maj, extra); err != nil {
 			return err
 		}
