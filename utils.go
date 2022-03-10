@@ -242,17 +242,15 @@ func readByte(r io.Reader) (byte, error) {
 }
 
 func CborReadHeader(br io.Reader) (_b byte, _ui uint64, err error) {
-	hasReadOnce := false
-	defer func() {
-		if err == io.EOF && hasReadOnce {
-			err = io.ErrUnexpectedEOF
-		}
-	}()
 	first, err := readByte(br)
 	if err != nil {
 		return 0, 0, err
 	}
-	hasReadOnce = true
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	maj := (first & 0xe0) >> 5
 	low := first & 0x1f
@@ -472,17 +470,15 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 }
 
 func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) (bs []byte, err error) {
-	hasReadOnce := false
-	defer func() {
-		if err == io.EOF && hasReadOnce {
-			err = io.ErrUnexpectedEOF
-		}
-	}()
 	maj, extra, err := CborReadHeader(br)
 	if err != nil {
 		return nil, err
 	}
-	hasReadOnce = true
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	if maj != MajTag {
 		return nil, fmt.Errorf("expected cbor type 'tag' in input")
