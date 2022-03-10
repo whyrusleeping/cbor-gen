@@ -27,6 +27,13 @@ func discard(br io.Reader, n int) error {
 	}
 
 	switch r := br.(type) {
+	case *readerWithEOFContext:
+		err := discard(r.r, n)
+		if err == io.EOF && r.hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+		r.hasReadOnce = true
+		return err
 	case *bytes.Buffer:
 		buf := r.Next(n)
 		if len(buf) == 0 {
