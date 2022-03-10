@@ -59,6 +59,7 @@ import (
 	"io"
 	"math"
 	"sort"
+	"errors"
 
 {{ range .Imports }}{{ .Name }} "{{ .PkgPath }}"
 {{ end }}
@@ -1043,8 +1044,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if errors.Is(err, io.EOF) {
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
@@ -1207,8 +1208,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if errors.Is(err, io.EOF) {
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 

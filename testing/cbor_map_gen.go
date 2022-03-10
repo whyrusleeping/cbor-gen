@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -200,7 +201,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -461,7 +462,7 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -713,7 +714,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -1273,7 +1274,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -1685,7 +1686,7 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
