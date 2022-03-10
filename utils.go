@@ -174,7 +174,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 
 func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 	// Reuse any existing buffers.
-	br = &ReaderWithEOFContext{R: br}
+	br = NewReaderWithEOFContext(br)
 	reusedBuf := d.Raw[:0]
 	d.Raw = nil
 	buf := bytes.NewBuffer(reusedBuf)
@@ -681,7 +681,7 @@ func (cb CborBool) MarshalCBOR(w io.Writer) error {
 }
 
 func (cb *CborBool) UnmarshalCBOR(r io.Reader) error {
-	r = &ReaderWithEOFContext{R: r}
+	r = NewReaderWithEOFContext(r)
 	t, val, err := CborReadHeader(r)
 	if err != nil {
 		return err
@@ -719,7 +719,7 @@ func (ci CborInt) MarshalCBOR(w io.Writer) error {
 }
 
 func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
-	r = &ReaderWithEOFContext{R: r}
+	r = NewReaderWithEOFContext(r)
 	maj, extra, err := CborReadHeader(r)
 	if err != nil {
 		return err
@@ -756,7 +756,7 @@ func (ct CborTime) MarshalCBOR(w io.Writer) error {
 }
 
 func (ct *CborTime) UnmarshalCBOR(r io.Reader) error {
-	r = &ReaderWithEOFContext{R: r}
+	r = NewReaderWithEOFContext(r)
 	var cbi CborInt
 	if err := cbi.UnmarshalCBOR(r); err != nil {
 		return err
@@ -814,4 +814,13 @@ func (r *ReaderWithEOFContext) Read(p []byte) (n int, err error) {
 		err = io.ErrUnexpectedEOF
 	}
 	return n, err
+}
+
+//go:inline
+func NewReaderWithEOFContext(r io.Reader) *ReaderWithEOFContext {
+	if rc, ok := r.(*ReaderWithEOFContext); ok {
+		return rc
+	} else {
+		return &ReaderWithEOFContext{R: r}
+	}
 }
