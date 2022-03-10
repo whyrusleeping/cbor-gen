@@ -190,6 +190,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = SimpleTypeTree{}
 
 	br := cbg.GetPeeker(r)
@@ -445,6 +446,7 @@ func (t *NeedScratchForMap) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = NeedScratchForMap{}
 
 	br := cbg.GetPeeker(r)
@@ -691,6 +693,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = SimpleStructV1{}
 
 	br := cbg.GetPeeker(r)
@@ -1245,6 +1248,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = SimpleStructV2{}
 
 	br := cbg.GetPeeker(r)
@@ -1651,6 +1655,7 @@ func (t *RenamedFields) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *RenamedFields) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = RenamedFields{}
 
 	br := cbg.GetPeeker(r)

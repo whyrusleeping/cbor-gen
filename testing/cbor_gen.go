@@ -48,6 +48,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = SignedArray{}
 
 	br := cbg.GetPeeker(r)
@@ -171,6 +172,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = SimpleTypeOne{}
 
 	br := cbg.GetPeeker(r)
@@ -412,6 +414,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = SimpleTypeTwo{}
 
 	br := cbg.GetPeeker(r)
@@ -732,6 +735,7 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = DeferredContainer{}
 
 	br := cbg.GetPeeker(r)
@@ -851,6 +855,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = FixedArrays{}
 
 	br := cbg.GetPeeker(r)
@@ -996,6 +1001,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 }
 
 func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) error {
+	r = &cbg.ReaderWithEOFContext{R: r}
 	*t = ThingWithSomeTime{}
 
 	br := cbg.GetPeeker(r)

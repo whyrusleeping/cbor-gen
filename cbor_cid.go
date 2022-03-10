@@ -13,7 +13,7 @@ func (c CborCid) MarshalCBOR(w io.Writer) error {
 }
 
 func (c *CborCid) UnmarshalCBOR(r io.Reader) error {
-	r = &readerWithEOFContext{r: r}
+	r = &ReaderWithEOFContext{R: r}
 	oc, err := ReadCid(r)
 	if err != nil {
 		return err

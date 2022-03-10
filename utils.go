@@ -27,8 +27,8 @@ func discard(br io.Reader, n int) error {
 	}
 
 	switch r := br.(type) {
-	case *readerWithEOFContext:
-		err := discard(r.r, n)
+	case *ReaderWithEOFContext:
+		err := discard(r.R, n)
 		if err == io.EOF && r.hasReadOnce {
 			err = io.ErrUnexpectedEOF
 		}
@@ -174,7 +174,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 
 func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 	// Reuse any existing buffers.
-	br = &readerWithEOFContext{r: br}
+	br = &ReaderWithEOFContext{R: br}
 	reusedBuf := d.Raw[:0]
 	d.Raw = nil
 	buf := bytes.NewBuffer(reusedBuf)
@@ -240,8 +240,8 @@ func readByte(r io.Reader) (byte, error) {
 	// try to cast to a concrete type, it's much faster than casting to an
 	// interface.
 	switch r := r.(type) {
-	case *readerWithEOFContext:
-		b, err := readByte(r.r)
+	case *ReaderWithEOFContext:
+		b, err := readByte(r.R)
 		if err == io.EOF && r.hasReadOnce {
 			err = io.ErrUnexpectedEOF
 		}
@@ -323,8 +323,8 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	// Reading a single byte from these buffers is much faster than copying
 	// into a slice.
 	switch r := r.(type) {
-	case *readerWithEOFContext:
-		b, err := readByteBuf(r.r, scratch)
+	case *ReaderWithEOFContext:
+		b, err := readByteBuf(r.R, scratch)
 		if err == io.EOF && r.hasReadOnce {
 			err = io.ErrUnexpectedEOF
 		}
@@ -681,7 +681,7 @@ func (cb CborBool) MarshalCBOR(w io.Writer) error {
 }
 
 func (cb *CborBool) UnmarshalCBOR(r io.Reader) error {
-	r = &readerWithEOFContext{r: r}
+	r = &ReaderWithEOFContext{R: r}
 	t, val, err := CborReadHeader(r)
 	if err != nil {
 		return err
@@ -719,7 +719,7 @@ func (ci CborInt) MarshalCBOR(w io.Writer) error {
 }
 
 func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
-	r = &readerWithEOFContext{r: r}
+	r = &ReaderWithEOFContext{R: r}
 	maj, extra, err := CborReadHeader(r)
 	if err != nil {
 		return err
@@ -756,7 +756,7 @@ func (ct CborTime) MarshalCBOR(w io.Writer) error {
 }
 
 func (ct *CborTime) UnmarshalCBOR(r io.Reader) error {
-	r = &readerWithEOFContext{r: r}
+	r = &ReaderWithEOFContext{R: r}
 	var cbi CborInt
 	if err := cbi.UnmarshalCBOR(r); err != nil {
 		return err
@@ -785,7 +785,7 @@ func (ct *CborTime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// readerWithEOFContext keeps track of whether it was able to read at least one
+// ReaderWithEOFContext keeps track of whether it was able to read at least one
 // byte from the underlying reader. It uses this context to either return EOF or
 // ErrUnexpectedEOF using the following rule:
 // - if we were not able to read a single byte because of EOF, it returns EOF.
@@ -798,18 +798,18 @@ func (ct *CborTime) UnmarshalJSON(b []byte) error {
 // when we unmarshal a CBOR blob into an object it should only return EOF if the
 // input blob was empty, otherwise it should return an ErrUnexpectedEOF since it
 // started decoding the blob but failed.
-type readerWithEOFContext struct {
+type ReaderWithEOFContext struct {
+	R           io.Reader
 	hasReadOnce bool
-	r           io.Reader
 }
 
-func (r *readerWithEOFContext) Read(p []byte) (n int, err error) {
+func (r *ReaderWithEOFContext) Read(p []byte) (n int, err error) {
 	if !r.hasReadOnce {
 		r.hasReadOnce = true
-		return r.r.Read(p)
+		return r.R.Read(p)
 	}
 
-	n, err = r.r.Read(p)
+	n, err = r.R.Read(p)
 	if err == io.EOF {
 		err = io.ErrUnexpectedEOF
 	}
