@@ -202,7 +202,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
+			err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -463,7 +463,7 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
+			err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -715,7 +715,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
+			err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -1275,7 +1275,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
+			err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -1687,7 +1687,7 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
+			err = io.ErrUnexpectedEOF
 		}
 	}()
 
