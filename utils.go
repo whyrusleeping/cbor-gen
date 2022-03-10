@@ -228,7 +228,12 @@ func readByte(r io.Reader) (byte, error) {
 	// interface.
 	switch r := r.(type) {
 	case *readerWithEOFContext:
-		return readByte(r.r)
+		b, err := readByte(r.r)
+		if err == io.EOF && r.hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+		r.hasReadOnce = true
+		return b, err
 	case *bytes.Buffer:
 		return r.ReadByte()
 	case *bytes.Reader:
@@ -306,7 +311,12 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	// into a slice.
 	switch r := r.(type) {
 	case *readerWithEOFContext:
-		return readByteBuf(r.r, scratch)
+		b, err := readByteBuf(r.r, scratch)
+		if err == io.EOF && r.hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+		r.hasReadOnce = true
+		return b, err
 	case *bytes.Buffer:
 		return r.ReadByte()
 	case *bytes.Reader:
