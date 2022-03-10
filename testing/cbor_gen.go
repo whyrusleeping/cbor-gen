@@ -3,7 +3,6 @@
 package testing
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -59,7 +58,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -188,7 +187,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -435,7 +434,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -761,7 +760,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -886,7 +885,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
@@ -1037,7 +1036,7 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
