@@ -12,6 +12,11 @@ type BytePeeker interface {
 }
 
 func GetPeeker(r io.Reader) BytePeeker {
+	if r, ok := r.(*ReaderWithEOFContext); ok {
+		if r, ok := r.R.(BytePeeker); ok {
+			return r
+		}
+	}
 	if r, ok := r.(BytePeeker); ok {
 		return r
 	}
