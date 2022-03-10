@@ -334,12 +334,13 @@ func TestErrUnexpectedEOF(t *testing.T) {
 
 			nobj := SimpleTypeTwo{}
 			err := nobj.UnmarshalCBOR(bytes.NewReader(enc))
+			t.Logf("endIdx=%v, originalLen=%v", endIdx, originalLen)
 			if int(endIdx) == originalLen && err != nil {
 				t.Fatal("failed to round trip object: ", err)
 			} else if endIdx == 0 && !errors.Is(err, io.EOF) {
 				t.Fatal("expected EOF got", err)
 			} else if endIdx != 0 && !errors.Is(err, io.ErrUnexpectedEOF) {
-				t.Fatal("expected ErrUnexpectedEOF got", endIdx, originalLen, err)
+				t.Fatal("expected ErrUnexpectedEOF got", err)
 			}
 		})
 

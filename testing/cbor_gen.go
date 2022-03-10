@@ -60,7 +60,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = io.ErrUnexpectedEOF
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
@@ -189,7 +189,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = io.ErrUnexpectedEOF
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
@@ -436,7 +436,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = io.ErrUnexpectedEOF
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
@@ -762,7 +762,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = io.ErrUnexpectedEOF
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
@@ -887,7 +887,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = io.ErrUnexpectedEOF
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
@@ -1038,7 +1038,7 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	defer func() {
 		if errors.Is(err, io.EOF) {
-			err = io.ErrUnexpectedEOF
+			err = xerrors.Errorf("%w: %v", io.ErrUnexpectedEOF, err)
 		}
 	}()
 
