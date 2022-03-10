@@ -339,8 +339,8 @@ func TestErrUnexpectedEOF(t *testing.T) {
 				t.Fatal("failed to round trip object: ", err)
 			} else if endIdx == 0 && !errors.Is(err, io.EOF) {
 				t.Fatal("expected EOF got", err)
-			} else if endIdx != 0 && !errors.Is(err, io.ErrUnexpectedEOF) {
-				t.Fatal("expected ErrUnexpectedEOF got", err)
+			} else if endIdx != 0 && err == io.EOF {
+				t.Fatal("did not expect EOF but got it")
 			}
 		})
 
