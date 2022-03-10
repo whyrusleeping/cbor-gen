@@ -3,12 +3,15 @@ package testing
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/ipfs/go-cid"
+	"errors"
+	"io"
 	"math/rand"
 	"reflect"
 	"testing"
 	"testing/quick"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/google/go-cmp/cmp"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -174,12 +177,12 @@ func TestLessToMoreFieldsRoundTrip(t *testing.T) {
 		NString: "namedstr",
 	}
 	obj := &SimpleStructV1{
-		OldStr: "hello",
-		OldBytes: []byte("bytes"),
-		OldNum: 10,
-		OldPtr: &dummyCid,
-		OldMap: map[string]SimpleTypeOne{"first": simpleTypeOne},
-		OldArray: []SimpleTypeOne{simpleTypeOne},
+		OldStr:    "hello",
+		OldBytes:  []byte("bytes"),
+		OldNum:    10,
+		OldPtr:    &dummyCid,
+		OldMap:    map[string]SimpleTypeOne{"first": simpleTypeOne},
+		OldArray:  []SimpleTypeOne{simpleTypeOne},
 		OldStruct: simpleTypeOne,
 	}
 
@@ -274,8 +277,8 @@ func TestMoreToLessFieldsRoundTrip(t *testing.T) {
 		NewPtr:    &dummyCid2,
 		OldMap:    map[string]SimpleTypeOne{"foo": simpleType1},
 		NewMap:    map[string]SimpleTypeOne{"bar": simpleType2},
-		OldArray: []SimpleTypeOne{simpleType1},
-		NewArray: []SimpleTypeOne{simpleType1, simpleType2},
+		OldArray:  []SimpleTypeOne{simpleType1},
+		NewArray:  []SimpleTypeOne{simpleType1, simpleType2},
 		OldStruct: simpleType1,
 		NewStruct: simpleType2,
 	}
@@ -314,4 +317,36 @@ func TestMoreToLessFieldsRoundTrip(t *testing.T) {
 	if !cmp.Equal(obj.OldStruct, nobj.OldStruct) {
 		t.Fatal("mismatch struct marshal / unmarshal")
 	}
+}
+
+func TestErrUnexpectedEOF(t *testing.T) {
+	err := quick.Check(func(val SimpleTypeTwo, endIdx uint) bool {
+		return t.Run("quickcheck", func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			if err := val.MarshalCBOR(buf); err != nil {
+				t.Error(err)
+			}
+
+			enc := buf.Bytes()
+			originalLen := len(enc)
+			endIdx = endIdx % uint(len(enc))
+			enc = enc[:endIdx]
+
+			nobj := SimpleTypeTwo{}
+			err := nobj.UnmarshalCBOR(bytes.NewReader(enc))
+			if int(endIdx) == originalLen && err != nil {
+				t.Fatal("failed to round trip object: ", err)
+			} else if endIdx == 0 && !errors.Is(err, io.EOF) {
+				t.Fatal("expected EOF got", err)
+			} else if endIdx != 0 && !errors.Is(err, io.ErrUnexpectedEOF) {
+				t.Fatal("expected ErrUnexpectedEOF got", endIdx, originalLen, err)
+			}
+		})
+
+	}, &quick.Config{MaxCount: 1000})
+
+	if err != nil {
+		t.Error(err)
+	}
+
 }
