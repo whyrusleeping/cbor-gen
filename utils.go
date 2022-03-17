@@ -60,13 +60,20 @@ func discard(br io.Reader, n int) error {
 	}
 }
 
-func ScanForLinks(br io.Reader, cb func(cid.Cid)) error {
+func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 	scratch := make([]byte, maxCidLength)
 	for remaining := uint64(1); remaining > 0; remaining-- {
 		maj, extra, err := CborReadHeaderBuf(br, scratch)
 		if err != nil {
 			return err
 		}
+		hasReadOnce = true
 
 		switch maj {
 		case MajUnsignedInt, MajNegativeInt, MajOther:
@@ -151,7 +158,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 	return err
 }
 
-func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
+func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 	// Reuse any existing buffers.
 	reusedBuf := d.Raw[:0]
 	d.Raw = nil
@@ -159,6 +166,13 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 
 	// Allocate some scratch space.
 	scratch := make([]byte, maxHeaderSize)
+
+	hasReadOnce := false
+	defer func() {
+		if err == io.EOF && hasReadOnce {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	// Algorithm:
 	//
@@ -175,6 +189,7 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) error {
 		if err != nil {
 			return err
 		}
+		hasReadOnce = true
 		if err := WriteMajorTypeHeaderBuf(scratch, buf, maj, extra); err != nil {
 			return err
 		}
@@ -234,11 +249,16 @@ func readByte(r io.Reader) (byte, error) {
 	return buf[0], err
 }
 
-func CborReadHeader(br io.Reader) (byte, uint64, error) {
+func CborReadHeader(br io.Reader) (_b byte, _ui uint64, err error) {
 	first, err := readByte(br)
 	if err != nil {
 		return 0, 0, err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	maj := (first & 0xe0) >> 5
 	low := first & 0x1f
@@ -457,11 +477,16 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 	}
 }
 
-func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) ([]byte, error) {
+func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) (bs []byte, err error) {
 	maj, extra, err := CborReadHeader(br)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	if maj != MajTag {
 		return nil, fmt.Errorf("expected cbor type 'tag' in input")

@@ -47,7 +47,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
+func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SignedArray{}
 
 	br := cbg.GetPeeker(r)
@@ -57,6 +57,12 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
@@ -170,7 +176,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
+func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleTypeOne{}
 
 	br := cbg.GetPeeker(r)
@@ -180,6 +186,12 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
@@ -411,7 +423,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
+func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleTypeTwo{}
 
 	br := cbg.GetPeeker(r)
@@ -421,6 +433,12 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
@@ -731,7 +749,7 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
+func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = DeferredContainer{}
 
 	br := cbg.GetPeeker(r)
@@ -741,6 +759,12 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
@@ -850,7 +874,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
+func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = FixedArrays{}
 
 	br := cbg.GetPeeker(r)
@@ -860,6 +884,12 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
@@ -995,7 +1025,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) error {
+func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = ThingWithSomeTime{}
 
 	br := cbg.GetPeeker(r)
@@ -1005,6 +1035,12 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}

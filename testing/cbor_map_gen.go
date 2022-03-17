@@ -189,7 +189,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
+func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleTypeTree{}
 
 	br := cbg.GetPeeker(r)
@@ -199,6 +199,12 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajMap {
 		return fmt.Errorf("cbor input should be of type map")
 	}
@@ -444,7 +450,7 @@ func (t *NeedScratchForMap) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) error {
+func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = NeedScratchForMap{}
 
 	br := cbg.GetPeeker(r)
@@ -454,6 +460,12 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajMap {
 		return fmt.Errorf("cbor input should be of type map")
 	}
@@ -690,7 +702,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) error {
+func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleStructV1{}
 
 	br := cbg.GetPeeker(r)
@@ -700,6 +712,12 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajMap {
 		return fmt.Errorf("cbor input should be of type map")
 	}
@@ -1244,7 +1262,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) error {
+func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleStructV2{}
 
 	br := cbg.GetPeeker(r)
@@ -1254,6 +1272,12 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajMap {
 		return fmt.Errorf("cbor input should be of type map")
 	}
@@ -1650,7 +1674,7 @@ func (t *RenamedFields) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *RenamedFields) UnmarshalCBOR(r io.Reader) error {
+func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = RenamedFields{}
 
 	br := cbg.GetPeeker(r)
@@ -1660,6 +1684,12 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
 	if maj != cbg.MajMap {
 		return fmt.Errorf("cbor input should be of type map")
 	}

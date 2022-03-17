@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	cid "github.com/ipfs/go-cid"
@@ -38,6 +39,32 @@ func TestScanForLinksEOFRegression(t *testing.T) {
 	if err := ScanForLinks(bytes.NewReader(inpb), func(c cid.Cid) {
 		cids = append(cids, c)
 	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Log(cids)
+}
+
+func TestScanForLinksShouldReturnErrUnexpectedEOF(t *testing.T) {
+	inp := "824420000000818182420051"
+	inpb, err := hex.DecodeString(inp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cids []cid.Cid
+	if err := ScanForLinks(bytes.NewReader(inpb), func(c cid.Cid) {
+		cids = append(cids, c)
+	}); err != io.ErrUnexpectedEOF {
+		t.Fatal(err)
+	}
+	t.Log(cids)
+}
+
+func TestScanForLinksShouldReturnEOFWhenNothingRead(t *testing.T) {
+	var cids []cid.Cid
+	if err := ScanForLinks(strings.NewReader(""), func(c cid.Cid) {
+		cids = append(cids, c)
+	}); err != io.EOF {
 		t.Fatal(err)
 	}
 	t.Log(cids)
