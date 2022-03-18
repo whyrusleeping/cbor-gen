@@ -48,7 +48,6 @@ func TestNeedScratchForMap(t *testing.T) {
 }
 
 func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
-
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalCBOR(buf); err != nil {
 		t.Fatal("i guess its fine to fail marshaling")
@@ -74,7 +73,6 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 	if !bytes.Equal(nbuf.Bytes(), enc) {
 		t.Fatalf("objects encodings different: %x != %x", nbuf.Bytes(), enc)
 	}
-
 }
 
 func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
@@ -161,10 +159,9 @@ func TestTimeIsh(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if out2.When != out.When {
-		t.Fatal(err)
+	if !out.When.Time().Equal(out2.When.Time()) {
+		t.Fatalf("when: got %#v, wanted %#v", out2.When, out.When)
 	}
-
 }
 
 func TestLessToMoreFieldsRoundTrip(t *testing.T) {
@@ -343,11 +340,8 @@ func TestErrUnexpectedEOF(t *testing.T) {
 				t.Fatal("did not expect EOF but got it")
 			}
 		})
-
 	}, &quick.Config{MaxCount: 1000})
-
 	if err != nil {
 		t.Error(err)
 	}
-
 }
