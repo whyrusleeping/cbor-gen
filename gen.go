@@ -25,12 +25,12 @@ func doTemplate(w io.Writer, info interface{}, templ string) error {
 	t := template.Must(template.New("").
 		Funcs(template.FuncMap{
 			"MajorType": func(wname string, tname string, val string) string {
-				return fmt.Sprintf(`if err := cbg.WriteMajorTypeHeaderBuf(scratch, %s, %s, uint64(%s)); err != nil {
+				return fmt.Sprintf(`if err := cbg.WriteMajorTypeHeader(%s, %s, uint64(%s)); err != nil {
 	return err
 }`, wname, tname, val)
 			},
 			"ReadHeader": func(rdr string) string {
-				return fmt.Sprintf(`cbg.CborReadHeaderBuf(%s, scratch)`, rdr)
+				return fmt.Sprintf(`cbg.CborReadHeader(%s)`, rdr)
 			},
 		}).Parse(templ))
 
@@ -145,30 +145,6 @@ func (gti *GenTypeInfo) Imports() []Import {
 	return imports
 }
 
-func (gti *GenTypeInfo) NeedsScratch() bool {
-	for _, f := range gti.Fields {
-		switch f.Type.Kind() {
-		case reflect.String,
-			reflect.Uint64,
-			reflect.Int64,
-			reflect.Uint8,
-			reflect.Array,
-			reflect.Slice,
-			reflect.Map:
-			return true
-
-		case reflect.Struct:
-			if f.Type == bigIntType || f.Type == cidType {
-				return true
-			}
-			// nope
-		case reflect.Bool:
-			// nope
-		}
-	}
-	return false
-}
-
 func nameIsExported(name string) bool {
 	return strings.ToUpper(name[0:1]) == name[0:1]
 }
@@ -257,6 +233,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 `)
 }
+
 func emitCborMarshalStructField(w io.Writer, f Field) error {
 	switch f.Type {
 	case bigIntType:
@@ -287,12 +264,12 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 			return err
 		}
 	} else {
-		if err := cbg.WriteCidBuf(scratch, w, *{{ .Name }}); err != nil {
+		if err := cbg.WriteCid(w, *{{ .Name }}); err != nil {
 			return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
 		}
 	}
 {{ else }}
-	if err := cbg.WriteCidBuf(scratch, w, {{ .Name }}); err != nil {
+	if err := cbg.WriteCid(w, {{ .Name }}); err != nil {
 		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
 	}
 {{ end }}
@@ -304,7 +281,6 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 	}
 `)
 	}
-
 }
 
 func emitCborMarshalUint64Field(w io.Writer, f Field) error {
@@ -455,7 +431,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		switch e {
 		case cidType:
 			err := doTemplate(w, f, `
-		if err := cbg.WriteCidBuf(scratch, w, v); err != nil {
+		if err := cbg.WriteCid(w, v); err != nil {
 			return xerrors.Errorf("failed writing cid field {{ .Name }}: %w", err)
 		}
 `)
@@ -520,9 +496,6 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if _, err := w.Write(lengthBuf{{ .Name }}); err != nil {
 		return err
 	}
-{{ if .NeedsScratch }}
-	scratch := make([]byte, 9)
-{{ end }}
 `)
 	if err != nil {
 		return err
@@ -585,7 +558,7 @@ func emitCborUnmarshalStringField(w io.Writer, f Field) error {
 	}
 	return doTemplate(w, f, `
 	{
-		sval, err := cbg.ReadStringBuf(br, scratch)
+		sval, err := cbg.ReadString(br)
 		if err != nil {
 			return err
 		}
@@ -1036,7 +1009,6 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
 	maj, extra, err := {{ ReadHeader "br" }}
 	if err != nil {
@@ -1132,8 +1104,6 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	if _, err := w.Write({{ .MapHeaderAsByteString }}); err != nil {
 		return err
 	}
-
-	scratch := make([]byte, 9)
 `)
 	if err != nil {
 		return err
@@ -1200,7 +1170,6 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
 	maj, extra, err := {{ ReadHeader "br" }}
 	if err != nil {

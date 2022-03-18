@@ -29,14 +29,12 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	scratch := make([]byte, 9)
-
 	// t.Signed ([]uint64) (slice)
 	if len(t.Signed) > cbg.MaxLength {
 		return xerrors.Errorf("Slice value in field t.Signed was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Signed))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Signed))); err != nil {
 		return err
 	}
 	for _, v := range t.Signed {
@@ -51,9 +49,8 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SignedArray{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -73,7 +70,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Signed ([]uint64) (slice)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -92,7 +89,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
+		maj, val, err := cbg.CborReadHeader(br)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Signed slice: %w", err)
 		}
@@ -118,14 +115,12 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	scratch := make([]byte, 9)
-
 	// t.Foo (string) (string)
 	if len(t.Foo) > cbg.MaxLength {
 		return xerrors.Errorf("Value in field t.Foo was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.Foo))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.Foo))); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, string(t.Foo)); err != nil {
@@ -134,7 +129,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 	// t.Value (uint64) (uint64)
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Value)); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Value)); err != nil {
 		return err
 	}
 
@@ -143,7 +138,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Byte array in field t.Binary was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Binary))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(t.Binary))); err != nil {
 		return err
 	}
 
@@ -153,11 +148,11 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 	// t.Signed (int64) (int64)
 	if t.Signed >= 0 {
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Signed)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Signed)); err != nil {
 			return err
 		}
 	} else {
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajNegativeInt, uint64(-t.Signed-1)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-t.Signed-1)); err != nil {
 			return err
 		}
 	}
@@ -167,7 +162,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.NString was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.NString))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.NString))); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, string(t.NString)); err != nil {
@@ -180,9 +175,8 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleTypeOne{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -203,7 +197,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Foo (string) (string)
 
 	{
-		sval, err := cbg.ReadStringBuf(br, scratch)
+		sval, err := cbg.ReadString(br)
 		if err != nil {
 			return err
 		}
@@ -214,7 +208,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 
 	{
 
-		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		maj, extra, err = cbg.CborReadHeader(br)
 		if err != nil {
 			return err
 		}
@@ -226,7 +220,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Binary ([]uint8) (slice)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -247,7 +241,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Signed (int64) (int64)
 	{
-		maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+		maj, extra, err := cbg.CborReadHeader(br)
 		var extraI int64
 		if err != nil {
 			return err
@@ -273,7 +267,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.NString (testing.NamedString) (string)
 
 	{
-		sval, err := cbg.ReadStringBuf(br, scratch)
+		sval, err := cbg.ReadString(br)
 		if err != nil {
 			return err
 		}
@@ -294,8 +288,6 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	scratch := make([]byte, 9)
-
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
 	if err := t.Stuff.MarshalCBOR(w); err != nil {
 		return err
@@ -306,7 +298,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Others was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Others))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Others))); err != nil {
 		return err
 	}
 	for _, v := range t.Others {
@@ -320,16 +312,16 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.SignedOthers was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.SignedOthers))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.SignedOthers))); err != nil {
 		return err
 	}
 	for _, v := range t.SignedOthers {
 		if v >= 0 {
-			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+			if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
 				return err
 			}
 		} else {
-			if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajNegativeInt, uint64(-v-1)); err != nil {
+			if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-v-1)); err != nil {
 				return err
 			}
 		}
@@ -340,7 +332,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Test was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Test))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Test))); err != nil {
 		return err
 	}
 	for _, v := range t.Test {
@@ -348,7 +340,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return xerrors.Errorf("Byte array in field v was too long")
 		}
 
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(v))); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(v))); err != nil {
 			return err
 		}
 
@@ -362,7 +354,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.Dog was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.Dog))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, string(t.Dog)); err != nil {
@@ -374,7 +366,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Numbers was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Numbers))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Numbers))); err != nil {
 		return err
 	}
 	for _, v := range t.Numbers {
@@ -390,7 +382,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	} else {
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.Pizza)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(*t.Pizza)); err != nil {
 			return err
 		}
 	}
@@ -402,7 +394,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	} else {
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(*t.PointyPizza)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(*t.PointyPizza)); err != nil {
 			return err
 		}
 	}
@@ -412,7 +404,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Arrrrrghay was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Arrrrrghay))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Arrrrrghay))); err != nil {
 		return err
 	}
 	for _, v := range t.Arrrrrghay {
@@ -427,9 +419,8 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = SimpleTypeTwo{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -468,7 +459,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Others ([]uint64) (slice)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -487,7 +478,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
+		maj, val, err := cbg.CborReadHeader(br)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Others slice: %w", err)
 		}
@@ -501,7 +492,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.SignedOthers ([]int64) (slice)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -520,7 +511,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 	for i := 0; i < int(extra); i++ {
 		{
-			maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+			maj, extra, err := cbg.CborReadHeader(br)
 			var extraI int64
 			if err != nil {
 				return err
@@ -547,7 +538,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Test ([][]uint8) (slice)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -570,7 +561,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			var extra uint64
 			var err error
 
-			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			maj, extra, err = cbg.CborReadHeader(br)
 			if err != nil {
 				return err
 			}
@@ -595,7 +586,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Dog (string) (string)
 
 	{
-		sval, err := cbg.ReadStringBuf(br, scratch)
+		sval, err := cbg.ReadString(br)
 		if err != nil {
 			return err
 		}
@@ -604,7 +595,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Numbers ([]testing.NamedNumber) (slice)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -623,7 +614,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
+		maj, val, err := cbg.CborReadHeader(br)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Numbers slice: %w", err)
 		}
@@ -647,7 +638,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			if err := br.UnreadByte(); err != nil {
 				return err
 			}
-			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			maj, extra, err = cbg.CborReadHeader(br)
 			if err != nil {
 				return err
 			}
@@ -671,7 +662,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			if err := br.UnreadByte(); err != nil {
 				return err
 			}
-			maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+			maj, extra, err = cbg.CborReadHeader(br)
 			if err != nil {
 				return err
 			}
@@ -685,7 +676,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -728,8 +719,6 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	scratch := make([]byte, 9)
-
 	// t.Stuff (testing.SimpleTypeOne) (struct)
 	if err := t.Stuff.MarshalCBOR(w); err != nil {
 		return err
@@ -742,7 +731,7 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 
 	// t.Value (uint64) (uint64)
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Value)); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Value)); err != nil {
 		return err
 	}
 
@@ -753,9 +742,8 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = DeferredContainer{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -806,7 +794,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 
 	{
 
-		maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+		maj, extra, err = cbg.CborReadHeader(br)
 		if err != nil {
 			return err
 		}
@@ -830,14 +818,12 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	scratch := make([]byte, 9)
-
 	// t.Bytes ([20]uint8) (array)
 	if len(t.Bytes) > cbg.ByteArrayMaxLen {
 		return xerrors.Errorf("Byte array in field t.Bytes was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Bytes))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(t.Bytes))); err != nil {
 		return err
 	}
 
@@ -850,7 +836,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Byte array in field t.Uint8 was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajByteString, uint64(len(t.Uint8))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(t.Uint8))); err != nil {
 		return err
 	}
 
@@ -863,7 +849,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Slice value in field t.Uint64 was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajArray, uint64(len(t.Uint64))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajArray, uint64(len(t.Uint64))); err != nil {
 		return err
 	}
 	for _, v := range t.Uint64 {
@@ -878,9 +864,8 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = FixedArrays{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -900,7 +885,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Bytes ([20]uint8) (array)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -923,7 +908,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Uint8 ([20]uint8) (array)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -946,7 +931,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Uint64 ([20]uint64) (array)
 
-	maj, extra, err = cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -967,7 +952,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 
 	for i := 0; i < int(extra); i++ {
 
-		maj, val, err := cbg.CborReadHeaderBuf(br, scratch)
+		maj, val, err := cbg.CborReadHeader(br)
 		if err != nil {
 			return xerrors.Errorf("failed to read uint64 for t.Uint64 slice: %w", err)
 		}
@@ -993,8 +978,6 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	scratch := make([]byte, 9)
-
 	// t.When (typegen.CborTime) (struct)
 	if err := t.When.MarshalCBOR(w); err != nil {
 		return err
@@ -1002,11 +985,11 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 
 	// t.Stuff (int64) (int64)
 	if t.Stuff >= 0 {
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajUnsignedInt, uint64(t.Stuff)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(t.Stuff)); err != nil {
 			return err
 		}
 	} else {
-		if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajNegativeInt, uint64(-t.Stuff-1)); err != nil {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-t.Stuff-1)); err != nil {
 			return err
 		}
 	}
@@ -1016,7 +999,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 		return xerrors.Errorf("Value in field t.CatName was too long")
 	}
 
-	if err := cbg.WriteMajorTypeHeaderBuf(scratch, w, cbg.MajTextString, uint64(len(t.CatName))); err != nil {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajTextString, uint64(len(t.CatName))); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, string(t.CatName)); err != nil {
@@ -1029,9 +1012,8 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = ThingWithSomeTime{}
 
 	br := cbg.GetPeeker(r)
-	scratch := make([]byte, 8)
 
-	maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+	maj, extra, err := cbg.CborReadHeader(br)
 	if err != nil {
 		return err
 	}
@@ -1060,7 +1042,7 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Stuff (int64) (int64)
 	{
-		maj, extra, err := cbg.CborReadHeaderBuf(br, scratch)
+		maj, extra, err := cbg.CborReadHeader(br)
 		var extraI int64
 		if err != nil {
 			return err
@@ -1086,7 +1068,7 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.CatName (string) (string)
 
 	{
-		sval, err := cbg.ReadStringBuf(br, scratch)
+		sval, err := cbg.ReadString(br)
 		if err != nil {
 			return err
 		}

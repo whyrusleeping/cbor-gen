@@ -9,13 +9,16 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"sync"
 	"time"
 
 	cid "github.com/ipfs/go-cid"
 )
 
-const maxCidLength = 100
-const maxHeaderSize = 9
+const (
+	maxCidLength  = 100
+	maxHeaderSize = 9
+)
 
 // discard is a helper function to discard data from a reader, special-casing
 // the most common readers we encounter in this library for a significant
@@ -67,9 +70,8 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-	scratch := make([]byte, maxCidLength)
 	for remaining := uint64(1); remaining > 0; remaining-- {
-		maj, extra, err := CborReadHeaderBuf(br, scratch)
+		maj, extra, err := CborReadHeader(br)
 		if err != nil {
 			return err
 		}
@@ -84,7 +86,7 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
 			}
 		case MajTag:
 			if extra == 42 {
-				maj, extra, err = CborReadHeaderBuf(br, scratch)
+				maj, extra, err = CborReadHeader(br)
 				if err != nil {
 					return err
 				}
@@ -97,6 +99,7 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
 					return fmt.Errorf("string in cbor input too long")
 				}
 
+				scratch := make([]byte, maxCidLength)
 				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
 					return err
 				}
@@ -164,9 +167,6 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 	d.Raw = nil
 	buf := bytes.NewBuffer(reusedBuf)
 
-	// Allocate some scratch space.
-	scratch := make([]byte, maxHeaderSize)
-
 	hasReadOnce := false
 	defer func() {
 		if err == io.EOF && hasReadOnce {
@@ -185,12 +185,12 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 	// define this once so we don't keep allocating it.
 	limitedReader := io.LimitedReader{R: br}
 	for remaining := uint64(1); remaining > 0; remaining-- {
-		maj, extra, err := CborReadHeaderBuf(br, scratch)
+		maj, extra, err := CborReadHeader(br)
 		if err != nil {
 			return err
 		}
 		hasReadOnce = true
-		if err := WriteMajorTypeHeaderBuf(scratch, buf, maj, extra); err != nil {
+		if err := WriteMajorTypeHeader(buf, maj, extra); err != nil {
 			return err
 		}
 
@@ -249,65 +249,22 @@ func readByte(r io.Reader) (byte, error) {
 	return buf[0], err
 }
 
-func CborReadHeader(br io.Reader) (_b byte, _ui uint64, err error) {
-	first, err := readByte(br)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-	}()
+var headerBufPool = sync.Pool{
+	New: func() interface{} {
+		b := make([]byte, maxHeaderSize)
+		return &b
+	},
+}
 
-	maj := (first & 0xe0) >> 5
-	low := first & 0x1f
-
-	switch {
-	case low < 24:
-		return maj, uint64(low), nil
-	case low == 24:
-		next, err := readByte(br)
-		if err != nil {
-			return 0, 0, err
-		}
-		if next < 24 {
-			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 24 with value < 24)")
-		}
-		return maj, uint64(next), nil
-	case low == 25:
-		scratch := make([]byte, 2)
-		if _, err := io.ReadAtLeast(br, scratch[:2], 2); err != nil {
-			return 0, 0, err
-		}
-		val := uint64(binary.BigEndian.Uint16(scratch[:2]))
-		if val <= math.MaxUint8 {
-			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 25 with value <= MaxUint8)")
-		}
-		return maj, val, nil
-	case low == 26:
-		scratch := make([]byte, 4)
-		if _, err := io.ReadAtLeast(br, scratch[:4], 4); err != nil {
-			return 0, 0, err
-		}
-		val := uint64(binary.BigEndian.Uint32(scratch[:4]))
-		if val <= math.MaxUint16 {
-			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 26 with value <= MaxUint16)")
-		}
-		return maj, val, nil
-	case low == 27:
-		scratch := make([]byte, 8)
-		if _, err := io.ReadAtLeast(br, scratch, 8); err != nil {
-			return 0, 0, err
-		}
-		val := binary.BigEndian.Uint64(scratch)
-		if val <= math.MaxUint32 {
-			return 0, 0, fmt.Errorf("cbor input was not canonical (lval 27 with value <= MaxUint32)")
-		}
-		return maj, val, nil
-	default:
-		return 0, 0, fmt.Errorf("invalid header: (%x)", first)
+func CborReadHeader(br io.Reader) (byte, uint64, error) {
+	bufp := headerBufPool.Get().(*[]byte)
+	b, n, err := CborReadHeaderBuf(br, *bufp)
+	// optimizes to memclr
+	for i := range *bufp {
+		(*bufp)[i] = 0
 	}
+	headerBufPool.Put(bufp)
+	return b, n, err
 }
 
 func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
@@ -335,6 +292,12 @@ func CborReadHeaderBuf(br io.Reader, scratch []byte) (byte, uint64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
+
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
 
 	maj := (first & 0xe0) >> 5
 	low := first & 0x1f
@@ -390,32 +353,14 @@ func CborWriteHeader(w io.Writer, t byte, l uint64) error {
 // TODO: No matter what I do, this function *still* allocates. Its super frustrating.
 // See issue: https://github.com/golang/go/issues/33160
 func WriteMajorTypeHeader(w io.Writer, t byte, l uint64) error {
-	switch {
-	case l < 24:
-		_, err := w.Write([]byte{(t << 5) | byte(l)})
-		return err
-	case l < (1 << 8):
-		_, err := w.Write([]byte{(t << 5) | 24, byte(l)})
-		return err
-	case l < (1 << 16):
-		var b [3]byte
-		b[0] = (t << 5) | 25
-		binary.BigEndian.PutUint16(b[1:3], uint16(l))
-		_, err := w.Write(b[:])
-		return err
-	case l < (1 << 32):
-		var b [5]byte
-		b[0] = (t << 5) | 26
-		binary.BigEndian.PutUint32(b[1:5], uint32(l))
-		_, err := w.Write(b[:])
-		return err
-	default:
-		var b [9]byte
-		b[0] = (t << 5) | 27
-		binary.BigEndian.PutUint64(b[1:], uint64(l))
-		_, err := w.Write(b[:])
-		return err
+	bufp := headerBufPool.Get().(*[]byte)
+	err := WriteMajorTypeHeaderBuf(*bufp, w, t, l)
+	// optimizes to memclr
+	for i := range *bufp {
+		(*bufp)[i] = 0
 	}
+	headerBufPool.Put(bufp)
+	return err
 }
 
 // Same as the above, but uses a passed in buffer to avoid allocations
@@ -539,6 +484,13 @@ func WriteBool(w io.Writer, b bool) error {
 	return err
 }
 
+var stringBufPool = sync.Pool{
+	New: func() interface{} {
+		b := make([]byte, MaxLength)
+		return &b
+	},
+}
+
 func ReadString(r io.Reader) (string, error) {
 	maj, l, err := CborReadHeader(r)
 	if err != nil {
@@ -553,7 +505,15 @@ func ReadString(r io.Reader) (string, error) {
 		return "", fmt.Errorf("string in input was too long")
 	}
 
-	buf := make([]byte, l)
+	bufp := stringBufPool.Get().(*[]byte)
+	buf := (*bufp)[:l] // shares same backing array as pooled slice
+	defer func() {
+		// optimizes to memclr
+		for i := range buf {
+			buf[i] = 0
+		}
+		stringBufPool.Put(bufp)
+	}()
 	_, err = io.ReadAtLeast(r, buf, int(l))
 	if err != nil {
 		return "", err
@@ -562,27 +522,9 @@ func ReadString(r io.Reader) (string, error) {
 	return string(buf), nil
 }
 
-func ReadStringBuf(r io.Reader, scratch []byte) (string, error) {
-	maj, l, err := CborReadHeaderBuf(r, scratch)
-	if err != nil {
-		return "", err
-	}
-
-	if maj != MajTextString {
-		return "", fmt.Errorf("got tag %d while reading string value (l = %d)", maj, l)
-	}
-
-	if l > MaxLength {
-		return "", fmt.Errorf("string in input was too long")
-	}
-
-	buf := make([]byte, l)
-	_, err = io.ReadAtLeast(r, buf, int(l))
-	if err != nil {
-		return "", err
-	}
-
-	return string(buf), nil
+// Deprecated: use ReadString
+func ReadStringBuf(r io.Reader, _ []byte) (string, error) {
+	return ReadString(r)
 }
 
 func ReadCid(br io.Reader) (cid.Cid, error) {
@@ -595,7 +537,6 @@ func ReadCid(br io.Reader) (cid.Cid, error) {
 }
 
 func bufToCid(buf []byte) (cid.Cid, error) {
-
 	if len(buf) == 0 {
 		return cid.Undef, fmt.Errorf("undefined cid")
 	}
@@ -619,7 +560,7 @@ func WriteCid(w io.Writer, c cid.Cid) error {
 	}
 	if c == cid.Undef {
 		return fmt.Errorf("undefined cid")
-		//return CborWriteHeader(w, MajByteString, 0)
+		// return CborWriteHeader(w, MajByteString, 0)
 	}
 
 	if err := WriteMajorTypeHeader(w, MajByteString, uint64(c.ByteLen()+1)); err != nil {
@@ -638,29 +579,9 @@ func WriteCid(w io.Writer, c cid.Cid) error {
 	return nil
 }
 
-func WriteCidBuf(buf []byte, w io.Writer, c cid.Cid) error {
-	if err := WriteMajorTypeHeaderBuf(buf, w, MajTag, 42); err != nil {
-		return err
-	}
-	if c == cid.Undef {
-		return fmt.Errorf("undefined cid")
-		//return CborWriteHeader(w, MajByteString, 0)
-	}
-
-	if err := WriteMajorTypeHeaderBuf(buf, w, MajByteString, uint64(c.ByteLen()+1)); err != nil {
-		return err
-	}
-
-	// that binary multibase prefix...
-	if _, err := w.Write(byteArrZero); err != nil {
-		return err
-	}
-
-	if _, err := c.WriteBytes(w); err != nil {
-		return err
-	}
-
-	return nil
+// Deprecated: use WriteCid
+func WriteCidBuf(_ []byte, w io.Writer, c cid.Cid) error {
+	return WriteCid(w, c)
 }
 
 type CborBool bool
