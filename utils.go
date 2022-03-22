@@ -101,7 +101,6 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
 					return fmt.Errorf("string in cbor input too long")
 				}
 
-				scratch := make([]byte, maxCidLength)
 				if _, err := io.ReadAtLeast(br, scratch[:extra], int(extra)); err != nil {
 					return err
 				}
