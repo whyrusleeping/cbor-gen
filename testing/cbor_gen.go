@@ -47,7 +47,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *SignedArray) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = SignedArray{}
 
 	br := cbg.GetPeeker(r)
@@ -58,8 +58,8 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -176,7 +176,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = SimpleTypeOne{}
 
 	br := cbg.GetPeeker(r)
@@ -187,8 +187,8 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -423,7 +423,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = SimpleTypeTwo{}
 
 	br := cbg.GetPeeker(r)
@@ -434,8 +434,8 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -749,7 +749,7 @@ func (t *DeferredContainer) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = DeferredContainer{}
 
 	br := cbg.GetPeeker(r)
@@ -760,8 +760,8 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -874,7 +874,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = FixedArrays{}
 
 	br := cbg.GetPeeker(r)
@@ -885,8 +885,8 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -1025,7 +1025,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = ThingWithSomeTime{}
 
 	br := cbg.GetPeeker(r)
@@ -1036,8 +1036,8 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 

@@ -1032,7 +1032,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
@@ -1043,8 +1043,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -1196,7 +1196,7 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 
 func emitCborUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	err := doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (_err error) {
 	*t = {{.Name}}{}
 
 	br := cbg.GetPeeker(r)
@@ -1207,8 +1207,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 

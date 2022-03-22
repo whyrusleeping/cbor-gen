@@ -60,11 +60,11 @@ func discard(br io.Reader, n int) error {
 	}
 }
 
-func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
+func ScanForLinks(br io.Reader, cb func(cid.Cid)) (_err error) {
 	hasReadOnce := false
 	defer func() {
-		if err == io.EOF && hasReadOnce {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF && hasReadOnce {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 	scratch := make([]byte, maxCidLength)
@@ -158,7 +158,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 	return err
 }
 
-func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
+func (d *Deferred) UnmarshalCBOR(br io.Reader) (_err error) {
 	// Reuse any existing buffers.
 	reusedBuf := d.Raw[:0]
 	d.Raw = nil
@@ -169,8 +169,8 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 
 	hasReadOnce := false
 	defer func() {
-		if err == io.EOF && hasReadOnce {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF && hasReadOnce {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -249,14 +249,14 @@ func readByte(r io.Reader) (byte, error) {
 	return buf[0], err
 }
 
-func CborReadHeader(br io.Reader) (_b byte, _ui uint64, err error) {
+func CborReadHeader(br io.Reader) (_b byte, _ui uint64, _err error) {
 	first, err := readByte(br)
 	if err != nil {
 		return 0, 0, err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
@@ -477,14 +477,14 @@ func CborEncodeMajorType(t byte, l uint64) []byte {
 	}
 }
 
-func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) (bs []byte, err error) {
+func ReadTaggedByteArray(br io.Reader, exptag uint64, maxlen uint64) (_ []byte, _err error) {
 	maj, extra, err := CborReadHeader(br)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+		if _err == io.EOF {
+			_err = io.ErrUnexpectedEOF
 		}
 	}()
 
