@@ -246,6 +246,8 @@ func readByte(r io.Reader) (byte, error) {
 		return r.ReadByte()
 	case *peeker:
 		return r.ReadByte()
+	case *CborReader:
+		return readByte(r.r)
 	case io.ByteReader:
 		return r.ReadByte()
 	}
@@ -331,6 +333,8 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 		return r.ReadByte()
 	case *peeker:
 		return r.ReadByte()
+	case *CborReader:
+		return readByte(r.r)
 	case io.ByteReader:
 		return r.ReadByte()
 	}
