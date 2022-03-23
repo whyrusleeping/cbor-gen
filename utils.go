@@ -632,10 +632,8 @@ func bufToCid(buf []byte) (cid.Cid, error) {
 var byteArrZero = []byte{0}
 
 func WriteCid(w io.Writer, c cid.Cid) error {
-	if cw, ok := w.(*CborWriter); ok {
-		w = cw // take advantage of cbor writer scratch buffer
-	}
-	if err := WriteMajorTypeHeader(w, MajTag, 42); err != nil {
+	cw := NewCborWriter(w)
+	if err := cw.WriteMajorTypeHeader(MajTag, 42); err != nil {
 		return err
 	}
 	if c == cid.Undef {
@@ -643,16 +641,16 @@ func WriteCid(w io.Writer, c cid.Cid) error {
 		// return CborWriteHeader(w, MajByteString, 0)
 	}
 
-	if err := WriteMajorTypeHeader(w, MajByteString, uint64(c.ByteLen()+1)); err != nil {
+	if err := cw.WriteMajorTypeHeader(MajByteString, uint64(c.ByteLen()+1)); err != nil {
 		return err
 	}
 
 	// that binary multibase prefix...
-	if _, err := w.Write(byteArrZero); err != nil {
+	if _, err := cw.Write(byteArrZero); err != nil {
 		return err
 	}
 
-	if _, err := c.WriteBytes(w); err != nil {
+	if _, err := c.WriteBytes(cw); err != nil {
 		return err
 	}
 
