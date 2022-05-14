@@ -1169,8 +1169,6 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
-		// todo here
-
 		if err := emitCborMarshalStringField(w, Field{
 			Name: `"` + f.MapKey + `"`,
 		}); err != nil {
