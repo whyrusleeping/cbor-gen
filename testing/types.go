@@ -104,3 +104,7 @@ type RenamedFields struct {
 	Foo int64  `cborgen:"foo"`
 	Bar string `cborgen:"beep"`
 }
+
+type BigField struct {
+	LargeBytes []byte `cborgen:"maxlen=10000000"`
+}

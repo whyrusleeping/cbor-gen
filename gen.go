@@ -2,12 +2,13 @@ package typegen
 
 import (
 	"fmt"
-	cid "github.com/ipfs/go-cid/_rsrch/cidiface"
 	"io"
 	"math/big"
 	"reflect"
 	"strings"
 	"text/template"
+
+	cid "github.com/ipfs/go-cid"
 )
 
 const MaxLength = 8192
@@ -83,8 +84,8 @@ type Field struct {
 
 	IterLabel string
 
-	MaxLen     int
-	MaxByteLen int
+	MaxLen int
+	//	MaxByteLen int
 }
 
 func typeName(pkg string, t reflect.Type) string {
