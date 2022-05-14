@@ -1095,3 +1095,79 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	return nil
 }
+
+var lengthBufBigField = []byte{129}
+
+func (t *BigField) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write(lengthBufBigField); err != nil {
+		return err
+	}
+
+	// t.LargeBytes ([]uint8) (slice)
+	if len(t.LargeBytes) > 10000000 {
+		return xerrors.Errorf("Byte array in field t.LargeBytes was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(t.LargeBytes))); err != nil {
+		return err
+	}
+
+	if _, err := cw.Write(t.LargeBytes[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = BigField{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.LargeBytes ([]uint8) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > 10000000 {
+		return fmt.Errorf("t.LargeBytes: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra > 0 {
+		t.LargeBytes = make([]uint8, extra)
+	}
+
+	if _, err := io.ReadFull(cr, t.LargeBytes[:]); err != nil {
+		return err
+	}
+	return nil
+}

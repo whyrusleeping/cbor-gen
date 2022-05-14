@@ -13,6 +13,7 @@ func main() {
 		types.DeferredContainer{},
 		types.FixedArrays{},
 		types.ThingWithSomeTime{},
+		types.BigField{},
 	); err != nil {
 		panic(err)
 	}
