@@ -346,7 +346,7 @@ func TestErrUnexpectedEOF(t *testing.T) {
 	}
 }
 
-func TestLargeFeild(t *testing.T) {
+func TestLargeField(t *testing.T) {
 	// 10 MB of data is the specified max so  4 MiB should work
 	bs := make([]byte, 2<<21)
 	bs[2<<20] = 0xaa // flags to check that serialization works
@@ -375,5 +375,6 @@ func TestLargeFeild(t *testing.T) {
 	if err == nil {
 		t.Fatal("buffer bigger than specified in struct tag should fail")
 	}
-
 }
+
+//TODO same for strings

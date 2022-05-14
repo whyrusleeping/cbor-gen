@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -16,6 +17,7 @@ const MaxLength = 8192
 const ByteArrayMaxLen = 2 << 20
 
 const MaxLenTag = "maxlen"
+const NoUsrMaxLen = -1
 
 var (
 	cidType      = reflect.TypeOf(cid.Cid{})
@@ -34,6 +36,7 @@ func doTemplate(w io.Writer, info interface{}, templ string) error {
 			"ReadHeader": func(rdr string) string {
 				return fmt.Sprintf(`%s.ReadHeader()`, rdr)
 			},
+			//todo do it here
 		}).Parse(templ))
 
 	return t.Execute(w, info)
@@ -85,7 +88,6 @@ type Field struct {
 	IterLabel string
 
 	MaxLen int
-	//	MaxByteLen int
 }
 
 func typeName(pkg string, t reflect.Type) string {
@@ -177,12 +179,17 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 		}
 
 		mapk := f.Name
+		usrMaxLen := NoUsrMaxLen
 		tagval := f.Tag.Get("cborgen")
-		if tagval != "" {
+		if len(tagval) > len(MaxLenTag) && tagval[0:len(MaxLenTag)] == MaxLenTag {
+			var err error
+			usrMaxLen, err = strconv.Atoi(tagval[len(MaxLenTag):])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse specified length in max len tag %w", err)
+			}
+		} else if tagval != "" {
 			mapk = tagval
 		}
-
-		// todo and here
 
 		out.Fields = append(out.Fields, Field{
 			Name:    f.Name,
@@ -190,6 +197,7 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			Pointer: pointer,
 			Type:    ft,
 			Pkg:     pkg,
+			MaxLen:  usrMaxLen,
 		})
 	}
 
@@ -230,7 +238,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	return doTemplate(w, f, `
-	if len({{ .Name }}) > cbg.MaxLength {
+	if len({{ .Name }}) > {{ .MaxLen }} {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
@@ -404,7 +412,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	// Note: this re-slices the slice to deal with arrays.
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if len({{ .Name }}) > cbg.ByteArrayMaxLen {
+	if len({{ .Name }}) > {{ .MaxLen }} {
 		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
@@ -421,7 +429,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	err := doTemplate(w, f, `
-	if len({{ .Name }}) > cbg.MaxLength {
+	if len({{ .Name }}) > {{ .MaxLen }} {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
@@ -876,7 +884,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if extra > cbg.ByteArrayMaxLen {
+	if extra > {{ .MaxLen }} {
 		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -900,7 +908,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	if err := doTemplate(w, f, `
-	if extra > cbg.MaxLength {
+	if extra > {{ .MaxLen }} {
 		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
 	}
 `); err != nil {
@@ -1200,7 +1208,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("cbor input should be of type map")
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > {{ .MaxLen }} {
 		return fmt.Errorf("{{ .Name }}: map struct too large (%d)", extra)
 	}
 
