@@ -2,18 +2,19 @@ package typegen
 
 import (
 	"fmt"
+	cid "github.com/ipfs/go-cid/_rsrch/cidiface"
 	"io"
 	"math/big"
 	"reflect"
 	"strings"
 	"text/template"
-
-	"github.com/ipfs/go-cid"
 )
 
 const MaxLength = 8192
 
 const ByteArrayMaxLen = 2 << 20
+
+const MaxLenTag = "maxlen"
 
 var (
 	cidType      = reflect.TypeOf(cid.Cid{})
@@ -81,6 +82,9 @@ type Field struct {
 	Pkg     string
 
 	IterLabel string
+
+	MaxLen     int
+	MaxByteLen int
 }
 
 func typeName(pkg string, t reflect.Type) string {
@@ -176,6 +180,8 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 		if tagval != "" {
 			mapk = tagval
 		}
+
+		// todo and here
 
 		out.Fields = append(out.Fields, Field{
 			Name:    f.Name,
@@ -1117,6 +1123,8 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+
+		// todo here
 
 		if err := emitCborMarshalStringField(w, Field{
 			Name: `"` + f.MapKey + `"`,
