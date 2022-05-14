@@ -361,17 +361,17 @@ func TestLargeField(t *testing.T) {
 	}
 	enc := buf.Bytes()
 	typ.LargeBytes = make([]byte, 0) // reset
-	if err := typ.LargeBytes.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+	if err := typ.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
 		t.Error(err)
 	}
 
 	// 16 MiB > 10, fails
-	bs := make([]byte, 2<<23)
-	badType = BigField{
+	bs = make([]byte, 2<<23)
+	badType := BigField{
 		LargeBytes: bs,
 	}
-	buf := new(bytes.Buffer)
-	err := badTyp.MarshalCBOR(buf)
+	buf = new(bytes.Buffer)
+	err := badType.MarshalCBOR(buf)
 	if err == nil {
 		t.Fatal("buffer bigger than specified in struct tag should fail")
 	}
