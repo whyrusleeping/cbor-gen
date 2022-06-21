@@ -75,7 +75,7 @@ import (
 )
 
 
-var _ = xerrors.Errorf
+var _ = fmt.Errorf
 var _ = cid.Undef
 var _ = math.E
 var _ = sort.Sort
@@ -275,7 +275,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 
 	return doTemplate(w, f, `
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
-		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
+		return fmt.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
 	{{ MajorType "cw" "cbg.MajTextString" (print "len(" .Name ")") }}
@@ -316,12 +316,12 @@ func emitCborMarshalStructField(w io.Writer, f Field) error {
 		}
 	} else {
 		if err := cbg.WriteCid(cw, *{{ .Name }}); err != nil {
-			return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
+			return fmt.Errorf("failed to write cid field {{ .Name }}: %w", err)
 		}
 	}
 {{ else }}
 	if err := cbg.WriteCid(cw, {{ .Name }}); err != nil {
-		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
+		return fmt.Errorf("failed to write cid field {{ .Name }}: %w", err)
 	}
 {{ end }}
 `)
@@ -389,7 +389,7 @@ func emitCborMarshalMapField(w io.Writer, f Field) error {
 	err := doTemplate(w, f, `
 {
 	if len({{ .Name }}) > 4096 {
-		return xerrors.Errorf("cannot marshal {{ .Name }} map too large")
+		return fmt.Errorf("cannot marshal {{ .Name }} map too large")
 	}
 
 	{{ MajorType "cw" "cbg.MajMap" (print "len(" .Name ")") }}
@@ -449,7 +449,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
-		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
+		return fmt.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
 	{{ MajorType "cw" "cbg.MajByteString" (print "len(" .Name ")" ) }}
@@ -466,7 +466,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 	err := doTemplate(w, f, `
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
-		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
+		return fmt.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
 	{{ MajorType "cw" "cbg.MajArray" ( print "len(" .Name ")" ) }}
@@ -483,7 +483,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		case cidType:
 			err := doTemplate(w, f, `
 		if err := cbg.WriteCid(w, v); err != nil {
-			return xerrors.Errorf("failed writing cid field {{ .Name }}: %w", err)
+			return fmt.Errorf("failed writing cid field {{ .Name }}: %w", err)
 		}
 `)
 			if err != nil {
@@ -673,7 +673,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 {{ end }}
 		c, err := cbg.ReadCid(cr)
 		if err != nil {
-			return xerrors.Errorf("failed to read cid field {{ .Name }}: %w", err)
+			return fmt.Errorf("failed to read cid field {{ .Name }}: %w", err)
 		}
 {{ if .Pointer }}
 			{{ .Name }} = &c
@@ -690,7 +690,7 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		{{ .Name }} = new(cbg.Deferred)
 {{ end }}
 		if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-			return xerrors.Errorf("failed to read deferred field: %w", err)
+			return fmt.Errorf("failed to read deferred field: %w", err)
 		}
 	}
 `)
@@ -709,12 +709,12 @@ func emitCborUnmarshalStructField(w io.Writer, f Field) error {
 			}
 			{{ .Name }} = new({{ .TypeName }})
 			if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-				return xerrors.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
+				return fmt.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
 			}
 		}
 {{ else }}
 		if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-			return xerrors.Errorf("unmarshaling {{ .Name }}: %w", err)
+			return fmt.Errorf("unmarshaling {{ .Name }}: %w", err)
 		}
 {{ end }}
 	}
@@ -980,7 +980,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			err := doTemplate(w, f, `
 		c, err := cbg.ReadCid(cr)
 		if err != nil {
-			return xerrors.Errorf("reading cid field {{ .Name }} failed: %w", err)
+			return fmt.Errorf("reading cid field {{ .Name }} failed: %w", err)
 		}
 		{{ .Name }}[{{ .IterLabel }}] = c
 `)
@@ -1011,11 +1011,11 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		err := doTemplate(w, f, `
 		maj, val, err := {{ ReadHeader "cr" }}
 		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
+			return fmt.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
 		}
 
 		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
+			return fmt.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
 		}
 		
 		{{ .Name }}[{{ .IterLabel}}] = {{ .ElemName }}(val)
@@ -1330,7 +1330,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 `)
 }
 
-// Generates 'tuple representation' cbor encoders for the given type
+// GenMapEncodersForType generates 'tuple representation' cbor encoders for the given type
 func GenMapEncodersForType(gti *GenTypeInfo, w io.Writer) error {
 	if err := emitCborMarshalStructMap(w, gti); err != nil {
 		return err

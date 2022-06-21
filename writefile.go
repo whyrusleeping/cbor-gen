@@ -2,13 +2,12 @@ package typegen
 
 import (
 	"bytes"
+	"fmt"
 	"go/format"
 	"os"
-
-	"golang.org/x/xerrors"
 )
 
-// WriteTupleFileEncodersToFile generates array backed MarshalCBOR and UnmarshalCBOR implementations for the
+// WriteTupleEncodersToFile generates array backed MarshalCBOR and UnmarshalCBOR implementations for the
 // given types in the specified file, with the specified package name.
 //
 // The MarshalCBOR and UnmarshalCBOR implementations will marshal/unmarshal each type's fields as a
@@ -20,18 +19,18 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	for i, t := range types {
 		gti, err := ParseTypeInfo(t)
 		if err != nil {
-			return xerrors.Errorf("failed to parse type info: %w", err)
+			return fmt.Errorf("failed to parse type info: %w", err)
 		}
 		typeInfos[i] = gti
 	}
 
 	if err := PrintHeaderAndUtilityMethods(buf, pkg, typeInfos); err != nil {
-		return xerrors.Errorf("failed to write header: %w", err)
+		return fmt.Errorf("failed to write header: %w", err)
 	}
 
 	for _, t := range typeInfos {
 		if err := GenTupleEncodersForType(t, buf); err != nil {
-			return xerrors.Errorf("failed to generate encoders: %w", err)
+			return fmt.Errorf("failed to generate encoders: %w", err)
 		}
 	}
 
@@ -42,7 +41,7 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 
 	fi, err := os.Create(fname)
 	if err != nil {
-		return xerrors.Errorf("failed to open file: %w", err)
+		return fmt.Errorf("failed to open file: %w", err)
 	}
 
 	_, err = fi.Write(data)
@@ -55,7 +54,7 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 	return nil
 }
 
-// WriteMapFileEncodersToFile generates map backed MarshalCBOR and UnmarshalCBOR implementations for
+// WriteMapEncodersToFile generates map backed MarshalCBOR and UnmarshalCBOR implementations for
 // the given types in the specified file, with the specified package name.
 //
 // The MarshalCBOR and UnmarshalCBOR implementations will marshal/unmarshal each type's fields as a
@@ -67,18 +66,18 @@ func WriteMapEncodersToFile(fname, pkg string, types ...interface{}) error {
 	for i, t := range types {
 		gti, err := ParseTypeInfo(t)
 		if err != nil {
-			return xerrors.Errorf("failed to parse type info: %w", err)
+			return fmt.Errorf("failed to parse type info: %w", err)
 		}
 		typeInfos[i] = gti
 	}
 
 	if err := PrintHeaderAndUtilityMethods(buf, pkg, typeInfos); err != nil {
-		return xerrors.Errorf("failed to write header: %w", err)
+		return fmt.Errorf("failed to write header: %w", err)
 	}
 
 	for _, t := range typeInfos {
 		if err := GenMapEncodersForType(t, buf); err != nil {
-			return xerrors.Errorf("failed to generate encoders: %w", err)
+			return fmt.Errorf("failed to generate encoders: %w", err)
 		}
 	}
 
@@ -89,7 +88,7 @@ func WriteMapEncodersToFile(fname, pkg string, types ...interface{}) error {
 
 	fi, err := os.Create(fname)
 	if err != nil {
-		return xerrors.Errorf("failed to open file: %w", err)
+		return fmt.Errorf("failed to open file: %w", err)
 	}
 
 	_, err = fi.Write(data)

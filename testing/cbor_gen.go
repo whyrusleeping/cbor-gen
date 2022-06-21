@@ -10,10 +10,9 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
-	xerrors "golang.org/x/xerrors"
 )
 
-var _ = xerrors.Errorf
+var _ = fmt.Errorf
 var _ = cid.Undef
 var _ = math.E
 var _ = sort.Sort
@@ -34,7 +33,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 
 	// t.Signed ([]uint64) (slice)
 	if len(t.Signed) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.Signed was too long")
+		return fmt.Errorf("Slice value in field t.Signed was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Signed))); err != nil {
@@ -94,11 +93,11 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 
 		maj, val, err := cr.ReadHeader()
 		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Signed slice: %w", err)
+			return fmt.Errorf("failed to read uint64 for t.Signed slice: %w", err)
 		}
 
 		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Signed was not a uint, instead got %d", maj)
+			return fmt.Errorf("value read for array t.Signed was not a uint, instead got %d", maj)
 		}
 
 		t.Signed[i] = uint64(val)
@@ -123,7 +122,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 	// t.Foo (string) (string)
 	if len(t.Foo) > cbg.MaxLength {
-		return xerrors.Errorf("Value in field t.Foo was too long")
+		return fmt.Errorf("Value in field t.Foo was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Foo))); err != nil {
@@ -141,7 +140,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 	// t.Binary ([]uint8) (slice)
 	if len(t.Binary) > cbg.ByteArrayMaxLen {
-		return xerrors.Errorf("Byte array in field t.Binary was too long")
+		return fmt.Errorf("Byte array in field t.Binary was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(t.Binary))); err != nil {
@@ -165,7 +164,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 
 	// t.NString (testing.NamedString) (string)
 	if len(t.NString) > cbg.MaxLength {
-		return xerrors.Errorf("Value in field t.NString was too long")
+		return fmt.Errorf("Value in field t.NString was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.NString))); err != nil {
@@ -304,7 +303,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 	// t.Others ([]uint64) (slice)
 	if len(t.Others) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.Others was too long")
+		return fmt.Errorf("Slice value in field t.Others was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Others))); err != nil {
@@ -318,7 +317,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 	// t.SignedOthers ([]int64) (slice)
 	if len(t.SignedOthers) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.SignedOthers was too long")
+		return fmt.Errorf("Slice value in field t.SignedOthers was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.SignedOthers))); err != nil {
@@ -338,7 +337,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 	// t.Test ([][]uint8) (slice)
 	if len(t.Test) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.Test was too long")
+		return fmt.Errorf("Slice value in field t.Test was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Test))); err != nil {
@@ -346,7 +345,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 	for _, v := range t.Test {
 		if len(v) > cbg.ByteArrayMaxLen {
-			return xerrors.Errorf("Byte array in field v was too long")
+			return fmt.Errorf("Byte array in field v was too long")
 		}
 
 		if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(v))); err != nil {
@@ -360,7 +359,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 	// t.Dog (string) (string)
 	if len(t.Dog) > cbg.MaxLength {
-		return xerrors.Errorf("Value in field t.Dog was too long")
+		return fmt.Errorf("Value in field t.Dog was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Dog))); err != nil {
@@ -372,7 +371,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 	// t.Numbers ([]testing.NamedNumber) (slice)
 	if len(t.Numbers) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.Numbers was too long")
+		return fmt.Errorf("Slice value in field t.Numbers was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Numbers))); err != nil {
@@ -410,7 +409,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 	if len(t.Arrrrrghay) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.Arrrrrghay was too long")
+		return fmt.Errorf("Slice value in field t.Arrrrrghay was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Arrrrrghay))); err != nil {
@@ -461,7 +460,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 			t.Stuff = new(SimpleTypeTwo)
 			if err := t.Stuff.UnmarshalCBOR(cr); err != nil {
-				return xerrors.Errorf("unmarshaling t.Stuff pointer: %w", err)
+				return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
 
@@ -489,11 +488,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 		maj, val, err := cr.ReadHeader()
 		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Others slice: %w", err)
+			return fmt.Errorf("failed to read uint64 for t.Others slice: %w", err)
 		}
 
 		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Others was not a uint, instead got %d", maj)
+			return fmt.Errorf("value read for array t.Others was not a uint, instead got %d", maj)
 		}
 
 		t.Others[i] = uint64(val)
@@ -625,11 +624,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 		maj, val, err := cr.ReadHeader()
 		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Numbers slice: %w", err)
+			return fmt.Errorf("failed to read uint64 for t.Numbers slice: %w", err)
 		}
 
 		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Numbers was not a uint, instead got %d", maj)
+			return fmt.Errorf("value read for array t.Numbers was not a uint, instead got %d", maj)
 		}
 
 		t.Numbers[i] = NamedNumber(val)
@@ -787,7 +786,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 			t.Stuff = new(SimpleTypeOne)
 			if err := t.Stuff.UnmarshalCBOR(cr); err != nil {
-				return xerrors.Errorf("unmarshaling t.Stuff pointer: %w", err)
+				return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
 
@@ -799,7 +798,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 		t.Deferred = new(cbg.Deferred)
 
 		if err := t.Deferred.UnmarshalCBOR(cr); err != nil {
-			return xerrors.Errorf("failed to read deferred field: %w", err)
+			return fmt.Errorf("failed to read deferred field: %w", err)
 		}
 	}
 	// t.Value (uint64) (uint64)
@@ -835,7 +834,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 
 	// t.Bytes ([20]uint8) (array)
 	if len(t.Bytes) > cbg.ByteArrayMaxLen {
-		return xerrors.Errorf("Byte array in field t.Bytes was too long")
+		return fmt.Errorf("Byte array in field t.Bytes was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(t.Bytes))); err != nil {
@@ -848,7 +847,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 
 	// t.Uint8 ([20]uint8) (array)
 	if len(t.Uint8) > cbg.ByteArrayMaxLen {
-		return xerrors.Errorf("Byte array in field t.Uint8 was too long")
+		return fmt.Errorf("Byte array in field t.Uint8 was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(t.Uint8))); err != nil {
@@ -861,7 +860,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 
 	// t.Uint64 ([20]uint64) (array)
 	if len(t.Uint64) > cbg.MaxLength {
-		return xerrors.Errorf("Slice value in field t.Uint64 was too long")
+		return fmt.Errorf("Slice value in field t.Uint64 was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Uint64))); err != nil {
@@ -969,11 +968,11 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 
 		maj, val, err := cr.ReadHeader()
 		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Uint64 slice: %w", err)
+			return fmt.Errorf("failed to read uint64 for t.Uint64 slice: %w", err)
 		}
 
 		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Uint64 was not a uint, instead got %d", maj)
+			return fmt.Errorf("value read for array t.Uint64 was not a uint, instead got %d", maj)
 		}
 
 		t.Uint64[i] = uint64(val)
@@ -1014,7 +1013,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 
 	// t.CatName (string) (string)
 	if len(t.CatName) > cbg.MaxLength {
-		return xerrors.Errorf("Value in field t.CatName was too long")
+		return fmt.Errorf("Value in field t.CatName was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.CatName))); err != nil {
@@ -1054,7 +1053,7 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	{
 
 		if err := t.When.UnmarshalCBOR(cr); err != nil {
-			return xerrors.Errorf("unmarshaling t.When: %w", err)
+			return fmt.Errorf("unmarshaling t.When: %w", err)
 		}
 
 	}
@@ -1112,7 +1111,7 @@ func (t *BigField) MarshalCBOR(w io.Writer) error {
 
 	// t.LargeBytes ([]uint8) (slice)
 	if len(t.LargeBytes) > 10000000 {
-		return xerrors.Errorf("Byte array in field t.LargeBytes was too long")
+		return fmt.Errorf("Byte array in field t.LargeBytes was too long")
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(t.LargeBytes))); err != nil {

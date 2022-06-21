@@ -136,7 +136,7 @@ const (
 	MajOther       = 7
 )
 
-var maxLengthError = fmt.Errorf("length beyond maximum allowed")
+var maxLengthError = errors.New("length beyond maximum allowed")
 
 type CBORUnmarshaler interface {
 	UnmarshalCBOR(io.Reader) error
