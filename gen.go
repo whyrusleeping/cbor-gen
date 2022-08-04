@@ -529,6 +529,10 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		if err := emitCborMarshalSliceField(w, subf); err != nil {
 			return err
 		}
+	case reflect.String:
+		if err := emitCborMarshalStringField(w, Field{Name: "v"}); err != nil {
+			return err
+		}
 	}
 
 	// array end
@@ -1048,6 +1052,17 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			return err
 		}
 		fmt.Fprintf(w, "\t\t}\n")
+
+	case reflect.String:
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
+		}
+		err := emitCborUnmarshalStringField(w, subf)
+		if err != nil {
+			return err
+		}
 
 	default:
 		return fmt.Errorf("do not yet support slices of %s yet", e.Elem())

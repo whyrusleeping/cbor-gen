@@ -20,6 +20,7 @@ type SimpleTypeOne struct {
 	Binary  []byte
 	Signed  int64
 	NString NamedString
+	Strings []string
 }
 
 type SimpleTypeTwo struct {

@@ -172,6 +172,7 @@ func TestLessToMoreFieldsRoundTrip(t *testing.T) {
 		Binary:  []byte("bin"),
 		Signed:  -1,
 		NString: "namedstr",
+		Strings: []string{"cat", "dog", "bear"},
 	}
 	obj := &SimpleStructV1{
 		OldStr:    "hello",
