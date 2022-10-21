@@ -107,7 +107,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 	return nil
 }
 
-var lengthBufSimpleTypeOne = []byte{133}
+var lengthBufSimpleTypeOne = []byte{134}
 
 func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -174,6 +174,27 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if _, err := io.WriteString(w, string(t.NString)); err != nil {
 		return err
 	}
+
+	// t.Strings ([]string) (slice)
+	if len(t.Strings) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.Strings was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Strings))); err != nil {
+		return err
+	}
+	for _, v := range t.Strings {
+		if len(v) > cbg.MaxLength {
+			return xerrors.Errorf("Value in field v was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(v))); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, string(v)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -196,7 +217,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 5 {
+	if extra != 6 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -280,6 +301,37 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 
 		t.NString = NamedString(sval)
 	}
+	// t.Strings ([]string) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("t.Strings: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.Strings = make([]string, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+
+		{
+			sval, err := cbg.ReadString(cr)
+			if err != nil {
+				return err
+			}
+
+			t.Strings[i] = string(sval)
+		}
+	}
+
 	return nil
 }
 
