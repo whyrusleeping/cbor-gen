@@ -543,6 +543,18 @@ func ReadByteArray(br io.Reader, maxlen uint64) ([]byte, error) {
 	return buf, nil
 }
 
+// WriteByteArray encodes a byte array as a cbor byte-string.
+func WriteByteArray(bw io.Writer, bytes []byte) error {
+	writer := NewCborWriter(bw)
+	if err := writer.WriteMajorTypeHeader(MajByteString, uint64(len(bytes))); err != nil {
+		return err
+	}
+	if _, err := writer.Write(bytes); err != nil {
+		return err
+	}
+	return nil
+}
+
 var (
 	CborBoolFalse = []byte{0xf4}
 	CborBoolTrue  = []byte{0xf5}

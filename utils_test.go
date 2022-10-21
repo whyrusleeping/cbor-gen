@@ -83,6 +83,36 @@ func TestDeferredMaxLengthSingle(t *testing.T) {
 	}
 }
 
+func TestByteArray(t *testing.T) {
+	var buf bytes.Buffer
+	input := []byte("foobar")
+	if err := WriteByteArray(&buf, input); err != nil {
+		t.Fatal("failed to encode byte array")
+	}
+
+	// Exact length should work.
+	encoded := bytes.NewReader(buf.Bytes())
+	if out, err := ReadByteArray(encoded, uint64(len(input))); err != nil {
+		t.Fatal("failed to decode byte array")
+	} else if string(out) != string(input) {
+		t.Fatal("bytes failed to round-trip")
+	}
+
+	// Large length should work.
+	encoded.Seek(0, io.SeekStart)
+	if out, err := ReadByteArray(encoded, 100); err != nil {
+		t.Fatal("failed to decode byte array")
+	} else if string(out) != string(input) {
+		t.Fatal("bytes failed to round-trip")
+	}
+
+	// Short length should not work.
+	encoded.Seek(0, io.SeekStart)
+	if _, err := ReadByteArray(encoded, uint64(len(input)-1)); err == nil {
+		t.Fatal("should have refused to read too many bytes")
+	}
+}
+
 // TestReadEOFSemantics checks that our helper functions follow this rule when
 // dealing with EOF:
 // If the reader can't read a single byte because of EOF, it should return err == io.EOF.
