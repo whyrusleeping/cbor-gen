@@ -270,7 +270,22 @@ func (gti GenTypeInfo) MapHeaderAsByteString() string {
 
 func emitCborMarshalStringField(w io.Writer, f Field) error {
 	if f.Pointer {
-		return fmt.Errorf("pointers to strings not supported")
+		return doTemplate(w, f, `
+	if {{ .Name }} == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if len(*{{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+			return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
+		}
+
+		{{ MajorType "cw" "cbg.MajTextString" (print "len(*" .Name ")") }}
+		if _, err := io.WriteString(w, string(*{{ .Name }})); err != nil {
+			return err
+		}
+	}
+`)
 	}
 
 	return doTemplate(w, f, `
@@ -609,7 +624,26 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 
 func emitCborUnmarshalStringField(w io.Writer, f Field) error {
 	if f.Pointer {
-		return fmt.Errorf("pointers to strings not supported")
+		return doTemplate(w, f, `
+	{
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+
+			sval, err := cbg.ReadString(cr)
+			if err != nil {
+				return err
+			}
+
+			{{ .Name }} = (*{{ .TypeName }})(&sval)
+		}
+	}
+`)
 	}
 	if f.Type == nil {
 		f.Type = reflect.TypeOf("")

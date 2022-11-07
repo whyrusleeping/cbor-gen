@@ -43,6 +43,7 @@ type SimpleTypeTree struct {
 	Dog                              string
 	SixtyThreeBitIntegerWithASignBit int64
 	NotPizza                         *uint64
+	StringPtr                        *string
 }
 
 type SimpleStructV1 struct {

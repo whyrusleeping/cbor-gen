@@ -26,7 +26,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 
 	cw := cbg.NewCborWriter(w)
 
-	if _, err := cw.Write([]byte{167}); err != nil {
+	if _, err := cw.Write([]byte{168}); err != nil {
 		return err
 	}
 
@@ -187,6 +187,34 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
+	// t.StringPtr (string) (string)
+	if len("StringPtr") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"StringPtr\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("StringPtr"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("StringPtr")); err != nil {
+		return err
+	}
+
+	if t.StringPtr == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if len(*t.StringPtr) > cbg.MaxLength {
+			return xerrors.Errorf("Value in field t.StringPtr was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(*t.StringPtr))); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, string(*t.StringPtr)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -411,6 +439,27 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 					t.NotPizza = &typed
 				}
 
+			}
+			// t.StringPtr (string) (string)
+		case "StringPtr":
+
+			{
+				b, err := cr.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					if err := cr.UnreadByte(); err != nil {
+						return err
+					}
+
+					sval, err := cbg.ReadString(cr)
+					if err != nil {
+						return err
+					}
+
+					t.StringPtr = (*string)(&sval)
+				}
 			}
 
 		default:
