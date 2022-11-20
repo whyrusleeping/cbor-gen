@@ -110,3 +110,8 @@ type RenamedFields struct {
 type BigField struct {
 	LargeBytes []byte `cborgen:"maxlen=10000000"`
 }
+
+type TestEmpty struct {
+	Foo *string `cborgen:"omitempty"`
+	Cat int64
+}

@@ -90,6 +90,7 @@ type Field struct {
 	Type    reflect.Type
 	Pkg     string
 
+	OmitEmpty bool
 	IterLabel string
 
 	MaxLen int
@@ -203,13 +204,16 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			usrMaxLen = val
 		}
 
+		_, omitempty := tags["omitempty"]
+
 		out.Fields = append(out.Fields, Field{
-			Name:    f.Name,
-			MapKey:  mapk,
-			Pointer: pointer,
-			Type:    ft,
-			Pkg:     pkg,
-			MaxLen:  usrMaxLen,
+			Name:      f.Name,
+			MapKey:    mapk,
+			Pointer:   pointer,
+			Type:      ft,
+			Pkg:       pkg,
+			OmitEmpty: omitempty,
+			MaxLen:    usrMaxLen,
 		})
 	}
 
@@ -231,6 +235,8 @@ func tagparse(v string) (map[string]string, error) {
 			}
 
 			out[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		} else if elem == "omitempty" {
+			out["omitempty"] = "true"
 		} else {
 			out["name"] = elem
 		}
@@ -245,7 +251,10 @@ func (gti GenTypeInfo) TupleHeader() []byte {
 }
 
 func (gti GenTypeInfo) TupleHeaderAsByteString() string {
-	h := gti.TupleHeader()
+	return MakeByteString(gti.TupleHeader())
+}
+
+func MakeByteString(h []byte) string {
 	s := "[]byte{"
 	for _, b := range h {
 		s += fmt.Sprintf("%d,", b)
@@ -1199,6 +1208,13 @@ func GenTupleEncodersForType(gti *GenTypeInfo, w io.Writer) error {
 }
 
 func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
+	var hasOmitEmpty bool
+	for _, f := range gti.Fields {
+		if f.OmitEmpty {
+			hasOmitEmpty = true
+		}
+	}
+
 	err := doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -1206,17 +1222,55 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	}
 
 	cw := cbg.NewCborWriter(w)
-
-	if _, err := cw.Write({{ .MapHeaderAsByteString }}); err != nil {
-		return err
-	}
 `)
 	if err != nil {
 		return err
 	}
 
+	if hasOmitEmpty {
+		fmt.Fprintln(w, "var emptyFieldCount int")
+		for _, f := range gti.Fields {
+			if f.OmitEmpty {
+				err := doTemplate(w, f, `
+	if t.{{ .Name }} == nil {
+		emptyFieldCount++
+	}
+`)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		fmt.Fprintf(w, `
+	if _, err := cw.Write(cbg.CborEncodeMajorType(cbg.MajMap, uint64(%d - emptyFieldCount))); err != nil {
+		return err
+	}
+`, len(gti.Fields))
+		if err != nil {
+			return err
+		}
+
+	} else {
+
+		err = doTemplate(w, gti, `
+	if _, err := cw.Write({{ .MapHeaderAsByteString }}); err != nil {
+		return err
+	}
+`)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+
+		if f.OmitEmpty {
+			if err := doTemplate(w, f, "\nif t.{{.Name}} != nil {\n"); err != nil {
+				return err
+			}
+		}
 
 		if err := emitCborMarshalStringField(w, Field{
 			Name: `"` + f.MapKey + `"`,
@@ -1225,7 +1279,6 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		}
 
 		f.Name = "t." + f.Name
-
 		switch f.Type.Kind() {
 		case reflect.String:
 			if err := emitCborMarshalStringField(w, f); err != nil {
@@ -1263,6 +1316,12 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			}
 		default:
 			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
+		}
+
+		if f.OmitEmpty {
+			if err := doTemplate(w, f, "}\n"); err != nil {
+				return err
+			}
 		}
 	}
 
