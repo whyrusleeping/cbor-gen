@@ -378,4 +378,14 @@ func TestLargeField(t *testing.T) {
 	}
 }
 
+func TestOmitEmpty(t *testing.T) {
+	et := TestEmpty{
+		Cat: 167,
+	}
+
+	recepticle := TestEmpty{}
+
+	testValueRoundtrip(t, &et, &recepticle)
+}
+
 //TODO same for strings
