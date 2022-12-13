@@ -1815,13 +1815,13 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 	}
 
 	cw := cbg.NewCborWriter(w)
-	var emptyFieldCount int
+	fieldCount := 2
 
 	if t.Foo == nil {
-		emptyFieldCount++
+		fieldCount--
 	}
 
-	if _, err := cw.Write(cbg.CborEncodeMajorType(cbg.MajMap, uint64(2-emptyFieldCount))); err != nil {
+	if _, err := cw.Write(cbg.CborEncodeMajorType(cbg.MajMap, uint64(fieldCount))); err != nil {
 		return err
 	}
 
@@ -1965,6 +1965,145 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 				}
 
 				t.Cat = int64(extraI)
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(r, func(cid.Cid) {})
+		}
+	}
+
+	return nil
+}
+func (t *TestConstField) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{162}); err != nil {
+		return err
+	}
+
+	// t.Cats (string) (string)
+	if len("Cats") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"Cats\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Cats"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("Cats")); err != nil {
+		return err
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Cats))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("dogsdrool")); err != nil {
+		return err
+	}
+
+	// t.Thing (int64) (int64)
+	if len("Thing") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"Thing\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Thing"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("Thing")); err != nil {
+		return err
+	}
+
+	if t.Thing >= 0 {
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Thing)); err != nil {
+			return err
+		}
+	} else {
+		if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-t.Thing-1)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = TestConstField{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("TestConstField: map struct too large (%d)", extra)
+	}
+
+	var name string
+	n := extra
+
+	for i := uint64(0); i < n; i++ {
+
+		{
+			sval, err := cbg.ReadString(cr)
+			if err != nil {
+				return err
+			}
+
+			name = string(sval)
+		}
+
+		switch name {
+		// t.Cats (string) (string)
+		case "Cats":
+
+			{
+				sval, err := cbg.ReadString(cr)
+				if err != nil {
+					return err
+				}
+
+				t.Cats = string(sval)
+			}
+			// t.Thing (int64) (int64)
+		case "Thing":
+			{
+				maj, extra, err := cr.ReadHeader()
+				var extraI int64
+				if err != nil {
+					return err
+				}
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative oveflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
+				}
+
+				t.Thing = int64(extraI)
 			}
 
 		default:

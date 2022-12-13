@@ -25,6 +25,7 @@ func main() {
 		types.SimpleStructV2{},
 		types.RenamedFields{},
 		types.TestEmpty{},
+		types.TestConstField{},
 	); err != nil {
 		panic(err)
 	}
