@@ -207,6 +207,9 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 
 		var constval *string
 		if cv, hasconst := tags["const"]; hasconst {
+			if ft.Kind() != reflect.String {
+				return nil, fmt.Errorf("const vals are only supported for string types")
+			}
 			constval = &cv
 		}
 
