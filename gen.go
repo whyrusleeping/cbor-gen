@@ -196,6 +196,10 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			return nil, fmt.Errorf("invalid tag format: %w", err)
 		}
 
+		if _, ok := tags["ignore"]; ok {
+			continue
+		}
+
 		if tags["name"] != "" {
 			mapk = tags["name"]
 		}
@@ -250,6 +254,8 @@ func tagparse(v string) (map[string]string, error) {
 			out[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 		} else if elem == "omitempty" {
 			out["omitempty"] = "true"
+		} else if elem == "ignore" || elem == "-" {
+			out["ignore"] = "true"
 		} else {
 			out["name"] = elem
 		}
