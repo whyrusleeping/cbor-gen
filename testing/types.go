@@ -115,3 +115,8 @@ type TestEmpty struct {
 	Foo *string `cborgen:"omitempty"`
 	Cat int64
 }
+
+type TestConstField struct {
+	Cats  string `cborgen:"const=dogsdrool"`
+	Thing int64
+}

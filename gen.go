@@ -89,6 +89,7 @@ type Field struct {
 	Pointer bool
 	Type    reflect.Type
 	Pkg     string
+	Const   *string
 
 	OmitEmpty bool
 	IterLabel string
@@ -204,6 +205,14 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			usrMaxLen = val
 		}
 
+		var constval *string
+		if cv, hasconst := tags["const"]; hasconst {
+			if ft.Kind() != reflect.String {
+				return nil, fmt.Errorf("const vals are only supported for string types")
+			}
+			constval = &cv
+		}
+
 		_, omitempty := tags["omitempty"]
 
 		out.Fields = append(out.Fields, Field{
@@ -214,6 +223,7 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			Pkg:       pkg,
 			OmitEmpty: omitempty,
 			MaxLen:    usrMaxLen,
+			Const:     constval,
 		})
 	}
 
@@ -295,6 +305,16 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 		}
 	}
 `)
+	}
+
+	if f.Const != nil {
+		return doTemplate(w, f, `
+	{{ MajorType "cw" "cbg.MajTextString" (print "len(" .Name ")") }}
+	if _, err := io.WriteString(w, string("{{ .Const }}")); err != nil {
+		return err
+	}
+`)
+
 	}
 
 	return doTemplate(w, f, `
@@ -1228,12 +1248,12 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	}
 
 	if hasOmitEmpty {
-		fmt.Fprintln(w, "var emptyFieldCount int")
+		fmt.Fprintf(w, "fieldCount := %d\n", len(gti.Fields))
 		for _, f := range gti.Fields {
 			if f.OmitEmpty {
 				err := doTemplate(w, f, `
 	if t.{{ .Name }} == nil {
-		emptyFieldCount++
+		fieldCount--
 	}
 `)
 				if err != nil {
@@ -1243,10 +1263,10 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		}
 
 		fmt.Fprintf(w, `
-	if _, err := cw.Write(cbg.CborEncodeMajorType(cbg.MajMap, uint64(%d - emptyFieldCount))); err != nil {
+	if _, err := cw.Write(cbg.CborEncodeMajorType(cbg.MajMap, uint64(fieldCount))); err != nil {
 		return err
 	}
-`, len(gti.Fields))
+`)
 		if err != nil {
 			return err
 		}
