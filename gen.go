@@ -42,6 +42,9 @@ func doTemplate(w io.Writer, info interface{}, templ string) error {
 				}
 				return fmt.Sprintf("%d", val)
 			},
+			"Deref": func(sp *string) string {
+				return *sp
+			},
 		}).Parse(templ))
 
 	return t.Execute(w, info)
@@ -309,7 +312,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 
 	if f.Const != nil {
 		return doTemplate(w, f, `
-	{{ MajorType "cw" "cbg.MajTextString" (print "len(" .Name ")") }}
+	{{ MajorType "cw" "cbg.MajTextString" (print "len(\""  (Deref .Const)  "\")") }}
 	if _, err := io.WriteString(w, string("{{ .Const }}")); err != nil {
 		return err
 	}

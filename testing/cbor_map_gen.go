@@ -1999,7 +1999,7 @@ func (t *TestConstField) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Cats))); err != nil {
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("dogsdrool"))); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, string("dogsdrool")); err != nil {

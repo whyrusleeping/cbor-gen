@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"reflect"
@@ -386,6 +387,26 @@ func TestOmitEmpty(t *testing.T) {
 	recepticle := TestEmpty{}
 
 	testValueRoundtrip(t, &et, &recepticle)
+}
+
+func TestConstRoundtrip(t *testing.T) {
+	tcf := &TestConstField{
+		Thing: 16223,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := tcf.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("%x\n", buf.Bytes())
+
+	var out TestConstField
+	if err := out.UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(out)
 }
 
 //TODO same for strings
