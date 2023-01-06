@@ -26,6 +26,7 @@ func main() {
 		types.RenamedFields{},
 		types.TestEmpty{},
 		types.TestConstField{},
+		types.TestCanonicalFieldOrder{},
 	); err != nil {
 		panic(err)
 	}

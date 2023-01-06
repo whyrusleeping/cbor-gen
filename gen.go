@@ -1314,16 +1314,18 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fi := gti.Fields[i]
 		fj := gti.Fields[j]
 
-		if len(fi.MapKey) < len(fi.MapKey) {
+		if len(fi.MapKey) < len(fj.MapKey) {
 			return true
 		}
-		if len(fi.MapKey) > len(fi.MapKey) {
+		if len(fi.MapKey) > len(fj.MapKey) {
 			return false
 		}
 
 		// TODO: is this properly canonical?
 		return fi.MapKey < fj.MapKey
 	})
+
+	fmt.Println("sorted mapslice: ", gti.Fields)
 
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
