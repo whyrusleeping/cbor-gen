@@ -1311,8 +1311,15 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	}
 
 	sort.Slice(gti.Fields, func(i, j int) bool {
+		fi := gti.Fields[i]
+		fj := gti.Fields[j]
+
+		if len(fi.MapKey) < len(fi.MapKey) {
+			return true
+		}
+
 		// TODO: is this properly canonical?
-		return gti.Fields[i].MapKey < gti.Fields[j].MapKey
+		return fi.MapKey < fj.MapKey
 	})
 
 	for _, f := range gti.Fields {
