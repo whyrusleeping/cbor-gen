@@ -1325,8 +1325,6 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		return fi.MapKey < fj.MapKey
 	})
 
-	fmt.Println("sorted mapslice: ", gti.Fields)
-
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
