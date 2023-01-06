@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -1291,6 +1292,11 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			return err
 		}
 	}
+
+	sort.Slice(gti.Fields, func(i, j int) bool {
+		// TODO: is this properly canonical?
+		return gti.Fields[i].MapKey < gti.Fields[j].MapKey
+	})
 
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
