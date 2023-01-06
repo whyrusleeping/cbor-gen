@@ -1261,11 +1261,22 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fmt.Fprintf(w, "fieldCount := %d\n", len(gti.Fields))
 		for _, f := range gti.Fields {
 			if f.OmitEmpty {
-				err := doTemplate(w, f, `
-	if t.{{ .Name }} == nil {
+				var emptyVal string
+				if f.Pointer {
+					emptyVal = "nil"
+				} else {
+					switch f.Type.Kind() {
+					case reflect.String:
+						emptyVal = "\"\""
+					default:
+						return fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
+					}
+				}
+				err := doTemplate(w, f, fmt.Sprintf(`
+	if t.{{ .Name }} == %s {
 		fieldCount--
 	}
-`)
+`, emptyVal))
 				if err != nil {
 					return err
 				}
