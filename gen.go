@@ -1317,6 +1317,9 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		if len(fi.MapKey) < len(fi.MapKey) {
 			return true
 		}
+		if len(fi.MapKey) > len(fi.MapKey) {
+			return false
+		}
 
 		// TODO: is this properly canonical?
 		return fi.MapKey < fj.MapKey
