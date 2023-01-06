@@ -1814,14 +1814,44 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 	}
 
 	cw := cbg.NewCborWriter(w)
-	fieldCount := 2
+	fieldCount := 3
 
 	if t.Foo == nil {
 		fieldCount--
 	}
 
+	if t.Beep == "" {
+		fieldCount--
+	}
+
 	if _, err := cw.Write(cbg.CborEncodeMajorType(cbg.MajMap, uint64(fieldCount))); err != nil {
 		return err
+	}
+
+	// t.Beep (string) (string)
+	if t.Beep != "" {
+
+		if len("Beep") > cbg.MaxLength {
+			return xerrors.Errorf("Value in field \"Beep\" was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Beep"))); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, string("Beep")); err != nil {
+			return err
+		}
+
+		if len(t.Beep) > cbg.MaxLength {
+			return xerrors.Errorf("Value in field t.Beep was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Beep))); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, string(t.Beep)); err != nil {
+			return err
+		}
 	}
 
 	// t.Cat (int64) (int64)
@@ -1918,7 +1948,18 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 		}
 
 		switch name {
-		// t.Cat (int64) (int64)
+		// t.Beep (string) (string)
+		case "Beep":
+
+			{
+				sval, err := cbg.ReadString(cr)
+				if err != nil {
+					return err
+				}
+
+				t.Beep = string(sval)
+			}
+			// t.Cat (int64) (int64)
 		case "Cat":
 			{
 				maj, extra, err := cr.ReadHeader()

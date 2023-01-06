@@ -112,8 +112,9 @@ type BigField struct {
 }
 
 type TestEmpty struct {
-	Foo *string `cborgen:"omitempty"`
-	Cat int64
+	Foo  *string `cborgen:"omitempty"`
+	Beep string  `cborgen:"omitempty"`
+	Cat  int64
 }
 
 type TestConstField struct {

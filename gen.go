@@ -135,6 +135,10 @@ func (f Field) IsArray() bool {
 	return f.Type.Kind() == reflect.Array
 }
 
+func (f Field) EmptyVal() (string, error) {
+	return emptyValForField(f)
+}
+
 func (f Field) Len() int {
 	return f.Type.Len()
 }
@@ -1237,6 +1241,19 @@ func GenTupleEncodersForType(gti *GenTypeInfo, w io.Writer) error {
 	return nil
 }
 
+func emptyValForField(f Field) (string, error) {
+	if f.Pointer {
+		return "nil", nil
+	} else {
+		switch f.Type.Kind() {
+		case reflect.String:
+			return "\"\"", nil
+		default:
+			return "", fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
+		}
+	}
+}
+
 func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	var hasOmitEmpty bool
 	for _, f := range gti.Fields {
@@ -1261,22 +1278,11 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fmt.Fprintf(w, "fieldCount := %d\n", len(gti.Fields))
 		for _, f := range gti.Fields {
 			if f.OmitEmpty {
-				var emptyVal string
-				if f.Pointer {
-					emptyVal = "nil"
-				} else {
-					switch f.Type.Kind() {
-					case reflect.String:
-						emptyVal = "\"\""
-					default:
-						return fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
-					}
-				}
-				err := doTemplate(w, f, fmt.Sprintf(`
-	if t.{{ .Name }} == %s {
+				err = doTemplate(w, f, `
+	if t.{{ .Name }} == {{ .EmptyVal }} {
 		fieldCount--
 	}
-`, emptyVal))
+`)
 				if err != nil {
 					return err
 				}
@@ -1313,7 +1319,7 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		if f.OmitEmpty {
-			if err := doTemplate(w, f, "\nif t.{{.Name}} != nil {\n"); err != nil {
+			if err := doTemplate(w, f, "\nif t.{{.Name}} != {{ .EmptyVal }} {\n"); err != nil {
 				return err
 			}
 		}
