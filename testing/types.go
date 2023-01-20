@@ -112,11 +112,19 @@ type BigField struct {
 }
 
 type TestEmpty struct {
-	Foo *string `cborgen:"omitempty"`
-	Cat int64
+	Foo  *string `cborgen:"omitempty"`
+	Beep string  `cborgen:"omitempty"`
+	Cat  int64
 }
 
 type TestConstField struct {
 	Cats  string `cborgen:"const=dogsdrool"`
 	Thing int64
+}
+
+type TestCanonicalFieldOrder struct {
+	Foo   int64  `cborgen:"foo"`
+	Bar   string `cborgen:"beep"`
+	Drond int64
+	Zp    string `cborgen:"ap"`
 }

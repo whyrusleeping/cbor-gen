@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -134,6 +135,10 @@ func (f Field) IsArray() bool {
 	return f.Type.Kind() == reflect.Array
 }
 
+func (f Field) EmptyVal() (string, error) {
+	return emptyValForField(f)
+}
+
 func (f Field) Len() int {
 	return f.Type.Len()
 }
@@ -196,6 +201,10 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 			return nil, fmt.Errorf("invalid tag format: %w", err)
 		}
 
+		if _, ok := tags["ignore"]; ok {
+			continue
+		}
+
 		if tags["name"] != "" {
 			mapk = tags["name"]
 		}
@@ -250,6 +259,8 @@ func tagparse(v string) (map[string]string, error) {
 			out[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 		} else if elem == "omitempty" {
 			out["omitempty"] = "true"
+		} else if elem == "ignore" || elem == "-" {
+			out["ignore"] = "true"
 		} else {
 			out["name"] = elem
 		}
@@ -1230,6 +1241,19 @@ func GenTupleEncodersForType(gti *GenTypeInfo, w io.Writer) error {
 	return nil
 }
 
+func emptyValForField(f Field) (string, error) {
+	if f.Pointer {
+		return "nil", nil
+	} else {
+		switch f.Type.Kind() {
+		case reflect.String:
+			return "\"\"", nil
+		default:
+			return "", fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
+		}
+	}
+}
+
 func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	var hasOmitEmpty bool
 	for _, f := range gti.Fields {
@@ -1254,8 +1278,8 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fmt.Fprintf(w, "fieldCount := %d\n", len(gti.Fields))
 		for _, f := range gti.Fields {
 			if f.OmitEmpty {
-				err := doTemplate(w, f, `
-	if t.{{ .Name }} == nil {
+				err = doTemplate(w, f, `
+	if t.{{ .Name }} == {{ .EmptyVal }} {
 		fieldCount--
 	}
 `)
@@ -1286,11 +1310,26 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		}
 	}
 
+	sort.Slice(gti.Fields, func(i, j int) bool {
+		fi := gti.Fields[i]
+		fj := gti.Fields[j]
+
+		if len(fi.MapKey) < len(fj.MapKey) {
+			return true
+		}
+		if len(fi.MapKey) > len(fj.MapKey) {
+			return false
+		}
+
+		// TODO: is this properly canonical?
+		return fi.MapKey < fj.MapKey
+	})
+
 	for _, f := range gti.Fields {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		if f.OmitEmpty {
-			if err := doTemplate(w, f, "\nif t.{{.Name}} != nil {\n"); err != nil {
+			if err := doTemplate(w, f, "\nif t.{{.Name}} != {{ .EmptyVal }} {\n"); err != nil {
 				return err
 			}
 		}
