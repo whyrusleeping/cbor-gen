@@ -41,6 +41,10 @@ func (cr *CborReader) ReadHeader() (byte, uint64, error) {
 	return CborReadHeaderBuf(cr.r, cr.hbuf)
 }
 
+func (cr *CborReader) SetReader(r io.Reader) {
+	cr.r = GetPeeker(r)
+}
+
 var (
 	_ io.Writer       = (*CborWriter)(nil)
 	_ io.StringWriter = (*CborWriter)(nil)
