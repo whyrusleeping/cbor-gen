@@ -1248,6 +1248,8 @@ func emptyValForField(f Field) (string, error) {
 		switch f.Type.Kind() {
 		case reflect.String:
 			return "\"\"", nil
+		case reflect.Slice:
+			return "nil", nil
 		default:
 			return "", fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
 		}
