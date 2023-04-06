@@ -44,6 +44,7 @@ type SimpleTypeTree struct {
 	SixtyThreeBitIntegerWithASignBit int64
 	NotPizza                         *uint64
 	StringPtr                        *string
+	BoolPtr                          *bool
 }
 
 type SimpleStructV1 struct {

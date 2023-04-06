@@ -26,7 +26,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 
 	cw := cbg.NewCborWriter(w)
 
-	if _, err := cw.Write([]byte{168}); err != nil {
+	if _, err := cw.Write([]byte{169}); err != nil {
 		return err
 	}
 
@@ -141,6 +141,28 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 
 	if err := t.Stufff.MarshalCBOR(cw); err != nil {
 		return err
+	}
+
+	// t.BoolPtr (bool) (bool)
+	if len("BoolPtr") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"BoolPtr\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("BoolPtr"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("BoolPtr")); err != nil {
+		return err
+	}
+
+	if t.BoolPtr == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteBool(w, *t.BoolPtr); err != nil {
+			return err
+		}
 	}
 
 	// t.NotPizza (uint64) (uint64)
@@ -388,6 +410,39 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 					}
 				}
 
+			}
+			// t.BoolPtr (bool) (bool)
+		case "BoolPtr":
+
+			{
+				b, err := cr.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					if err := cr.UnreadByte(); err != nil {
+						return err
+					}
+
+					maj, extra, err = cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajOther {
+						return fmt.Errorf("booleans must be major type 7")
+					}
+
+					var val bool
+					switch extra {
+					case 20:
+						val = false
+					case 21:
+						val = true
+					default:
+						return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+					}
+					t.BoolPtr = &val
+				}
 			}
 			// t.NotPizza (uint64) (uint64)
 		case "NotPizza":
