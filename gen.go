@@ -436,11 +436,25 @@ func emitCborMarshalInt64Field(w io.Writer, f Field) error {
 }
 
 func emitCborMarshalBoolField(w io.Writer, f Field) error {
-	return doTemplate(w, f, `
+	if f.Pointer {
+		return doTemplate(w, f, `
+	if {{ .Name }} == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteBool(w, *{{ .Name }}); err != nil {
+			return err
+		}
+	}
+`)
+	} else {
+		return doTemplate(w, f, `
 	if err := cbg.WriteBool(w, {{ .Name }}); err != nil {
 		return err
 	}
 `)
+	}
 }
 
 func emitCborMarshalMapField(w io.Writer, f Field) error {
@@ -884,7 +898,41 @@ func emitCborUnmarshalUint8Field(w io.Writer, f Field) error {
 }
 
 func emitCborUnmarshalBoolField(w io.Writer, f Field) error {
-	return doTemplate(w, f, `
+	if f.Pointer {
+		return doTemplate(w, f, `
+	{
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+
+			maj, extra, err = {{ ReadHeader "cr" }}
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajOther {
+				return fmt.Errorf("booleans must be major type 7")
+			}
+
+			var val bool
+			switch extra {
+			case 20:
+				val = false
+			case 21:
+				val = true
+			default:
+				return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+			}
+			{{ .Name }} = &val
+		}
+	}
+`)
+	} else {
+		return doTemplate(w, f, `
 	maj, extra, err = {{ ReadHeader "cr" }}
 	if err != nil {
 		return err
@@ -901,6 +949,7 @@ func emitCborUnmarshalBoolField(w io.Writer, f Field) error {
 		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
 	}
 `)
+	}
 }
 
 func emitCborUnmarshalMapField(w io.Writer, f Field) error {
@@ -1248,6 +1297,8 @@ func emptyValForField(f Field) (string, error) {
 		switch f.Type.Kind() {
 		case reflect.String:
 			return "\"\"", nil
+		case reflect.Slice:
+			return "nil", nil
 		default:
 			return "", fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
 		}
