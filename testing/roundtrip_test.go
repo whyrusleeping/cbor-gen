@@ -15,6 +15,7 @@ import (
 	"github.com/ipfs/go-cid"
 
 	"github.com/google/go-cmp/cmp"
+
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
@@ -402,6 +403,37 @@ func TestConstRoundtrip(t *testing.T) {
 	fmt.Printf("%x\n", buf.Bytes())
 
 	var out TestConstField
+	if err := out.UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(out)
+}
+
+func TestMapOfStringToString(t *testing.T) {
+	mss := &MapStringString{Snorkleblump: map[string]string{
+		"leave me":    "like this",
+		"RAT":         "ATA",
+		"Tears":       "eyes",
+		"Rumble":      "killers in the jungle",
+		"Butterflies": "caterpillars",
+		"Inhale":      "Exhale",
+		"A Street":    "I know",
+		"XENA":        "ahhhhhhhhhh",
+		"TOO":         "BIZARRE",
+		"Stay":        "Hydrated",
+		"Good":        "Space",
+		"Super":       "sonic",
+		"Hazel":       "theme",
+		"Still":       "Here with the ones that I came with",
+	}}
+
+	buf := new(bytes.Buffer)
+	if err := mss.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	var out MapStringString
 	if err := out.UnmarshalCBOR(buf); err != nil {
 		t.Fatal(err)
 	}
