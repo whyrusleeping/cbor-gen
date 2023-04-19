@@ -14,8 +14,6 @@ func main() {
 		types.FixedArrays{},
 		types.ThingWithSomeTime{},
 		types.BigField{},
-		// TODO this fails with error: failed to generate encoders: currently unsupported map elem type: string
-		types.MapStringString{},
 	); err != nil {
 		panic(err)
 	}
@@ -29,6 +27,7 @@ func main() {
 		types.TestEmpty{},
 		types.TestConstField{},
 		types.TestCanonicalFieldOrder{},
+		types.MapStringString{},
 	); err != nil {
 		panic(err)
 	}
