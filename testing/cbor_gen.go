@@ -335,7 +335,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	return nil
 }
 
-var lengthBufSimpleTypeTwo = []byte{137}
+var lengthBufSimpleTypeTwo = []byte{138}
 
 func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -473,6 +473,11 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	}
+
+	// t.Custom (testing.CustomMarshalerStruct) (struct)
+	if err := t.Custom.MarshalCBOR(cw); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -495,7 +500,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 9 {
+	if extra != 10 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -766,6 +771,15 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		t.Arrrrrghay[i] = v
 	}
 
+	// t.Custom (testing.CustomMarshalerStruct) (struct)
+
+	{
+
+		if err := t.Custom.UnmarshalCBOR(cr); err != nil {
+			return xerrors.Errorf("unmarshaling t.Custom: %w", err)
+		}
+
+	}
 	return nil
 }
 

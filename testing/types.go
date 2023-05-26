@@ -1,6 +1,9 @@
 package testing
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
@@ -33,6 +36,7 @@ type SimpleTypeTwo struct {
 	Pizza        *uint64
 	PointyPizza  *NamedNumber
 	Arrrrrghay   [Thingc]SimpleTypeOne
+	Custom       CustomMarshalerStruct
 }
 
 type SimpleTypeTree struct {
@@ -110,6 +114,31 @@ type RenamedFields struct {
 
 type BigField struct {
 	LargeBytes []byte `cborgen:"maxlen=10000000"`
+}
+
+type CustomMarshalerContainer struct {
+	Struct *CustomMarshalerStruct `cborgen:"custom"`
+}
+
+type CustomMarshalerStruct struct {
+	Foo int64  `cborgen:"foo"`
+	Bar string `cborgen:"bar"`
+}
+
+func (t *CustomMarshalerStruct) MarshalCBOR(w io.Writer) error {
+	w.Write([]byte(fmt.Sprintf("foo:%020d/bar_length:%010d/bar:%s", t.Foo, len(t.Bar), t.Bar)))
+	return nil
+}
+
+func (t *CustomMarshalerStruct) UnmarshalCBOR(r io.Reader) error {
+	buf := make([]byte, len("foo:00000000000000000000/bar_length:0000000000/bar:"))
+	r.Read(buf)
+	barLength := 0
+	fmt.Sscanf(string(buf), "foo:%020d/bar_length:%010d/bar", &t.Foo, &barLength)
+	barBuf := make([]byte, barLength)
+	r.Read(barBuf)
+	t.Bar = string(barBuf)
+	return nil
 }
 
 type TestEmpty struct {

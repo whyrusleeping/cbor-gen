@@ -2435,3 +2435,100 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 
 	return nil
 }
+func (t *CustomMarshalerContainer) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{161}); err != nil {
+		return err
+	}
+
+	// t.Struct (testing.CustomMarshalerStruct) (struct)
+	if len("custom") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"custom\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("custom"))); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, string("custom")); err != nil {
+		return err
+	}
+
+	if err := t.Struct.MarshalCBOR(cw); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *CustomMarshalerContainer) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = CustomMarshalerContainer{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("CustomMarshalerContainer: map struct too large (%d)", extra)
+	}
+
+	var name string
+	n := extra
+
+	for i := uint64(0); i < n; i++ {
+
+		{
+			sval, err := cbg.ReadString(cr)
+			if err != nil {
+				return err
+			}
+
+			name = string(sval)
+		}
+
+		switch name {
+		// t.Struct (testing.CustomMarshalerStruct) (struct)
+		case "custom":
+
+			{
+
+				b, err := cr.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					if err := cr.UnreadByte(); err != nil {
+						return err
+					}
+					t.Struct = new(CustomMarshalerStruct)
+					if err := t.Struct.UnmarshalCBOR(cr); err != nil {
+						return xerrors.Errorf("unmarshaling t.Struct pointer: %w", err)
+					}
+				}
+
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(r, func(cid.Cid) {})
+		}
+	}
+
+	return nil
+}
