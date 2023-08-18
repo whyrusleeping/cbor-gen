@@ -74,6 +74,15 @@ func NewCborWriter(w io.Writer) *CborWriter {
 	return cw
 }
 
+func (cw *CborWriter) SetWriter(w io.Writer) {
+	cw.w = w
+	if sw, ok := w.(io.StringWriter); ok {
+		cw.sw = sw
+	} else {
+		cw.sw = nil
+	}
+}
+
 func (cw *CborWriter) Write(p []byte) (n int, err error) {
 	return cw.w.Write(p)
 }
