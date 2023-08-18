@@ -314,7 +314,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 		}
 
 		{{ MajorType "cw" "cbg.MajTextString" (print "len(*" .Name ")") }}
-		if _, err := io.WriteString(w, string(*{{ .Name }})); err != nil {
+		if _, err := cw.WriteString(string(*{{ .Name }})); err != nil {
 			return err
 		}
 	}
@@ -324,7 +324,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	if f.Const != nil {
 		return doTemplate(w, f, `
 	{{ MajorType "cw" "cbg.MajTextString" (print "len(\""  (Deref .Const)  "\")") }}
-	if _, err := io.WriteString(w, string("{{ .Const }}")); err != nil {
+	if _, err := cw.WriteString(string("{{ .Const }}")); err != nil {
 		return err
 	}
 `)
@@ -337,7 +337,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	{{ MajorType "cw" "cbg.MajTextString" (print "len(" .Name ")") }}
-	if _, err := io.WriteString(w, string({{ .Name }})); err != nil {
+	if _, err := cw.WriteString(string({{ .Name }})); err != nil {
 		return err
 	}
 `)

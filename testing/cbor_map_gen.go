@@ -38,7 +38,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Dog"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Dog")); err != nil {
+	if _, err := cw.WriteString(string("Dog")); err != nil {
 		return err
 	}
 
@@ -49,7 +49,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.Dog)); err != nil {
+	if _, err := cw.WriteString(string(t.Dog)); err != nil {
 		return err
 	}
 
@@ -61,7 +61,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Test"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Test")); err != nil {
+	if _, err := cw.WriteString(string("Test")); err != nil {
 		return err
 	}
 
@@ -94,7 +94,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Stuff"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Stuff")); err != nil {
+	if _, err := cw.WriteString(string("Stuff")); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Others"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Others")); err != nil {
+	if _, err := cw.WriteString(string("Others")); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Stufff"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Stufff")); err != nil {
+	if _, err := cw.WriteString(string("Stufff")); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("BoolPtr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("BoolPtr")); err != nil {
+	if _, err := cw.WriteString(string("BoolPtr")); err != nil {
 		return err
 	}
 
@@ -173,7 +173,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NotPizza"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NotPizza")); err != nil {
+	if _, err := cw.WriteString(string("NotPizza")); err != nil {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("StringPtr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("StringPtr")); err != nil {
+	if _, err := cw.WriteString(string("StringPtr")); err != nil {
 		return err
 	}
 
@@ -211,7 +211,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(*t.StringPtr))); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(w, string(*t.StringPtr)); err != nil {
+		if _, err := cw.WriteString(string(*t.StringPtr)); err != nil {
 			return err
 		}
 	}
@@ -224,7 +224,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("SixtyThreeBitIntegerWithASignBit"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("SixtyThreeBitIntegerWithASignBit")); err != nil {
+	if _, err := cw.WriteString(string("SixtyThreeBitIntegerWithASignBit")); err != nil {
 		return err
 	}
 
@@ -545,7 +545,7 @@ func (t *NeedScratchForMap) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Thing"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Thing")); err != nil {
+	if _, err := cw.WriteString(string("Thing")); err != nil {
 		return err
 	}
 
@@ -640,7 +640,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldMap"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldMap")); err != nil {
+	if _, err := cw.WriteString(string("OldMap")); err != nil {
 		return err
 	}
 
@@ -668,7 +668,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(k))); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(w, string(k)); err != nil {
+			if _, err := cw.WriteString(string(k)); err != nil {
 				return err
 			}
 
@@ -687,7 +687,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldNum"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldNum")); err != nil {
+	if _, err := cw.WriteString(string("OldNum")); err != nil {
 		return err
 	}
 
@@ -703,7 +703,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldPtr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldPtr")); err != nil {
+	if _, err := cw.WriteString(string("OldPtr")); err != nil {
 		return err
 	}
 
@@ -725,7 +725,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldStr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldStr")); err != nil {
+	if _, err := cw.WriteString(string("OldStr")); err != nil {
 		return err
 	}
 
@@ -736,7 +736,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.OldStr))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.OldStr)); err != nil {
+	if _, err := cw.WriteString(string(t.OldStr)); err != nil {
 		return err
 	}
 
@@ -748,7 +748,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldArray"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldArray")); err != nil {
+	if _, err := cw.WriteString(string("OldArray")); err != nil {
 		return err
 	}
 
@@ -773,7 +773,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldBytes"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldBytes")); err != nil {
+	if _, err := cw.WriteString(string("OldBytes")); err != nil {
 		return err
 	}
 
@@ -797,7 +797,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldStruct"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldStruct")); err != nil {
+	if _, err := cw.WriteString(string("OldStruct")); err != nil {
 		return err
 	}
 
@@ -1027,7 +1027,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewMap"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewMap")); err != nil {
+	if _, err := cw.WriteString(string("NewMap")); err != nil {
 		return err
 	}
 
@@ -1055,7 +1055,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(k))); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(w, string(k)); err != nil {
+			if _, err := cw.WriteString(string(k)); err != nil {
 				return err
 			}
 
@@ -1074,7 +1074,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewNum"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewNum")); err != nil {
+	if _, err := cw.WriteString(string("NewNum")); err != nil {
 		return err
 	}
 
@@ -1090,7 +1090,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewPtr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewPtr")); err != nil {
+	if _, err := cw.WriteString(string("NewPtr")); err != nil {
 		return err
 	}
 
@@ -1112,7 +1112,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewStr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewStr")); err != nil {
+	if _, err := cw.WriteString(string("NewStr")); err != nil {
 		return err
 	}
 
@@ -1123,7 +1123,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.NewStr))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.NewStr)); err != nil {
+	if _, err := cw.WriteString(string(t.NewStr)); err != nil {
 		return err
 	}
 
@@ -1135,7 +1135,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldMap"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldMap")); err != nil {
+	if _, err := cw.WriteString(string("OldMap")); err != nil {
 		return err
 	}
 
@@ -1163,7 +1163,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(k))); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(w, string(k)); err != nil {
+			if _, err := cw.WriteString(string(k)); err != nil {
 				return err
 			}
 
@@ -1182,7 +1182,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldNum"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldNum")); err != nil {
+	if _, err := cw.WriteString(string("OldNum")); err != nil {
 		return err
 	}
 
@@ -1198,7 +1198,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldPtr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldPtr")); err != nil {
+	if _, err := cw.WriteString(string("OldPtr")); err != nil {
 		return err
 	}
 
@@ -1220,7 +1220,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldStr"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldStr")); err != nil {
+	if _, err := cw.WriteString(string("OldStr")); err != nil {
 		return err
 	}
 
@@ -1231,7 +1231,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.OldStr))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.OldStr)); err != nil {
+	if _, err := cw.WriteString(string(t.OldStr)); err != nil {
 		return err
 	}
 
@@ -1243,7 +1243,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewArray"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewArray")); err != nil {
+	if _, err := cw.WriteString(string("NewArray")); err != nil {
 		return err
 	}
 
@@ -1268,7 +1268,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewBytes"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewBytes")); err != nil {
+	if _, err := cw.WriteString(string("NewBytes")); err != nil {
 		return err
 	}
 
@@ -1292,7 +1292,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldArray"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldArray")); err != nil {
+	if _, err := cw.WriteString(string("OldArray")); err != nil {
 		return err
 	}
 
@@ -1317,7 +1317,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldBytes"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldBytes")); err != nil {
+	if _, err := cw.WriteString(string("OldBytes")); err != nil {
 		return err
 	}
 
@@ -1341,7 +1341,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("NewStruct"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("NewStruct")); err != nil {
+	if _, err := cw.WriteString(string("NewStruct")); err != nil {
 		return err
 	}
 
@@ -1357,7 +1357,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldStruct"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("OldStruct")); err != nil {
+	if _, err := cw.WriteString(string("OldStruct")); err != nil {
 		return err
 	}
 
@@ -1740,7 +1740,7 @@ func (t *RenamedFields) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("foo"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("foo")); err != nil {
+	if _, err := cw.WriteString(string("foo")); err != nil {
 		return err
 	}
 
@@ -1762,7 +1762,7 @@ func (t *RenamedFields) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("beep"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("beep")); err != nil {
+	if _, err := cw.WriteString(string("beep")); err != nil {
 		return err
 	}
 
@@ -1773,7 +1773,7 @@ func (t *RenamedFields) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Bar))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.Bar)); err != nil {
+	if _, err := cw.WriteString(string(t.Bar)); err != nil {
 		return err
 	}
 	return nil
@@ -1892,7 +1892,7 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Cat"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Cat")); err != nil {
+	if _, err := cw.WriteString(string("Cat")); err != nil {
 		return err
 	}
 
@@ -1916,7 +1916,7 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Foo"))); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(w, string("Foo")); err != nil {
+		if _, err := cw.WriteString(string("Foo")); err != nil {
 			return err
 		}
 
@@ -1932,7 +1932,7 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(*t.Foo))); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(w, string(*t.Foo)); err != nil {
+			if _, err := cw.WriteString(string(*t.Foo)); err != nil {
 				return err
 			}
 		}
@@ -1948,7 +1948,7 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Beep"))); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(w, string("Beep")); err != nil {
+		if _, err := cw.WriteString(string("Beep")); err != nil {
 			return err
 		}
 
@@ -1959,7 +1959,7 @@ func (t *TestEmpty) MarshalCBOR(w io.Writer) error {
 		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Beep))); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(w, string(t.Beep)); err != nil {
+		if _, err := cw.WriteString(string(t.Beep)); err != nil {
 			return err
 		}
 	}
@@ -2091,14 +2091,14 @@ func (t *TestConstField) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Cats"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Cats")); err != nil {
+	if _, err := cw.WriteString(string("Cats")); err != nil {
 		return err
 	}
 
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("dogsdrool"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("dogsdrool")); err != nil {
+	if _, err := cw.WriteString(string("dogsdrool")); err != nil {
 		return err
 	}
 
@@ -2110,7 +2110,7 @@ func (t *TestConstField) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Thing"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Thing")); err != nil {
+	if _, err := cw.WriteString(string("Thing")); err != nil {
 		return err
 	}
 
@@ -2230,7 +2230,7 @@ func (t *TestCanonicalFieldOrder) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("ap"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("ap")); err != nil {
+	if _, err := cw.WriteString(string("ap")); err != nil {
 		return err
 	}
 
@@ -2241,7 +2241,7 @@ func (t *TestCanonicalFieldOrder) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Zp))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.Zp)); err != nil {
+	if _, err := cw.WriteString(string(t.Zp)); err != nil {
 		return err
 	}
 
@@ -2253,7 +2253,7 @@ func (t *TestCanonicalFieldOrder) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("foo"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("foo")); err != nil {
+	if _, err := cw.WriteString(string("foo")); err != nil {
 		return err
 	}
 
@@ -2275,7 +2275,7 @@ func (t *TestCanonicalFieldOrder) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("beep"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("beep")); err != nil {
+	if _, err := cw.WriteString(string("beep")); err != nil {
 		return err
 	}
 
@@ -2286,7 +2286,7 @@ func (t *TestCanonicalFieldOrder) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Bar))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.Bar)); err != nil {
+	if _, err := cw.WriteString(string(t.Bar)); err != nil {
 		return err
 	}
 
@@ -2298,7 +2298,7 @@ func (t *TestCanonicalFieldOrder) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Drond"))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string("Drond")); err != nil {
+	if _, err := cw.WriteString(string("Drond")); err != nil {
 		return err
 	}
 
