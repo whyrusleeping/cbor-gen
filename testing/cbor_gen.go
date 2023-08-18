@@ -129,7 +129,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Foo))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.Foo)); err != nil {
+	if _, err := cw.WriteString(string(t.Foo)); err != nil {
 		return err
 	}
 
@@ -171,7 +171,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.NString))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.NString)); err != nil {
+	if _, err := cw.WriteString(string(t.NString)); err != nil {
 		return err
 	}
 
@@ -191,7 +191,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(v))); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(w, string(v)); err != nil {
+		if _, err := cw.WriteString(string(v)); err != nil {
 			return err
 		}
 	}
@@ -418,7 +418,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Dog))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.Dog)); err != nil {
+	if _, err := cw.WriteString(string(t.Dog)); err != nil {
 		return err
 	}
 
@@ -1072,7 +1072,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.CatName))); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(w, string(t.CatName)); err != nil {
+	if _, err := cw.WriteString(string(t.CatName)); err != nil {
 		return err
 	}
 	return nil

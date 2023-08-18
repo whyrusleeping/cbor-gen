@@ -53,15 +53,33 @@ var (
 type CborWriter struct {
 	w    io.Writer
 	hbuf []byte
+
+	sw io.StringWriter
 }
 
 func NewCborWriter(w io.Writer) *CborWriter {
 	if w, ok := w.(*CborWriter); ok {
 		return w
 	}
-	return &CborWriter{
+
+	cw := &CborWriter{
 		w:    w,
 		hbuf: make([]byte, maxHeaderSize),
+	}
+
+	if sw, ok := w.(io.StringWriter); ok {
+		cw.sw = sw
+	}
+
+	return cw
+}
+
+func (cw *CborWriter) SetWriter(w io.Writer) {
+	cw.w = w
+	if sw, ok := w.(io.StringWriter); ok {
+		cw.sw = sw
+	} else {
+		cw.sw = nil
 	}
 }
 
@@ -78,8 +96,8 @@ func (cw *CborWriter) CborWriteHeader(t byte, l uint64) error {
 }
 
 func (cw *CborWriter) WriteString(s string) (int, error) {
-	if sw, ok := cw.w.(io.StringWriter); ok {
-		return sw.WriteString(s)
+	if cw.sw != nil {
+		return cw.sw.WriteString(s)
 	}
 	return cw.w.Write([]byte(s))
 }

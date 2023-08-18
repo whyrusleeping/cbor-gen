@@ -662,7 +662,7 @@ func WriteCid(w io.Writer, c cid.Cid) error {
 		return err
 	}
 
-	if _, err := c.WriteBytes(cw); err != nil {
+	if _, err := cw.WriteString(c.KeyString()); err != nil {
 		return err
 	}
 
