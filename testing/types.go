@@ -48,13 +48,15 @@ type SimpleTypeTree struct {
 }
 
 type SimpleStructV1 struct {
-	OldStr    string
-	OldBytes  []byte
-	OldNum    uint64
-	OldPtr    *cid.Cid
-	OldMap    map[string]SimpleTypeOne
-	OldArray  []SimpleTypeOne
-	OldStruct SimpleTypeOne
+	OldStr         string
+	OldBytes       []byte
+	OldNum         uint64
+	OldPtr         *cid.Cid
+	OldMap         map[string]SimpleTypeOne
+	OldArray       []SimpleTypeOne
+	OldStruct      SimpleTypeOne
+	OldCidArray    []cid.Cid
+	OldCidPtrArray []*cid.Cid
 }
 
 type SimpleStructV2 struct {
