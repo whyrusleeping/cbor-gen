@@ -122,9 +122,11 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Others {
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
+
 	}
 
 	// t.Stufff (testing.SimpleTypeTwo) (struct)
@@ -314,6 +316,9 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 					var maj byte
 					var extra uint64
 					var err error
+					_ = maj
+					_ = extra
+					_ = err
 
 					maj, extra, err = cr.ReadHeader()
 					if err != nil {
@@ -378,17 +383,27 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 
 			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
 
-				maj, val, err := cr.ReadHeader()
-				if err != nil {
-					return xerrors.Errorf("failed to read uint64 for t.Others slice: %w", err)
+					{
+
+						maj, extra, err = cr.ReadHeader()
+						if err != nil {
+							return err
+						}
+						if maj != cbg.MajUnsignedInt {
+							return fmt.Errorf("wrong type for uint64 field")
+						}
+						t.Others[i] = uint64(extra)
+
+					}
 				}
-
-				if maj != cbg.MajUnsignedInt {
-					return xerrors.Errorf("value read for array t.Others was not a uint, instead got %d", maj)
-				}
-
-				t.Others[i] = uint64(val)
 			}
 
 			// t.Stufff (testing.SimpleTypeTwo) (struct)
@@ -628,7 +643,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 
 	cw := cbg.NewCborWriter(w)
 
-	if _, err := cw.Write([]byte{167}); err != nil {
+	if _, err := cw.Write([]byte{169}); err != nil {
 		return err
 	}
 
@@ -804,6 +819,66 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 	if err := t.OldStruct.MarshalCBOR(cw); err != nil {
 		return err
 	}
+
+	// t.OldCidArray ([]cid.Cid) (slice)
+	if len("OldCidArray") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldCidArray\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldCidArray"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("OldCidArray")); err != nil {
+		return err
+	}
+
+	if len(t.OldCidArray) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.OldCidArray was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.OldCidArray))); err != nil {
+		return err
+	}
+	for _, v := range t.OldCidArray {
+
+		if err := cbg.WriteCid(cw, v); err != nil {
+			return xerrors.Errorf("failed to write cid field v: %w", err)
+		}
+
+	}
+
+	// t.OldCidPtrArray ([]*cid.Cid) (slice)
+	if len("OldCidPtrArray") > cbg.MaxLength {
+		return xerrors.Errorf("Value in field \"OldCidPtrArray\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("OldCidPtrArray"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("OldCidPtrArray")); err != nil {
+		return err
+	}
+
+	if len(t.OldCidPtrArray) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field t.OldCidPtrArray was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.OldCidPtrArray))); err != nil {
+		return err
+	}
+	for _, v := range t.OldCidPtrArray {
+
+		if v == nil {
+			if _, err := cw.Write(cbg.CborNull); err != nil {
+				return err
+			}
+		} else {
+			if err := cbg.WriteCid(cw, *v); err != nil {
+				return xerrors.Errorf("failed to write cid field v: %w", err)
+			}
+		}
+
+	}
 	return nil
 }
 
@@ -957,13 +1032,22 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 
 			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
 
-				var v SimpleTypeOne
-				if err := v.UnmarshalCBOR(cr); err != nil {
-					return err
+					{
+
+						if err := t.OldArray[i].UnmarshalCBOR(cr); err != nil {
+							return xerrors.Errorf("unmarshaling t.OldArray[i]: %w", err)
+						}
+
+					}
 				}
-
-				t.OldArray[i] = v
 			}
 
 			// t.OldBytes ([]uint8) (slice)
@@ -997,6 +1081,99 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 					return xerrors.Errorf("unmarshaling t.OldStruct: %w", err)
 				}
 
+			}
+			// t.OldCidArray ([]cid.Cid) (slice)
+		case "OldCidArray":
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > cbg.MaxLength {
+				return fmt.Errorf("t.OldCidArray: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.OldCidArray = make([]cid.Cid, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					{
+
+						c, err := cbg.ReadCid(cr)
+						if err != nil {
+							return xerrors.Errorf("failed to read cid field t.OldCidArray[i]: %w", err)
+						}
+
+						t.OldCidArray[i] = c
+
+					}
+				}
+			}
+
+			// t.OldCidPtrArray ([]*cid.Cid) (slice)
+		case "OldCidPtrArray":
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > cbg.MaxLength {
+				return fmt.Errorf("t.OldCidPtrArray: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.OldCidPtrArray = make([]*cid.Cid, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					{
+
+						b, err := cr.ReadByte()
+						if err != nil {
+							return err
+						}
+						if b != cbg.CborNull[0] {
+							if err := cr.UnreadByte(); err != nil {
+								return err
+							}
+
+							c, err := cbg.ReadCid(cr)
+							if err != nil {
+								return xerrors.Errorf("failed to read cid field t.OldCidPtrArray[i]: %w", err)
+							}
+
+							t.OldCidPtrArray[i] = &c
+						}
+
+					}
+				}
 			}
 
 		default:
@@ -1608,13 +1785,22 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 
 			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
 
-				var v SimpleTypeOne
-				if err := v.UnmarshalCBOR(cr); err != nil {
-					return err
+					{
+
+						if err := t.NewArray[i].UnmarshalCBOR(cr); err != nil {
+							return xerrors.Errorf("unmarshaling t.NewArray[i]: %w", err)
+						}
+
+					}
 				}
-
-				t.NewArray[i] = v
 			}
 
 			// t.NewBytes ([]uint8) (slice)
@@ -1660,13 +1846,22 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 
 			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
 
-				var v SimpleTypeOne
-				if err := v.UnmarshalCBOR(cr); err != nil {
-					return err
+					{
+
+						if err := t.OldArray[i].UnmarshalCBOR(cr); err != nil {
+							return xerrors.Errorf("unmarshaling t.OldArray[i]: %w", err)
+						}
+
+					}
 				}
-
-				t.OldArray[i] = v
 			}
 
 			// t.OldBytes ([]uint8) (slice)

@@ -532,8 +532,10 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 `)
 	}
 
+	var pointer bool
 	if e.Kind() == reflect.Ptr {
 		e = e.Elem()
+		pointer = true
 	}
 
 	err := doTemplate(w, f, `
@@ -547,64 +549,25 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 		return err
 	}
 
+	subf := Field{Name: "v", Type: e, Pkg: f.Pkg, Pointer: pointer}
 	switch e.Kind() {
 	default:
-		return fmt.Errorf("do not yet support slices of %s yet", e.Kind())
+		err = fmt.Errorf("do not yet support slices of %s yet", e.Kind())
 	case reflect.Struct:
-		switch e {
-		case cidType:
-			err := doTemplate(w, f, `
-		if err := cbg.WriteCid(w, v); err != nil {
-			return xerrors.Errorf("failed writing cid field {{ .Name }}: %w", err)
-		}
-`)
-			if err != nil {
-				return err
-			}
-
-		default:
-			err := doTemplate(w, f, `
-		if err := v.MarshalCBOR(cw); err != nil {
-			return err
-		}
-`)
-			if err != nil {
-				return err
-			}
-		}
+		err = emitCborMarshalStructField(w, subf)
 	case reflect.Uint64:
-		err := doTemplate(w, f, `
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
-			return err
-		}
-`)
-		if err != nil {
-			return err
-		}
+		err = emitCborMarshalUint64Field(w, subf)
 	case reflect.Uint8:
-		err := doTemplate(w, f, `
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
-			return err
-		}
-`)
-		if err != nil {
-			return err
-		}
+		err = emitCborMarshalUint8Field(w, subf)
 	case reflect.Int64:
-		subf := Field{Name: "v", Type: e, Pkg: f.Pkg}
-		if err := emitCborMarshalInt64Field(w, subf); err != nil {
-			return err
-		}
-
+		err = emitCborMarshalInt64Field(w, subf)
 	case reflect.Slice:
-		subf := Field{Name: "v", Type: e, Pkg: f.Pkg}
-		if err := emitCborMarshalSliceField(w, subf); err != nil {
-			return err
-		}
+		err = emitCborMarshalSliceField(w, subf)
 	case reflect.String:
-		if err := emitCborMarshalStringField(w, Field{Name: "v"}); err != nil {
-			return err
-		}
+		err = emitCborMarshalStringField(w, subf)
+	}
+	if err != nil {
+		return err
 	}
 
 	// array end
@@ -1102,54 +1065,28 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return err
 	}
 
+	fmt.Fprintf(w, "\t\t{\n\t\t\tvar maj byte\n\t\tvar extra uint64\n\t\tvar err error\n")
+	fmt.Fprintf(w, "\t\t\t_ = maj\n\t\t_ = extra\n\t\t_ = err\n")
+
 	switch e.Kind() {
 	case reflect.Struct:
-		fname := e.PkgPath() + "." + e.Name()
-		switch fname {
-		case "github.com/ipfs/go-cid.Cid":
-			err := doTemplate(w, f, `
-		c, err := cbg.ReadCid(cr)
-		if err != nil {
-			return xerrors.Errorf("reading cid field {{ .Name }} failed: %w", err)
+		subf := Field{
+			Type:    e,
+			Pkg:     f.Pkg,
+			Pointer: pointer,
+			Name:    f.Name + "[" + f.IterLabel + "]",
 		}
-		{{ .Name }}[{{ .IterLabel }}] = c
-`)
-			if err != nil {
-				return err
-			}
-		default:
-			subf := Field{
-				Type:    e,
-				Pkg:     f.Pkg,
-				Pointer: pointer,
-				Name:    f.Name + "[" + f.IterLabel + "]",
-			}
-
-			err := doTemplate(w, subf, `
-		var v {{ .TypeName }}
-		if err := v.UnmarshalCBOR(cr); err != nil {
+		err := emitCborUnmarshalStructField(w, subf)
+		if err != nil {
 			return err
 		}
-
-		{{ .Name }} = {{ if .Pointer }}&{{ end }}v
-`)
-			if err != nil {
-				return err
-			}
-		}
 	case reflect.Uint64:
-		err := doTemplate(w, f, `
-		maj, val, err := {{ ReadHeader "cr" }}
-		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for {{ .Name }} slice: %w", err)
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
 		}
-
-		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array {{ .Name }} was not a uint, instead got %d", maj)
-		}
-		
-		{{ .Name }}[{{ .IterLabel}}] = {{ .ElemName }}(val)
-`)
+		err := emitCborUnmarshalUint64Field(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1173,11 +1110,9 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			IterLabel: nextIter,
 			Pkg:       f.Pkg,
 		}
-		fmt.Fprintf(w, "\t\t{\n\t\t\tvar maj byte\n\t\tvar extra uint64\n\t\tvar err error\n")
 		if err := emitCborUnmarshalSliceField(w, subf); err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "\t\t}\n")
 
 	case reflect.String:
 		subf := Field{
@@ -1193,6 +1128,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	default:
 		return fmt.Errorf("do not yet support slices of %s yet", e.Elem())
 	}
+	fmt.Fprintf(w, "\t\t}\n")
 	fmt.Fprintf(w, "\t}\n\n")
 
 	return nil

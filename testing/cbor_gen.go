@@ -41,9 +41,11 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Signed {
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
+
 	}
 	return nil
 }
@@ -91,17 +93,27 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
-		maj, val, err := cr.ReadHeader()
-		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Signed slice: %w", err)
+			{
+
+				maj, extra, err = cr.ReadHeader()
+				if err != nil {
+					return err
+				}
+				if maj != cbg.MajUnsignedInt {
+					return fmt.Errorf("wrong type for uint64 field")
+				}
+				t.Signed[i] = uint64(extra)
+
+			}
 		}
-
-		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Signed was not a uint, instead got %d", maj)
-		}
-
-		t.Signed[i] = uint64(val)
 	}
 
 	return nil
@@ -321,14 +333,22 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for i := 0; i < int(extra); i++ {
-
 		{
-			sval, err := cbg.ReadString(cr)
-			if err != nil {
-				return err
-			}
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
-			t.Strings[i] = string(sval)
+			{
+				sval, err := cbg.ReadString(cr)
+				if err != nil {
+					return err
+				}
+
+				t.Strings[i] = string(sval)
+			}
 		}
 	}
 
@@ -363,9 +383,11 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Others {
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
+
 	}
 
 	// t.SignedOthers ([]int64) (slice)
@@ -431,9 +453,11 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Numbers {
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
+
 	}
 
 	// t.Pizza (uint64) (uint64)
@@ -538,17 +562,27 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
-		maj, val, err := cr.ReadHeader()
-		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Others slice: %w", err)
+			{
+
+				maj, extra, err = cr.ReadHeader()
+				if err != nil {
+					return err
+				}
+				if maj != cbg.MajUnsignedInt {
+					return fmt.Errorf("wrong type for uint64 field")
+				}
+				t.Others[i] = uint64(extra)
+
+			}
 		}
-
-		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Others was not a uint, instead got %d", maj)
-		}
-
-		t.Others[i] = uint64(val)
 	}
 
 	// t.SignedOthers ([]int64) (slice)
@@ -572,28 +606,36 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 	for i := 0; i < int(extra); i++ {
 		{
-			maj, extra, err := cr.ReadHeader()
-			var extraI int64
-			if err != nil {
-				return err
-			}
-			switch maj {
-			case cbg.MajUnsignedInt:
-				extraI = int64(extra)
-				if extraI < 0 {
-					return fmt.Errorf("int64 positive overflow")
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
+			{
+				maj, extra, err := cr.ReadHeader()
+				var extraI int64
+				if err != nil {
+					return err
 				}
-			case cbg.MajNegativeInt:
-				extraI = int64(extra)
-				if extraI < 0 {
-					return fmt.Errorf("int64 negative overflow")
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative overflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
-				extraI = -1 - extraI
-			default:
-				return fmt.Errorf("wrong type for int64 field: %d", maj)
-			}
 
-			t.SignedOthers[i] = int64(extraI)
+				t.SignedOthers[i] = int64(extraI)
+			}
 		}
 	}
 
@@ -621,6 +663,9 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			var maj byte
 			var extra uint64
 			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
 			maj, extra, err = cr.ReadHeader()
 			if err != nil {
@@ -674,17 +719,27 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
-		maj, val, err := cr.ReadHeader()
-		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Numbers slice: %w", err)
+			{
+
+				maj, extra, err = cr.ReadHeader()
+				if err != nil {
+					return err
+				}
+				if maj != cbg.MajUnsignedInt {
+					return fmt.Errorf("wrong type for uint64 field")
+				}
+				t.Numbers[i] = NamedNumber(extra)
+
+			}
 		}
-
-		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Numbers was not a uint, instead got %d", maj)
-		}
-
-		t.Numbers[i] = NamedNumber(val)
 	}
 
 	// t.Pizza (uint64) (uint64)
@@ -757,13 +812,22 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	t.Arrrrrghay = [3]SimpleTypeOne{}
 
 	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
-		var v SimpleTypeOne
-		if err := v.UnmarshalCBOR(cr); err != nil {
-			return err
+			{
+
+				if err := t.Arrrrrghay[i].UnmarshalCBOR(cr); err != nil {
+					return xerrors.Errorf("unmarshaling t.Arrrrrghay[i]: %w", err)
+				}
+
+			}
 		}
-
-		t.Arrrrrghay[i] = v
 	}
 
 	return nil
@@ -920,9 +984,11 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Uint64 {
-		if err := cw.CborWriteHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
 			return err
 		}
+
 	}
 	return nil
 }
@@ -1018,17 +1084,27 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	t.Uint64 = [20]uint64{}
 
 	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
 
-		maj, val, err := cr.ReadHeader()
-		if err != nil {
-			return xerrors.Errorf("failed to read uint64 for t.Uint64 slice: %w", err)
+			{
+
+				maj, extra, err = cr.ReadHeader()
+				if err != nil {
+					return err
+				}
+				if maj != cbg.MajUnsignedInt {
+					return fmt.Errorf("wrong type for uint64 field")
+				}
+				t.Uint64[i] = uint64(extra)
+
+			}
 		}
-
-		if maj != cbg.MajUnsignedInt {
-			return xerrors.Errorf("value read for array t.Uint64 was not a uint, instead got %d", maj)
-		}
-
-		t.Uint64[i] = uint64(val)
 	}
 
 	return nil
