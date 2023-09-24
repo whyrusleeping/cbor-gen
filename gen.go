@@ -143,6 +143,14 @@ func (f Field) Len() int {
 	return f.Type.Len()
 }
 
+func (f Field) ImplementsMarshaler() bool {
+	return f.Type.Implements(reflect.TypeOf((*Marshaler)(nil)).Elem())
+}
+
+func (f Field) ImplementsUnmarshaler() bool {
+	return f.Type.Implements(reflect.TypeOf((*Unmarshaler)(nil)).Elem())
+}
+
 type GenTypeInfo struct {
 	Name   string
 	Fields []Field
@@ -299,6 +307,28 @@ func (gti GenTypeInfo) MapHeaderAsByteString() string {
 	}
 	s += "}"
 	return s
+}
+
+func emitCborMarshalMarshalerField(w io.Writer, f Field) error {
+	if f.Pointer {
+		return doTemplate(w, f, `
+	if {{ .Name }} == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := (*{{ .Name }}).MarshalCBOR(cw); err != nil {
+			return err
+		}
+	}
+`)
+	}
+
+	return doTemplate(w, f, `
+	if err := {{ .Name }}.MarshalCBOR(cw); err != nil {
+		return err
+	}
+`)
 }
 
 func emitCborMarshalStringField(w io.Writer, f Field) error {
@@ -598,6 +628,13 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 		f.Name = "t." + f.Name
 
+		if f.ImplementsMarshaler() {
+			if err := emitCborMarshalMarshalerField(w, f); err != nil {
+				return err
+			}
+			continue
+		}
+
 		switch f.Type.Kind() {
 		case reflect.String:
 			if err := emitCborMarshalStringField(w, f); err != nil {
@@ -640,6 +677,33 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 
 	fmt.Fprintf(w, "\treturn nil\n}\n\n")
 	return nil
+}
+
+func emitCborUnmarshalUnmarshalerField(w io.Writer, f Field) error {
+	if f.Pointer {
+		return doTemplate(w, f, `
+	{
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+
+			if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
+				return err
+			}
+		}
+	}
+`)
+	}
+	return doTemplate(w, f, `
+	if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
+		return err
+	}
+`)
 }
 
 func emitCborUnmarshalStringField(w io.Writer, f Field) error {
@@ -1168,6 +1232,13 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 		f.Name = "t." + f.Name
 
+		if f.ImplementsUnmarshaler() {
+			if err := emitCborUnmarshalUnmarshalerField(w, f); err != nil {
+				return err
+			}
+			continue
+		}
+
 		switch f.Type.Kind() {
 		case reflect.String:
 			if err := emitCborUnmarshalStringField(w, f); err != nil {
@@ -1239,6 +1310,10 @@ func emptyValForField(f Field) (string, error) {
 			return "", fmt.Errorf("omit empty not supported for %s", f.Type.Kind())
 		}
 	}
+}
+
+type Marshaler interface {
+	MarshalCBOR() ([]byte, error)
 }
 
 func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
@@ -1328,6 +1403,13 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		}
 
 		f.Name = "t." + f.Name
+
+		if f.ImplementsMarshaler() {
+			if err := emitCborMarshalMarshalerField(w, f); err != nil {
+				return err
+			}
+		}
+
 		switch f.Type.Kind() {
 		case reflect.String:
 			if err := emitCborMarshalStringField(w, f); err != nil {
@@ -1376,6 +1458,10 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 
 	fmt.Fprintf(w, "\treturn nil\n}\n\n")
 	return nil
+}
+
+type Unmarshaler interface {
+	UnmarshalCBOR([]byte) error
 }
 
 func emitCborUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
@@ -1434,6 +1520,12 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		}
 
 		f.Name = "t." + f.Name
+
+		if f.ImplementsUnmarshaler() {
+			if err := emitCborUnmarshalUnmarshalerField(w, f); err != nil {
+				return err
+			}
+		}
 
 		switch f.Type.Kind() {
 		case reflect.String:

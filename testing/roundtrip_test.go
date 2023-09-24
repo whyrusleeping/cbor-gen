@@ -410,3 +410,40 @@ func TestConstRoundtrip(t *testing.T) {
 }
 
 //TODO same for strings
+
+func TestCustomMarshalerStruct(t *testing.T) {
+	// Test that a custom marshaler on a struct is called
+	// when the struct is a field of another struct
+	// (i.e. the custom marshaler is not ignored because
+	// the struct is not the top-level value)
+
+	s := &CustomMarshalerContainer{
+		Struct: &CustomMarshalerStruct{
+			Foo: 42,
+			Bar: "hello world",
+		},
+	}
+	buf := new(bytes.Buffer)
+	if err := s.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("%x\n", buf.Bytes())
+
+	var out CustomMarshalerContainer
+	if err := out.UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(out)
+
+	if out.Struct.Foo != 42 {
+		t.Fatal("foo not equal")
+	}
+
+	if out.Struct.Bar != "hello world" {
+		t.Fatal("bar not equal")
+	}
+
+	fmt.Printf("%+v, %+v\n", s.Struct, out.Struct)
+}
