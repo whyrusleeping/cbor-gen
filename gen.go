@@ -491,6 +491,10 @@ func emitCborMarshalMapField(w io.Writer, f Field) error {
 
 	// Map value
 	switch f.Type.Elem().Kind() {
+	case reflect.String:
+		if err := emitCborMarshalStringField(w, Field{Name: "v"}); err != nil {
+			return err
+		}
 	case reflect.Ptr:
 		if f.Type.Elem().Elem().Kind() != reflect.Struct {
 			return fmt.Errorf("unsupported map elem ptr type: %s", f.Type.Elem())
@@ -954,6 +958,20 @@ func emitCborUnmarshalMapField(w io.Writer, f Field) error {
 	var pointer bool
 	t := f.Type.Elem()
 	switch t.Kind() {
+	case reflect.String:
+		if err := doTemplate(w, f, `
+	var v string
+`); err != nil {
+			return err
+		}
+		if err := emitCborUnmarshalStringField(w, Field{Name: "v"}); err != nil {
+			return err
+		}
+		if err := doTemplate(w, f, `
+	{{ .Name }}[k] = v
+`); err != nil {
+			return err
+		}
 	case reflect.Ptr:
 		if t.Elem().Kind() != reflect.Struct {
 			return fmt.Errorf("unsupported map elem ptr type: %s", t)

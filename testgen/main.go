@@ -27,6 +27,7 @@ func main() {
 		types.TestEmpty{},
 		types.TestConstField{},
 		types.TestCanonicalFieldOrder{},
+		types.MapStringString{},
 	); err != nil {
 		panic(err)
 	}
