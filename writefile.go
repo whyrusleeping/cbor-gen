@@ -38,6 +38,7 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 
 	data, err := format.Source(buf.Bytes())
 	if err != nil {
+		fmt.Println(string(buf.Bytes()))
 		return fmt.Errorf("failed to format: %w", err)
 	}
 

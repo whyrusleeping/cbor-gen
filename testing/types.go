@@ -136,3 +136,12 @@ type TestCanonicalFieldOrder struct {
 type MapStringString struct {
 	Snorkleblump map[string]string
 }
+
+type TestSliceNilPreserve struct {
+	Cat      string
+	Stuff    []uint64
+	Not      []uint64 `cborgen:"preservenil"`
+	Other    []byte
+	NotOther []byte `cborgen:"preservenil"`
+	Beep     int64
+}

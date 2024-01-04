@@ -49,6 +49,10 @@ func TestNeedScratchForMap(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(NeedScratchForMap{}))
 }
 
+func TestNilPreserveWorks(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(TestSliceNilPreserve{}))
+}
+
 func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
 	t.Helper()
 
