@@ -50,6 +50,8 @@ func TestNeedScratchForMap(t *testing.T) {
 }
 
 func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
+	t.Helper()
+
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalCBOR(buf); err != nil {
 		t.Fatal("i guess its fine to fail marshaling")
@@ -73,11 +75,14 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 	}
 
 	if !bytes.Equal(nbuf.Bytes(), enc) {
+		fmt.Printf("%#v\n", obj)
+		fmt.Printf("%#v\n", nobj)
 		t.Fatalf("objects encodings different: %x != %x", nbuf.Bytes(), enc)
 	}
 }
 
 func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
+	t.Helper()
 	r := rand.New(rand.NewSource(56887))
 	for i := 0; i < 1000; i++ {
 		val, ok := quick.Value(typ, r)
