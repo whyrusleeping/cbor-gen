@@ -172,8 +172,8 @@ func nameIsExported(name string) bool {
 	return strings.ToUpper(name[0:1]) == name[0:1]
 }
 
-func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
-	t := reflect.TypeOf(i)
+func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
+	t := reflect.TypeOf(itype)
 
 	pkg := t.PkgPath()
 
@@ -228,6 +228,10 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 
 		_, omitempty := tags["omitempty"]
 		_, preservenil := tags["preservenil"]
+
+		if preservenil && ft.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("%T.%s: preservenil is only supported on slice types", itype, f.Name)
+		}
 
 		out.Fields = append(out.Fields, Field{
 			Name:        f.Name,
@@ -1154,7 +1158,7 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 				{{ .Name }} = make({{ .TypeName }}, extra)
 			}
 	{{ end }}
-			if _, err := io.ReadFull(cr, {{ .Name }}[:]); err != nil {
+			if _, err := io.ReadFull(cr, {{ .Name }}); err != nil {
 				return err
 			}
 

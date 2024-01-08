@@ -337,7 +337,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 						t.Test[i] = make([]uint8, extra)
 					}
 
-					if _, err := io.ReadFull(cr, t.Test[i][:]); err != nil {
+					if _, err := io.ReadFull(cr, t.Test[i]); err != nil {
 						return err
 					}
 
@@ -1071,7 +1071,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 				t.OldBytes = make([]uint8, extra)
 			}
 
-			if _, err := io.ReadFull(cr, t.OldBytes[:]); err != nil {
+			if _, err := io.ReadFull(cr, t.OldBytes); err != nil {
 				return err
 			}
 
@@ -1828,7 +1828,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				t.NewBytes = make([]uint8, extra)
 			}
 
-			if _, err := io.ReadFull(cr, t.NewBytes[:]); err != nil {
+			if _, err := io.ReadFull(cr, t.NewBytes); err != nil {
 				return err
 			}
 
@@ -1890,7 +1890,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				t.OldBytes = make([]uint8, extra)
 			}
 
-			if _, err := io.ReadFull(cr, t.OldBytes[:]); err != nil {
+			if _, err := io.ReadFull(cr, t.OldBytes); err != nil {
 				return err
 			}
 
@@ -3125,7 +3125,7 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 				t.Other = make([]uint8, extra)
 			}
 
-			if _, err := io.ReadFull(cr, t.Other[:]); err != nil {
+			if _, err := io.ReadFull(cr, t.Other); err != nil {
 				return err
 			}
 
@@ -3200,7 +3200,7 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 
 					t.NotOther = make([]uint8, extra)
 
-					if _, err := io.ReadFull(cr, t.NotOther[:]); err != nil {
+					if _, err := io.ReadFull(cr, t.NotOther); err != nil {
 						return err
 					}
 

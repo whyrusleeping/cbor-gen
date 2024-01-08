@@ -276,7 +276,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		t.Binary = make([]uint8, extra)
 	}
 
-	if _, err := io.ReadFull(cr, t.Binary[:]); err != nil {
+	if _, err := io.ReadFull(cr, t.Binary); err != nil {
 		return err
 	}
 
@@ -687,7 +687,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 				t.Test[i] = make([]uint8, extra)
 			}
 
-			if _, err := io.ReadFull(cr, t.Test[i][:]); err != nil {
+			if _, err := io.ReadFull(cr, t.Test[i]); err != nil {
 				return err
 			}
 
@@ -1291,7 +1291,7 @@ func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
 		t.LargeBytes = make([]uint8, extra)
 	}
 
-	if _, err := io.ReadFull(cr, t.LargeBytes[:]); err != nil {
+	if _, err := io.ReadFull(cr, t.LargeBytes); err != nil {
 		return err
 	}
 
