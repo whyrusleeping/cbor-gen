@@ -530,7 +530,6 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 	e := f.Type.Elem()
 
-	// Note: this re-slices the slice to deal with arrays.
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
@@ -547,7 +546,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	{{ end }}
 		{{ MajorType "cw" "cbg.MajByteString" (print "len(" .Name ")" ) }}
 
-		if _, err := cw.Write({{ .Name }}[:]); err != nil {
+		if _, err := cw.Write({{ .Name }}); err != nil {
 			return err
 		}
 	{{ if .PreserveNil }}

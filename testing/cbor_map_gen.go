@@ -81,7 +81,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 
-		if _, err := cw.Write(v[:]); err != nil {
+		if _, err := cw.Write(v); err != nil {
 			return err
 		}
 
@@ -802,7 +802,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.OldBytes[:]); err != nil {
+	if _, err := cw.Write(t.OldBytes); err != nil {
 		return err
 	}
 
@@ -1462,7 +1462,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.NewBytes[:]); err != nil {
+	if _, err := cw.Write(t.NewBytes); err != nil {
 		return err
 	}
 
@@ -1512,7 +1512,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.OldBytes[:]); err != nil {
+	if _, err := cw.Write(t.OldBytes); err != nil {
 		return err
 	}
 
@@ -2909,7 +2909,7 @@ func (t *TestSliceNilPreserve) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.Other[:]); err != nil {
+	if _, err := cw.Write(t.Other); err != nil {
 		return err
 	}
 
@@ -2967,7 +2967,7 @@ func (t *TestSliceNilPreserve) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 
-		if _, err := cw.Write(t.NotOther[:]); err != nil {
+		if _, err := cw.Write(t.NotOther); err != nil {
 			return err
 		}
 

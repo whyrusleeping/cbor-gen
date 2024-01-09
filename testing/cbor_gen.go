@@ -160,7 +160,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.Binary[:]); err != nil {
+	if _, err := cw.Write(t.Binary); err != nil {
 		return err
 	}
 
@@ -430,7 +430,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 
-		if _, err := cw.Write(v[:]); err != nil {
+		if _, err := cw.Write(v); err != nil {
 			return err
 		}
 
@@ -1243,7 +1243,7 @@ func (t *BigField) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.LargeBytes[:]); err != nil {
+	if _, err := cw.Write(t.LargeBytes); err != nil {
 		return err
 	}
 
