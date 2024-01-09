@@ -95,8 +95,9 @@ type Field struct {
 	Pkg     string
 	Const   *string
 
-	OmitEmpty bool
-	IterLabel string
+	OmitEmpty   bool
+	PreserveNil bool
+	IterLabel   string
 
 	MaxLen int
 }
@@ -171,8 +172,8 @@ func nameIsExported(name string) bool {
 	return strings.ToUpper(name[0:1]) == name[0:1]
 }
 
-func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
-	t := reflect.TypeOf(i)
+func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
+	t := reflect.TypeOf(itype)
 
 	pkg := t.PkgPath()
 
@@ -226,16 +227,22 @@ func ParseTypeInfo(i interface{}) (*GenTypeInfo, error) {
 		}
 
 		_, omitempty := tags["omitempty"]
+		_, preservenil := tags["preservenil"]
+
+		if preservenil && ft.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("%T.%s: preservenil is only supported on slice types", itype, f.Name)
+		}
 
 		out.Fields = append(out.Fields, Field{
-			Name:      f.Name,
-			MapKey:    mapk,
-			Pointer:   pointer,
-			Type:      ft,
-			Pkg:       pkg,
-			OmitEmpty: omitempty,
-			MaxLen:    usrMaxLen,
-			Const:     constval,
+			Name:        f.Name,
+			MapKey:      mapk,
+			Pointer:     pointer,
+			Type:        ft,
+			Pkg:         pkg,
+			OmitEmpty:   omitempty,
+			PreserveNil: preservenil,
+			MaxLen:      usrMaxLen,
+			Const:       constval,
 		})
 	}
 
@@ -259,6 +266,8 @@ func tagparse(v string) (map[string]string, error) {
 			out[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 		} else if elem == "omitempty" {
 			out["omitempty"] = "true"
+		} else if elem == "preservenil" {
+			out["preservenil"] = "true"
 		} else if elem == "ignore" || elem == "-" {
 			out["ignore"] = "true"
 		} else {
@@ -521,6 +530,96 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 	e := f.Type.Elem()
 
+	if e.Kind() == reflect.Uint8 {
+		return doTemplate(w, f, `
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
+		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
+	}
+
+	{{ if .PreserveNil }}
+	if {{ .Name }} == nil {
+		_, err := w.Write(cbg.CborNull)
+		if err != nil {
+			return err
+		}
+	} else {
+	{{ end }}
+		{{ MajorType "cw" "cbg.MajByteString" (print "len(" .Name ")" ) }}
+
+		if _, err := cw.Write({{ .Name }}); err != nil {
+			return err
+		}
+	{{ if .PreserveNil }}
+	}
+	{{ end }}
+`)
+	}
+
+	var pointer bool
+	if e.Kind() == reflect.Ptr {
+		e = e.Elem()
+		pointer = true
+	}
+
+	err := doTemplate(w, f, `
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
+	}
+
+	{{ if .PreserveNil }}
+	if {{ .Name }} == nil {
+		_, err := w.Write(cbg.CborNull)
+		if err != nil {
+			return err
+		}
+	} else {
+	{{ end }}
+		{{ MajorType "cw" "cbg.MajArray" ( print "len(" .Name ")" ) }}
+		for _, v := range {{ .Name }} {`)
+	if err != nil {
+		return err
+	}
+
+	subf := Field{Name: "v", Type: e, Pkg: f.Pkg, Pointer: pointer}
+	switch e.Kind() {
+	default:
+		err = fmt.Errorf("do not yet support slices of %s yet", e.Kind())
+	case reflect.Struct:
+		err = emitCborMarshalStructField(w, subf)
+	case reflect.Uint64:
+		err = emitCborMarshalUint64Field(w, subf)
+	case reflect.Uint8:
+		err = emitCborMarshalUint8Field(w, subf)
+	case reflect.Int64:
+		err = emitCborMarshalInt64Field(w, subf)
+	case reflect.Slice:
+		err = emitCborMarshalSliceField(w, subf)
+	case reflect.String:
+		err = emitCborMarshalStringField(w, subf)
+	}
+	if err != nil {
+		return err
+	}
+
+	// array end
+	if err := doTemplate(w, f, `
+	{{ if .PreserveNil }}
+		}
+	{{ end }}
+	}
+`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func emitCborMarshalArrayField(w io.Writer, f Field) error {
+	if f.Pointer {
+		return fmt.Errorf("pointers to arrays not supported")
+	}
+	e := f.Type.Elem()
+
 	// Note: this re-slices the slice to deal with arrays.
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
@@ -556,7 +655,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	subf := Field{Name: "v", Type: e, Pkg: f.Pkg, Pointer: pointer}
 	switch e.Kind() {
 	default:
-		err = fmt.Errorf("do not yet support slices of %s yet", e.Kind())
+		err = fmt.Errorf("do not yet support arrays of %s yet", e.Kind())
 	case reflect.Struct:
 		err = emitCborMarshalStructField(w, subf)
 	case reflect.Uint64:
@@ -624,7 +723,9 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 				return err
 			}
 		case reflect.Array:
-			fallthrough
+			if err := emitCborMarshalArrayField(w, f); err != nil {
+				return err
+			}
 		case reflect.Slice:
 			if err := emitCborMarshalSliceField(w, f); err != nil {
 				return err
@@ -1020,10 +1121,22 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	err := doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
+	{{ if .PreserveNil }}
+	{
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+
+	{{ end }}
+			maj, extra, err = {{ ReadHeader "cr" }}
+			if err != nil {
+				return err
+			}
 `)
 	if err != nil {
 		return err
@@ -1031,26 +1144,27 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if extra > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
-		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	{{if .IsArray}}
-	if extra != {{ .Len }} {
-		return fmt.Errorf("expected array to have {{ .Len }} elements")
-	}
+			if extra > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
+				return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
+			}
+			if maj != cbg.MajByteString {
+				return fmt.Errorf("expected byte array")
+			}
+	{{ if .PreserveNil }}
+			{{ .Name }} = make({{ .TypeName }}, extra)
+	{{ else }}
+			if extra > 0 {
+				{{ .Name }} = make({{ .TypeName }}, extra)
+			}
+	{{ end }}
+			if _, err := io.ReadFull(cr, {{ .Name }}); err != nil {
+				return err
+			}
 
-	{{ .Name }} = {{ .TypeName }}{}
-	{{else}}
-	if extra > 0 {
-		{{ .Name }} = make({{ .TypeName }}, extra)
+	{{ if .PreserveNil }}
+		}
 	}
-	{{end}}
-	if _, err := io.ReadFull(cr, {{ .Name }}[:]); err != nil {
-		return err
-	}
+	{{ end }}
 `)
 	}
 
@@ -1066,17 +1180,13 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
-	{{if .IsArray}}
-	if extra != {{ .Len }} {
-		return fmt.Errorf("expected array to have {{ .Len }} elements")
-	}
-
-	{{ .Name }} = {{ .TypeName }}{}
-	{{else}}
+	{{ if .PreserveNil }}
+	{{ .Name }} = make({{ .TypeName }}, extra)
+	{{ else }}
 	if extra > 0 {
 		{{ .Name }} = make({{ .TypeName }}, extra)
 	}
-	{{end}}
+	{{ end }}
 	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
 `)
 	if err != nil {
@@ -1119,7 +1229,167 @@ func emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			return err
 		}
 	case reflect.Array:
-		fallthrough
+		nextIter := string([]byte{f.IterLabel[0] + 1})
+		subf := Field{
+			Name:      fmt.Sprintf("%s[%s]", f.Name, f.IterLabel),
+			Type:      e,
+			IterLabel: nextIter,
+			Pkg:       f.Pkg,
+		}
+		if err := emitCborUnmarshalArrayField(w, subf); err != nil {
+			return err
+		}
+	case reflect.Slice:
+		nextIter := string([]byte{f.IterLabel[0] + 1})
+		subf := Field{
+			Name:      fmt.Sprintf("%s[%s]", f.Name, f.IterLabel),
+			Type:      e,
+			IterLabel: nextIter,
+			Pkg:       f.Pkg,
+		}
+		if err := emitCborUnmarshalSliceField(w, subf); err != nil {
+			return err
+		}
+
+	case reflect.String:
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
+		}
+		err := emitCborUnmarshalStringField(w, subf)
+		if err != nil {
+			return err
+		}
+
+	default:
+		return fmt.Errorf("do not yet support slices of %s yet", e.Elem())
+	}
+
+	if err := doTemplate(w, f, `
+	{{ if .PreserveNil }}
+				}
+			}
+	{{ end }}
+		}
+	}
+	`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func emitCborUnmarshalArrayField(w io.Writer, f Field) error {
+	if f.IterLabel == "" {
+		f.IterLabel = "i"
+	}
+
+	e := f.Type.Elem()
+	var pointer bool
+	if e.Kind() == reflect.Ptr {
+		pointer = true
+		e = e.Elem()
+	}
+
+	err := doTemplate(w, f, `
+	maj, extra, err = {{ ReadHeader "cr" }}
+	if err != nil {
+		return err
+	}
+`)
+	if err != nil {
+		return err
+	}
+
+	if e.Kind() == reflect.Uint8 {
+		return doTemplate(w, f, `
+	if extra > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
+		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+	if extra != {{ .Len }} {
+		return fmt.Errorf("expected array to have {{ .Len }} elements")
+	}
+
+	{{ .Name }} = {{ .TypeName }}{}
+	if _, err := io.ReadFull(cr, {{ .Name }}[:]); err != nil {
+		return err
+	}
+`)
+	}
+
+	if err := doTemplate(w, f, `
+	if extra > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
+	}
+`); err != nil {
+		return err
+	}
+
+	err = doTemplate(w, f, `
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+	if extra != {{ .Len }} {
+		return fmt.Errorf("expected array to have {{ .Len }} elements")
+	}
+
+	{{ .Name }} = {{ .TypeName }}{}
+	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
+`)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(w, "\t\t{\n\t\t\tvar maj byte\n\t\tvar extra uint64\n\t\tvar err error\n")
+	fmt.Fprintf(w, "\t\t\t_ = maj\n\t\t_ = extra\n\t\t_ = err\n")
+
+	switch e.Kind() {
+	case reflect.Struct:
+		subf := Field{
+			Type:    e,
+			Pkg:     f.Pkg,
+			Pointer: pointer,
+			Name:    f.Name + "[" + f.IterLabel + "]",
+		}
+		err := emitCborUnmarshalStructField(w, subf)
+		if err != nil {
+			return err
+		}
+	case reflect.Uint64:
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
+		}
+		err := emitCborUnmarshalUint64Field(w, subf)
+		if err != nil {
+			return err
+		}
+	case reflect.Int64:
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
+		}
+		err := emitCborUnmarshalInt64Field(w, subf)
+		if err != nil {
+			return err
+		}
+	case reflect.Array:
+		nextIter := string([]byte{f.IterLabel[0] + 1})
+		subf := Field{
+			Name:      fmt.Sprintf("%s[%s]", f.Name, f.IterLabel),
+			Type:      e,
+			IterLabel: nextIter,
+			Pkg:       f.Pkg,
+		}
+		if err := emitCborUnmarshalArrayField(w, subf); err != nil {
+			return err
+		}
 	case reflect.Slice:
 		nextIter := string([]byte{f.IterLabel[0] + 1})
 		subf := Field{
@@ -1208,7 +1478,9 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 		case reflect.Array:
-			fallthrough
+			if err := emitCborUnmarshalArrayField(w, f); err != nil {
+				return err
+			}
 		case reflect.Slice:
 			if err := emitCborUnmarshalSliceField(w, f); err != nil {
 				return err
@@ -1368,7 +1640,9 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 				return err
 			}
 		case reflect.Array:
-			fallthrough
+			if err := emitCborMarshalArrayField(w, f); err != nil {
+				return err
+			}
 		case reflect.Slice:
 			if err := emitCborMarshalSliceField(w, f); err != nil {
 				return err
@@ -1475,7 +1749,9 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 		case reflect.Array:
-			fallthrough
+			if err := emitCborUnmarshalArrayField(w, f); err != nil {
+				return err
+			}
 		case reflect.Slice:
 			if err := emitCborUnmarshalSliceField(w, f); err != nil {
 				return err

@@ -113,9 +113,9 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 				t.Signed[i] = uint64(extra)
 
 			}
+
 		}
 	}
-
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.Binary[:]); err != nil {
+	if _, err := cw.Write(t.Binary); err != nil {
 		return err
 	}
 
@@ -206,6 +206,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		if _, err := cw.WriteString(string(v)); err != nil {
 			return err
 		}
+
 	}
 	return nil
 }
@@ -275,9 +276,10 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		t.Binary = make([]uint8, extra)
 	}
 
-	if _, err := io.ReadFull(cr, t.Binary[:]); err != nil {
+	if _, err := io.ReadFull(cr, t.Binary); err != nil {
 		return err
 	}
+
 	// t.Signed (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
@@ -349,9 +351,9 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 
 				t.Strings[i] = string(sval)
 			}
+
 		}
 	}
-
 	return nil
 }
 
@@ -408,6 +410,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 				return err
 			}
 		}
+
 	}
 
 	// t.Test ([][]uint8) (slice)
@@ -427,9 +430,10 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 
-		if _, err := cw.Write(v[:]); err != nil {
+		if _, err := cw.Write(v); err != nil {
 			return err
 		}
+
 	}
 
 	// t.Dog (string) (string)
@@ -582,9 +586,9 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 				t.Others[i] = uint64(extra)
 
 			}
+
 		}
 	}
-
 	// t.SignedOthers ([]int64) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -636,9 +640,9 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 				t.SignedOthers[i] = int64(extraI)
 			}
+
 		}
 	}
-
 	// t.Test ([][]uint8) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -683,12 +687,12 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 				t.Test[i] = make([]uint8, extra)
 			}
 
-			if _, err := io.ReadFull(cr, t.Test[i][:]); err != nil {
+			if _, err := io.ReadFull(cr, t.Test[i]); err != nil {
 				return err
 			}
+
 		}
 	}
-
 	// t.Dog (string) (string)
 
 	{
@@ -739,9 +743,9 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 				t.Numbers[i] = NamedNumber(extra)
 
 			}
+
 		}
 	}
-
 	// t.Pizza (uint64) (uint64)
 
 	{
@@ -804,13 +808,11 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
-
 	if extra != 3 {
 		return fmt.Errorf("expected array to have 3 elements")
 	}
 
 	t.Arrrrrghay = [3]SimpleTypeOne{}
-
 	for i := 0; i < int(extra); i++ {
 		{
 			var maj byte
@@ -1029,13 +1031,11 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	if maj != cbg.MajByteString {
 		return fmt.Errorf("expected byte array")
 	}
-
 	if extra != 20 {
 		return fmt.Errorf("expected array to have 20 elements")
 	}
 
 	t.Bytes = [20]uint8{}
-
 	if _, err := io.ReadFull(cr, t.Bytes[:]); err != nil {
 		return err
 	}
@@ -1052,13 +1052,11 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	if maj != cbg.MajByteString {
 		return fmt.Errorf("expected byte array")
 	}
-
 	if extra != 20 {
 		return fmt.Errorf("expected array to have 20 elements")
 	}
 
 	t.Uint8 = [20]uint8{}
-
 	if _, err := io.ReadFull(cr, t.Uint8[:]); err != nil {
 		return err
 	}
@@ -1076,13 +1074,11 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("expected cbor array")
 	}
-
 	if extra != 20 {
 		return fmt.Errorf("expected array to have 20 elements")
 	}
 
 	t.Uint64 = [20]uint64{}
-
 	for i := 0; i < int(extra); i++ {
 		{
 			var maj byte
@@ -1247,9 +1243,10 @@ func (t *BigField) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if _, err := cw.Write(t.LargeBytes[:]); err != nil {
+	if _, err := cw.Write(t.LargeBytes); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -1294,8 +1291,9 @@ func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
 		t.LargeBytes = make([]uint8, extra)
 	}
 
-	if _, err := io.ReadFull(cr, t.LargeBytes[:]); err != nil {
+	if _, err := io.ReadFull(cr, t.LargeBytes); err != nil {
 		return err
 	}
+
 	return nil
 }

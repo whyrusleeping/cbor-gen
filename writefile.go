@@ -2,6 +2,7 @@ package typegen
 
 import (
 	"bytes"
+	"fmt"
 	"go/format"
 	"os"
 
@@ -37,7 +38,7 @@ func WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) error {
 
 	data, err := format.Source(buf.Bytes())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to format: %w", err)
 	}
 
 	fi, err := os.Create(fname)
