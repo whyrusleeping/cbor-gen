@@ -451,3 +451,47 @@ func TestMapOfStringToString(t *testing.T) {
 }
 
 //TODO same for strings
+
+func TestTransparentIntArray(t *testing.T) {
+	t.Run("roundtrip", func(t *testing.T) {
+		zero := &IntArray{}
+		recepticle := &IntArray{}
+		testValueRoundtrip(t, zero, recepticle)
+	})
+
+	t.Run("roundtrip intalias", func(t *testing.T) {
+		zero := &IntAliasArray{}
+		recepticle := &IntAliasArray{}
+		testValueRoundtrip(t, zero, recepticle)
+	})
+
+	// non-zero values
+	t.Run("roundtrip non-zero", func(t *testing.T) {
+		val := &IntArray{Ints: []int64{1, 2, 3}}
+		recepticle := &IntArray{}
+		testValueRoundtrip(t, val, recepticle)
+	})
+	t.Run("roundtrip non-zero intalias", func(t *testing.T) {
+		val := &IntAliasArray{Ints: []IntAlias{1, 2, 3}}
+		recepticle := &IntAliasArray{}
+		testValueRoundtrip(t, val, recepticle)
+	})
+
+	// tuple struct to/from transparent int array
+	t.Run("roundtrip tuple struct to transparent", func(t *testing.T) {
+		val := &TupleIntArray{2, 4, 5}
+		recepticle := &IntArray{}
+		testValueRoundtrip(t, val, recepticle)
+		if val.Int1 != recepticle.Ints[0] {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip transparent to tuple struct", func(t *testing.T) {
+		val := &IntArray{Ints: []int64{2, 4, 5}}
+		recepticle := &TupleIntArray{}
+		testValueRoundtrip(t, val, recepticle)
+		if val.Ints[0] != recepticle.Int1 {
+			t.Fatal("mismatch")
+		}
+	})
+}

@@ -145,8 +145,9 @@ func (f Field) Len() int {
 }
 
 type GenTypeInfo struct {
-	Name   string
-	Fields []Field
+	Name        string
+	Fields      []Field
+	Transparent bool
 }
 
 func (gti *GenTypeInfo) Imports() []Import {
@@ -178,10 +179,15 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 	pkg := t.PkgPath()
 
 	out := GenTypeInfo{
-		Name: t.Name(),
+		Name:        t.Name(),
+		Transparent: false,
 	}
 
 	for i := 0; i < t.NumField(); i++ {
+		if out.Transparent {
+			return nil, fmt.Errorf("transparent structs must exactly one field")
+		}
+
 		f := t.Field(i)
 		if !nameIsExported(f.Name) {
 			continue
@@ -225,6 +231,12 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			}
 			constval = &cv
 		}
+
+		_, transparent := tags["transparent"]
+		if transparent && len(out.Fields) > 0 {
+			return nil, fmt.Errorf("only one transparent field is allowed")
+		}
+		out.Transparent = transparent
 
 		_, omitempty := tags["omitempty"]
 		_, preservenil := tags["preservenil"]
@@ -270,6 +282,8 @@ func tagparse(v string) (map[string]string, error) {
 			out["preservenil"] = "true"
 		} else if elem == "ignore" || elem == "-" {
 			out["ignore"] = "true"
+		} else if elem == "transparent" {
+			out["transparent"] = "true"
 		} else {
 			out["name"] = elem
 		}
@@ -680,18 +694,19 @@ func emitCborMarshalArrayField(w io.Writer, f Field) error {
 
 func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
 	// 9 byte buffer to accomodate for the maximum header length (cbor varints are maximum 9 bytes_
-	err := doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
+	err := doTemplate(w, gti, `{{if not .Transparent}}var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}{{end}}
 func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
-	if t == nil {
+	{{if not .Transparent}}if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
-	}
+	}{{end}}
 
 	cw := cbg.NewCborWriter(w)
-
+	{{if not .Transparent}}
 	if _, err := cw.Write(lengthBuf{{ .Name }}); err != nil {
 		return err
 	}
+	{{end}}
 `)
 	if err != nil {
 		return err
@@ -1428,7 +1443,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	cr := cbg.NewCborReader(r)
-
+	{{ if not .Transparent }}
 	maj, extra, err := {{ ReadHeader "cr" }}
 	if err != nil {
 		return err
@@ -1446,7 +1461,12 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	if extra != {{ len .Fields }} {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
-
+	{{ else }}
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+	{{ end }}
 `)
 	if err != nil {
 		return err
@@ -1537,6 +1557,10 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		if f.OmitEmpty {
 			hasOmitEmpty = true
 		}
+	}
+
+	if gti.Transparent {
+		return fmt.Errorf("transparent fields not supported in map mode, use tuple encoding (outcome should be the same)")
 	}
 
 	err := doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {

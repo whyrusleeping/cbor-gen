@@ -14,6 +14,9 @@ func main() {
 		types.FixedArrays{},
 		types.ThingWithSomeTime{},
 		types.BigField{},
+		types.IntArray{},
+		types.IntAliasArray{},
+		types.TupleIntArray{},
 	); err != nil {
 		panic(err)
 	}

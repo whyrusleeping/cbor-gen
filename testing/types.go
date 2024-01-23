@@ -145,3 +145,18 @@ type TestSliceNilPreserve struct {
 	NotOther []byte `cborgen:"preservenil"`
 	Beep     int64
 }
+
+type IntAlias int64
+
+type IntArray struct {
+	Ints []int64 `cborgen:"transparent"`
+}
+type IntAliasArray struct {
+	Ints []IntAlias `cborgen:"transparent"`
+}
+
+type TupleIntArray struct {
+	Int1 int64
+	Int2 int64
+	Int3 int64
+}
