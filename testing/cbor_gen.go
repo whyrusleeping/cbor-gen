@@ -1299,7 +1299,6 @@ func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
 }
 
 func (t *IntArray) MarshalCBOR(w io.Writer) error {
-
 	cw := cbg.NewCborWriter(w)
 
 	// t.Ints ([]int64) (slice)
@@ -1329,12 +1328,10 @@ func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntArray{}
 
 	cr := cbg.NewCborReader(r)
-
 	var maj byte
 	var extra uint64
 	_ = maj
 	_ = extra
-
 	// t.Ints ([]int64) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1393,7 +1390,6 @@ func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
 }
 
 func (t *IntAliasArray) MarshalCBOR(w io.Writer) error {
-
 	cw := cbg.NewCborWriter(w)
 
 	// t.Ints ([]testing.IntAlias) (slice)
@@ -1423,12 +1419,10 @@ func (t *IntAliasArray) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntAliasArray{}
 
 	cr := cbg.NewCborReader(r)
-
 	var maj byte
 	var extra uint64
 	_ = maj
 	_ = extra
-
 	// t.Ints ([]testing.IntAlias) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1637,7 +1631,6 @@ func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
 }
 
 func (t *IntArrayNewType) MarshalCBOR(w io.Writer) error {
-
 	cw := cbg.NewCborWriter(w)
 
 	// (*t) (testing.IntArrayNewType) (slice)
@@ -1667,12 +1660,10 @@ func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntArrayNewType{}
 
 	cr := cbg.NewCborReader(r)
-
 	var maj byte
 	var extra uint64
 	_ = maj
 	_ = extra
-
 	// (*t) (testing.IntArrayNewType) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1731,7 +1722,6 @@ func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
 }
 
 func (t *IntArrayAliasNewType) MarshalCBOR(w io.Writer) error {
-
 	cw := cbg.NewCborWriter(w)
 
 	// (*t) (testing.IntArrayAliasNewType) (slice)
@@ -1761,12 +1751,10 @@ func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntArrayAliasNewType{}
 
 	cr := cbg.NewCborReader(r)
-
 	var maj byte
 	var extra uint64
 	_ = maj
 	_ = extra
-
 	// (*t) (testing.IntArrayAliasNewType) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1825,7 +1813,6 @@ func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
 }
 
 func (t *MapTransparentType) MarshalCBOR(w io.Writer) error {
-
 	cw := cbg.NewCborWriter(w)
 
 	// (*t) (testing.MapTransparentType) (map)
@@ -1877,12 +1864,10 @@ func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = MapTransparentType{}
 
 	cr := cbg.NewCborReader(r)
-
 	var maj byte
 	var extra uint64
 	_ = maj
 	_ = extra
-
 	// (*t) (testing.MapTransparentType) (map)
 
 	maj, extra, err = cr.ReadHeader()

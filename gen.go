@@ -206,7 +206,7 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 
 	for i := 0; i < t.NumField(); i++ {
 		if out.Transparent {
-			return nil, fmt.Errorf("transparent structs must exactly one field")
+			return nil, fmt.Errorf("transparent structs must have exactly one field")
 		}
 
 		f := t.Field(i)
@@ -713,22 +713,29 @@ func emitCborMarshalArrayField(w io.Writer, f Field) error {
 	return nil
 }
 
-func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
-	// 9 byte buffer to accomodate for the maximum header length (cbor varints are maximum 9 bytes_
-	err := doTemplate(w, gti, `{{if not .Transparent}}var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}{{end}}
+func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
+	// 9 byte buffer to accommodate for the maximum header length (cbor varints are maximum 9 bytes_
+	if gti.Transparent {
+		err = doTemplate(w, gti, `
 func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
-	{{if not .Transparent}}if t == nil {
+	cw := cbg.NewCborWriter(w)
+`)
+	} else {
+		err = doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
+func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
+	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
-	}{{end}}
+	}
 
 	cw := cbg.NewCborWriter(w)
-	{{if not .Transparent}}
+
 	if _, err := cw.Write(lengthBuf{{ .Name }}); err != nil {
 		return err
 	}
-	{{end}}
+
 `)
+	}
 	if err != nil {
 		return err
 	}
@@ -1462,13 +1469,25 @@ func emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 	return nil
 }
 
-func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
-	err := doTemplate(w, gti, `
+func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
+	if gti.Transparent {
+		err = doTemplate(w, gti, `
 func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	cr := cbg.NewCborReader(r)
-	{{ if not .Transparent }}
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+`)
+	} else {
+		err = doTemplate(w, gti, `
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = {{.Name}}{}
+
+	cr := cbg.NewCborReader(r)
+
 	maj, extra, err := {{ ReadHeader "cr" }}
 	if err != nil {
 		return err
@@ -1486,13 +1505,9 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	if extra != {{ len .Fields }} {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
-	{{ else }}
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
-	{{ end }}
+
 `)
+	}
 	if err != nil {
 		return err
 	}
