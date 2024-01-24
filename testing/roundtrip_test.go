@@ -494,4 +494,74 @@ func TestTransparentIntArray(t *testing.T) {
 			t.Fatal("mismatch")
 		}
 	})
+
+	// IntArrayNewType / IntArrayAliasNewType
+	t.Run("roundtrip IntArrayNewType", func(t *testing.T) {
+		zero := &IntArrayNewType{}
+		recepticle := &IntArrayNewType{}
+		testValueRoundtrip(t, zero, recepticle)
+	})
+	t.Run("roundtrip IntArrayAliasNewType", func(t *testing.T) {
+		zero := &IntArrayAliasNewType{}
+		recepticle := &IntArrayAliasNewType{}
+		testValueRoundtrip(t, zero, recepticle)
+	})
+	t.Run("roundtrip non-zero IntArrayNewType", func(t *testing.T) {
+		val := &IntArrayNewType{1, 2, 3}
+		recepticle := &IntArrayNewType{}
+		testValueRoundtrip(t, val, recepticle)
+	})
+	t.Run("roundtrip non-zero IntArrayAliasNewType", func(t *testing.T) {
+		val := &IntArrayAliasNewType{1, 2, 3}
+		recepticle := &IntArrayAliasNewType{}
+		testValueRoundtrip(t, val, recepticle)
+	})
+	// NewTypes into/from TupleIntArray
+	t.Run("roundtrip IntArrayNewType to TupleIntArray", func(t *testing.T) {
+		val := IntArrayNewType{1, 2, 3}
+		recepticle := &TupleIntArray{}
+		testValueRoundtrip(t, &val, recepticle)
+		if val[0] != recepticle.Int1 {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip IntArrayAliasNewType to TupleIntArray", func(t *testing.T) {
+		val := IntArrayAliasNewType{1, 2, 3}
+		recepticle := &TupleIntArray{}
+		testValueRoundtrip(t, &val, recepticle)
+		if int64(val[0]) != recepticle.Int1 {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip TupleIntArray to IntArrayNewType", func(t *testing.T) {
+		val := TupleIntArray{2, 4, 5}
+		recepticle := IntArrayNewType{}
+		testValueRoundtrip(t, &val, &recepticle)
+		if val.Int1 != recepticle[0] {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip TupleIntArray to IntArrayAliasNewType", func(t *testing.T) {
+		val := TupleIntArray{2, 4, 5}
+		recepticle := IntArrayAliasNewType{}
+		testValueRoundtrip(t, &val, &recepticle)
+		if val.Int1 != int64(recepticle[0]) {
+			t.Fatal("mismatch")
+		}
+	})
+}
+
+func TestMapTransparentType(t *testing.T) {
+	t.Run("roundtrip", func(t *testing.T) {
+		zero := MapTransparentType{}
+		recepticle := &MapTransparentType{}
+		testValueRoundtrip(t, &zero, recepticle)
+	})
+
+	// non-zero values
+	t.Run("roundtrip non-zero", func(t *testing.T) {
+		val := MapTransparentType(map[string]string{"foo": "bar"})
+		recepticle := &MapTransparentType{}
+		testValueRoundtrip(t, &val, recepticle)
+	})
 }

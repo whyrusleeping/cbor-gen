@@ -17,6 +17,9 @@ func main() {
 		types.IntArray{},
 		types.IntAliasArray{},
 		types.TupleIntArray{},
+		types.IntArrayNewType{},
+		types.IntArrayAliasNewType{},
+		types.MapTransparentType{},
 	); err != nil {
 		panic(err)
 	}

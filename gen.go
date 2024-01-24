@@ -183,6 +183,27 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 		Transparent: false,
 	}
 
+	if t.Kind() != reflect.Struct {
+		return &GenTypeInfo{
+			Name:        t.Name(),
+			Transparent: true,
+			Fields: []Field{
+				{
+					Name:        ".",
+					MapKey:      "",
+					Pointer:     t.Kind() == reflect.Ptr,
+					Type:        t,
+					Pkg:         pkg,
+					Const:       nil,
+					OmitEmpty:   false,
+					PreserveNil: false,
+					IterLabel:   "",
+					MaxLen:      NoUsrMaxLen,
+				},
+			},
+		}, nil
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		if out.Transparent {
 			return nil, fmt.Errorf("transparent structs must exactly one field")
@@ -713,8 +734,12 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
-		f.Name = "t." + f.Name
+		if f.Name == "." {
+			f.Name = "(*t)"
+		} else {
+			f.Name = "t." + f.Name
+		}
+		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1473,8 +1498,12 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
-		f.Name = "t." + f.Name
+		if f.Name == "." {
+			f.Name = "(*t)" // self
+		} else {
+			f.Name = "t." + f.Name
+		}
+		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:

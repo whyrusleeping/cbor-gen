@@ -1635,3 +1635,295 @@ func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	return nil
 }
+
+func (t *IntArrayNewType) MarshalCBOR(w io.Writer) error {
+
+	cw := cbg.NewCborWriter(w)
+
+	// (*t) (testing.IntArrayNewType) (slice)
+	if len((*t)) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field (*t) was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len((*t)))); err != nil {
+		return err
+	}
+	for _, v := range *t {
+		if v >= 0 {
+			if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+				return err
+			}
+		} else {
+			if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-v-1)); err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = IntArrayNewType{}
+
+	cr := cbg.NewCborReader(r)
+
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+
+	// (*t) (testing.IntArrayNewType) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("(*t): array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		(*t) = make([]int64, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
+			{
+				maj, extra, err := cr.ReadHeader()
+				var extraI int64
+				if err != nil {
+					return err
+				}
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative overflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
+				}
+
+				(*t)[i] = int64(extraI)
+			}
+
+		}
+	}
+	return nil
+}
+
+func (t *IntArrayAliasNewType) MarshalCBOR(w io.Writer) error {
+
+	cw := cbg.NewCborWriter(w)
+
+	// (*t) (testing.IntArrayAliasNewType) (slice)
+	if len((*t)) > cbg.MaxLength {
+		return xerrors.Errorf("Slice value in field (*t) was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len((*t)))); err != nil {
+		return err
+	}
+	for _, v := range *t {
+		if v >= 0 {
+			if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+				return err
+			}
+		} else {
+			if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-v-1)); err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = IntArrayAliasNewType{}
+
+	cr := cbg.NewCborReader(r)
+
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+
+	// (*t) (testing.IntArrayAliasNewType) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("(*t): array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		(*t) = make([]IntAlias, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
+			{
+				maj, extra, err := cr.ReadHeader()
+				var extraI int64
+				if err != nil {
+					return err
+				}
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative overflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
+				}
+
+				(*t)[i] = IntAlias(extraI)
+			}
+
+		}
+	}
+	return nil
+}
+
+func (t *MapTransparentType) MarshalCBOR(w io.Writer) error {
+
+	cw := cbg.NewCborWriter(w)
+
+	// (*t) (testing.MapTransparentType) (map)
+	{
+		if len((*t)) > 4096 {
+			return xerrors.Errorf("cannot marshal (*t) map too large")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajMap, uint64(len((*t)))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len((*t)))
+		for k := range *t {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := (*t)[k]
+
+			if len(k) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := cw.WriteString(string(k)); err != nil {
+				return err
+			}
+
+			if len(v) > cbg.MaxLength {
+				return xerrors.Errorf("Value in field v was too long")
+			}
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(v))); err != nil {
+				return err
+			}
+			if _, err := cw.WriteString(string(v)); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
+func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = MapTransparentType{}
+
+	cr := cbg.NewCborReader(r)
+
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+
+	// (*t) (testing.MapTransparentType) (map)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajMap {
+		return fmt.Errorf("expected a map (major type 5)")
+	}
+	if extra > 4096 {
+		return fmt.Errorf("(*t): map too large")
+	}
+
+	(*t) = make(map[string]string, extra)
+
+	for i, l := 0, int(extra); i < l; i++ {
+
+		var k string
+
+		{
+			sval, err := cbg.ReadString(cr)
+			if err != nil {
+				return err
+			}
+
+			k = string(sval)
+		}
+
+		var v string
+
+		{
+			sval, err := cbg.ReadString(cr)
+			if err != nil {
+				return err
+			}
+
+			v = string(sval)
+		}
+
+		(*t)[k] = v
+
+	}
+	return nil
+}

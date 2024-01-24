@@ -155,8 +155,14 @@ type IntAliasArray struct {
 	Ints []IntAlias `cborgen:"transparent"`
 }
 
+type IntArrayNewType []int64
+
+type IntArrayAliasNewType []IntAlias
+
 type TupleIntArray struct {
 	Int1 int64
 	Int2 int64
 	Int3 int64
 }
+
+type MapTransparentType map[string]string
