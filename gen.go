@@ -87,6 +87,10 @@ var _ = sort.Sort
 `)
 }
 
+// FieldNameSelf is the name of the field that is the marshal target itself.
+// This is used in non-struct types which are handled like transparent structs.
+const FieldNameSelf = "."
+
 type Field struct {
 	Name    string
 	MapKey  string
@@ -189,7 +193,7 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			Transparent: true,
 			Fields: []Field{
 				{
-					Name:        ".",
+					Name:        FieldNameSelf,
 					MapKey:      "",
 					Pointer:     t.Kind() == reflect.Ptr,
 					Type:        t,
@@ -741,7 +745,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	}
 
 	for _, f := range gti.Fields {
-		if f.Name == "." {
+		if f.Name == FieldNameSelf {
 			f.Name = "(*t)"
 		} else {
 			f.Name = "t." + f.Name
@@ -1513,7 +1517,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for _, f := range gti.Fields {
-		if f.Name == "." {
+		if f.Name == FieldNameSelf {
 			f.Name = "(*t)" // self
 		} else {
 			f.Name = "t." + f.Name
