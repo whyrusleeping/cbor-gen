@@ -13,9 +13,9 @@ import (
 	cid "github.com/ipfs/go-cid"
 )
 
-const MaxLength = 8192
+var MaxLength = uint64(8192)
 
-const ByteArrayMaxLen = 2 << 20
+var ByteArrayMaxLen = uint64(2 << 20)
 
 const MaxLenTag = "maxlen"
 const NoUsrMaxLen = -1
@@ -318,7 +318,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 			return err
 		}
 	} else {
-		if len(*{{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+		if uint64(len(*{{ .Name }})) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
 			return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 		}
 
@@ -341,7 +341,7 @@ func emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	return doTemplate(w, f, `
-	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+	if uint64(len({{ .Name }})) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
@@ -532,7 +532,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
+	if uint64(len({{ .Name }})) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
 		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
@@ -562,7 +562,7 @@ func emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	err := doTemplate(w, f, `
-	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+	if uint64(len({{ .Name }})) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
@@ -623,7 +623,7 @@ func emitCborMarshalArrayField(w io.Writer, f Field) error {
 	// Note: this re-slices the slice to deal with arrays.
 	if e.Kind() == reflect.Uint8 {
 		return doTemplate(w, f, `
-	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
+	if uint64(len({{ .Name }})) > {{ MaxLen .MaxLen "cbg.ByteArrayMaxLen" }} {
 		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
@@ -642,7 +642,7 @@ func emitCborMarshalArrayField(w io.Writer, f Field) error {
 	}
 
 	err := doTemplate(w, f, `
-	if len({{ .Name }}) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
+	if uint64(len({{ .Name }})) > {{ MaxLen .MaxLen "cbg.MaxLength" }} {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
