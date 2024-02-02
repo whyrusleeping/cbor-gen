@@ -53,8 +53,25 @@ func TestNilPreserveWorks(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(TestSliceNilPreserve{}))
 }
 
-func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler) {
+type RoundTripOptions struct {
+	Golden []byte
+}
+
+type RoundTripOption func(*RoundTripOptions)
+
+func WithGolden(golden []byte) RoundTripOption {
+	return func(opts *RoundTripOptions) {
+		opts.Golden = golden
+	}
+}
+
+func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler, options ...RoundTripOption) {
 	t.Helper()
+
+	opts := &RoundTripOptions{}
+	for _, option := range options {
+		option(opts)
+	}
 
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalCBOR(buf); err != nil {
@@ -62,6 +79,12 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 	}
 
 	enc := buf.Bytes()
+
+	if opts.Golden != nil {
+		if !bytes.Equal(opts.Golden, enc) {
+			t.Fatalf("encoding mismatch: %x != %x", opts.Golden, enc)
+		}
+	}
 
 	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
 		t.Logf("got bad bytes: %x", enc)
@@ -451,3 +474,117 @@ func TestMapOfStringToString(t *testing.T) {
 }
 
 //TODO same for strings
+
+func TestTransparentIntArray(t *testing.T) {
+	t.Run("roundtrip", func(t *testing.T) {
+		zero := &IntArray{}
+		recepticle := &IntArray{}
+		testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x80}))
+	})
+
+	t.Run("roundtrip intalias", func(t *testing.T) {
+		zero := &IntAliasArray{}
+		recepticle := &IntAliasArray{}
+		testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x80}))
+	})
+
+	// non-zero values
+	t.Run("roundtrip non-zero", func(t *testing.T) {
+		val := &IntArray{Ints: []int64{1, 2, 3}}
+		recepticle := &IntArray{}
+		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+	})
+	t.Run("roundtrip non-zero intalias", func(t *testing.T) {
+		val := &IntAliasArray{Ints: []IntAlias{1, 2, 3}}
+		recepticle := &IntAliasArray{}
+		testValueRoundtrip(t, val, recepticle)
+	})
+
+	// tuple struct to/from transparent int array
+	t.Run("roundtrip tuple struct to transparent", func(t *testing.T) {
+		val := &TupleIntArray{2, 4, 5}
+		recepticle := &IntArray{}
+		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		if val.Int1 != recepticle.Ints[0] {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip transparent to tuple struct", func(t *testing.T) {
+		val := &IntArray{Ints: []int64{2, 4, 5}}
+		recepticle := &TupleIntArray{}
+		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		if val.Ints[0] != recepticle.Int1 {
+			t.Fatal("mismatch")
+		}
+	})
+
+	// IntArrayNewType / IntArrayAliasNewType
+	t.Run("roundtrip IntArrayNewType", func(t *testing.T) {
+		zero := &IntArrayNewType{}
+		recepticle := &IntArrayNewType{}
+		testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x80}))
+	})
+	t.Run("roundtrip IntArrayAliasNewType", func(t *testing.T) {
+		zero := &IntArrayAliasNewType{}
+		recepticle := &IntArrayAliasNewType{}
+		testValueRoundtrip(t, zero, recepticle)
+	})
+	t.Run("roundtrip non-zero IntArrayNewType", func(t *testing.T) {
+		val := &IntArrayNewType{1, 2, 3}
+		recepticle := &IntArrayNewType{}
+		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+	})
+	t.Run("roundtrip non-zero IntArrayAliasNewType", func(t *testing.T) {
+		val := &IntArrayAliasNewType{1, 2, 3}
+		recepticle := &IntArrayAliasNewType{}
+		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+	})
+	// NewTypes into/from TupleIntArray
+	t.Run("roundtrip IntArrayNewType to TupleIntArray", func(t *testing.T) {
+		val := IntArrayNewType{1, 2, 3}
+		recepticle := &TupleIntArray{}
+		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		if val[0] != recepticle.Int1 {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip IntArrayAliasNewType to TupleIntArray", func(t *testing.T) {
+		val := IntArrayAliasNewType{1, 2, 3}
+		recepticle := &TupleIntArray{}
+		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		if int64(val[0]) != recepticle.Int1 {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip TupleIntArray to IntArrayNewType", func(t *testing.T) {
+		val := TupleIntArray{2, 4, 5}
+		recepticle := IntArrayNewType{}
+		testValueRoundtrip(t, &val, &recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		if val.Int1 != recepticle[0] {
+			t.Fatal("mismatch")
+		}
+	})
+	t.Run("roundtrip TupleIntArray to IntArrayAliasNewType", func(t *testing.T) {
+		val := TupleIntArray{2, 4, 5}
+		recepticle := IntArrayAliasNewType{}
+		testValueRoundtrip(t, &val, &recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		if val.Int1 != int64(recepticle[0]) {
+			t.Fatal("mismatch")
+		}
+	})
+}
+
+func TestMapTransparentType(t *testing.T) {
+	t.Run("roundtrip", func(t *testing.T) {
+		zero := MapTransparentType{}
+		recepticle := &MapTransparentType{}
+		testValueRoundtrip(t, &zero, recepticle, WithGolden([]byte{0xa0}))
+	})
+
+	// non-zero values
+	t.Run("roundtrip non-zero", func(t *testing.T) {
+		val := MapTransparentType(map[string]string{"foo": "bar"})
+		recepticle := &MapTransparentType{}
+		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0xa1, 0x63, 0x66, 0x6f, 0x6f, 0x63, 0x62, 0x61, 0x72}))
+	})
+}

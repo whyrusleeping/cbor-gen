@@ -14,6 +14,12 @@ func main() {
 		types.FixedArrays{},
 		types.ThingWithSomeTime{},
 		types.BigField{},
+		types.IntArray{},
+		types.IntAliasArray{},
+		types.TupleIntArray{},
+		types.IntArrayNewType{},
+		types.IntArrayAliasNewType{},
+		types.MapTransparentType{},
 	); err != nil {
 		panic(err)
 	}

@@ -87,6 +87,10 @@ var _ = sort.Sort
 `)
 }
 
+// FieldNameSelf is the name of the field that is the marshal target itself.
+// This is used in non-struct types which are handled like transparent structs.
+const FieldNameSelf = "."
+
 type Field struct {
 	Name    string
 	MapKey  string
@@ -145,8 +149,9 @@ func (f Field) Len() int {
 }
 
 type GenTypeInfo struct {
-	Name   string
-	Fields []Field
+	Name        string
+	Fields      []Field
+	Transparent bool
 }
 
 func (gti *GenTypeInfo) Imports() []Import {
@@ -178,10 +183,36 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 	pkg := t.PkgPath()
 
 	out := GenTypeInfo{
-		Name: t.Name(),
+		Name:        t.Name(),
+		Transparent: false,
+	}
+
+	if t.Kind() != reflect.Struct {
+		return &GenTypeInfo{
+			Name:        t.Name(),
+			Transparent: true,
+			Fields: []Field{
+				{
+					Name:        FieldNameSelf,
+					MapKey:      "",
+					Pointer:     t.Kind() == reflect.Ptr,
+					Type:        t,
+					Pkg:         pkg,
+					Const:       nil,
+					OmitEmpty:   false,
+					PreserveNil: false,
+					IterLabel:   "",
+					MaxLen:      NoUsrMaxLen,
+				},
+			},
+		}, nil
 	}
 
 	for i := 0; i < t.NumField(); i++ {
+		if out.Transparent {
+			return nil, fmt.Errorf("transparent structs must have exactly one field")
+		}
+
 		f := t.Field(i)
 		if !nameIsExported(f.Name) {
 			continue
@@ -225,6 +256,12 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			}
 			constval = &cv
 		}
+
+		_, transparent := tags["transparent"]
+		if transparent && len(out.Fields) > 0 {
+			return nil, fmt.Errorf("only one transparent field is allowed")
+		}
+		out.Transparent = transparent
 
 		_, omitempty := tags["omitempty"]
 		_, preservenil := tags["preservenil"]
@@ -270,6 +307,8 @@ func tagparse(v string) (map[string]string, error) {
 			out["preservenil"] = "true"
 		} else if elem == "ignore" || elem == "-" {
 			out["ignore"] = "true"
+		} else if elem == "transparent" {
+			out["transparent"] = "true"
 		} else {
 			out["name"] = elem
 		}
@@ -678,9 +717,15 @@ func emitCborMarshalArrayField(w io.Writer, f Field) error {
 	return nil
 }
 
-func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
-	// 9 byte buffer to accomodate for the maximum header length (cbor varints are maximum 9 bytes_
-	err := doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
+func emitCborMarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
+	// 9 byte buffer to accommodate for the maximum header length (cbor varints are maximum 9 bytes_
+	if gti.Transparent {
+		err = doTemplate(w, gti, `
+func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
+	cw := cbg.NewCborWriter(w)
+`)
+	} else {
+		err = doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
 func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -692,14 +737,20 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if _, err := cw.Write(lengthBuf{{ .Name }}); err != nil {
 		return err
 	}
+
 `)
+	}
 	if err != nil {
 		return err
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
-		f.Name = "t." + f.Name
+		if f.Name == FieldNameSelf {
+			f.Name = "(*t)"
+		} else {
+			f.Name = "t." + f.Name
+		}
+		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1422,8 +1473,20 @@ func emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 	return nil
 }
 
-func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) error {
-	err := doTemplate(w, gti, `
+func emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
+	if gti.Transparent {
+		err = doTemplate(w, gti, `
+func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = {{.Name}}{}
+
+	cr := cbg.NewCborReader(r)
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+`)
+	} else {
+		err = doTemplate(w, gti, `
 func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
@@ -1448,13 +1511,18 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 `)
+	}
 	if err != nil {
 		return err
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\t// t.%s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
-		f.Name = "t." + f.Name
+		if f.Name == FieldNameSelf {
+			f.Name = "(*t)" // self
+		} else {
+			f.Name = "t." + f.Name
+		}
+		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1537,6 +1605,10 @@ func emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		if f.OmitEmpty {
 			hasOmitEmpty = true
 		}
+	}
+
+	if gti.Transparent {
+		return fmt.Errorf("transparent fields not supported in map mode, use tuple encoding (outcome should be the same)")
 	}
 
 	err := doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
