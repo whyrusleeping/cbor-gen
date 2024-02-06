@@ -33,7 +33,7 @@ func (t *SignedArray) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Signed ([]uint64) (slice)
-	if len(t.Signed) > cbg.MaxLength {
+	if len(t.Signed) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Signed was too long")
 	}
 
@@ -80,7 +80,7 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Signed: array too large (%d)", extra)
 	}
 
@@ -134,7 +134,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Foo (string) (string)
-	if len(t.Foo) > cbg.MaxLength {
+	if len(t.Foo) > 8192 {
 		return xerrors.Errorf("Value in field t.Foo was too long")
 	}
 
@@ -152,7 +152,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Binary ([]uint8) (slice)
-	if len(t.Binary) > cbg.ByteArrayMaxLen {
+	if len(t.Binary) > 8192 {
 		return xerrors.Errorf("Byte array in field t.Binary was too long")
 	}
 
@@ -176,7 +176,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.NString (testing.NamedString) (string)
-	if len(t.NString) > cbg.MaxLength {
+	if len(t.NString) > 8192 {
 		return xerrors.Errorf("Value in field t.NString was too long")
 	}
 
@@ -188,7 +188,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Strings ([]string) (slice)
-	if len(t.Strings) > cbg.MaxLength {
+	if len(t.Strings) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Strings was too long")
 	}
 
@@ -196,7 +196,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Strings {
-		if len(v) > cbg.MaxLength {
+		if len(v) > 8192 {
 			return xerrors.Errorf("Value in field v was too long")
 		}
 
@@ -265,7 +265,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.ByteArrayMaxLen {
+	if extra > 8192 {
 		return fmt.Errorf("t.Binary: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -322,7 +322,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Strings: array too large (%d)", extra)
 	}
 
@@ -377,7 +377,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Others ([]uint64) (slice)
-	if len(t.Others) > cbg.MaxLength {
+	if len(t.Others) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Others was too long")
 	}
 
@@ -393,7 +393,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.SignedOthers ([]int64) (slice)
-	if len(t.SignedOthers) > cbg.MaxLength {
+	if len(t.SignedOthers) > 8192 {
 		return xerrors.Errorf("Slice value in field t.SignedOthers was too long")
 	}
 
@@ -414,7 +414,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Test ([][]uint8) (slice)
-	if len(t.Test) > cbg.MaxLength {
+	if len(t.Test) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Test was too long")
 	}
 
@@ -422,7 +422,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Test {
-		if len(v) > cbg.ByteArrayMaxLen {
+		if len(v) > 8192 {
 			return xerrors.Errorf("Byte array in field v was too long")
 		}
 
@@ -437,7 +437,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Dog (string) (string)
-	if len(t.Dog) > cbg.MaxLength {
+	if len(t.Dog) > 8192 {
 		return xerrors.Errorf("Value in field t.Dog was too long")
 	}
 
@@ -449,7 +449,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Numbers ([]testing.NamedNumber) (slice)
-	if len(t.Numbers) > cbg.MaxLength {
+	if len(t.Numbers) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Numbers was too long")
 	}
 
@@ -489,7 +489,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
-	if len(t.Arrrrrghay) > cbg.MaxLength {
+	if len(t.Arrrrrghay) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Arrrrrghay was too long")
 	}
 
@@ -553,7 +553,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Others: array too large (%d)", extra)
 	}
 
@@ -596,7 +596,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.SignedOthers: array too large (%d)", extra)
 	}
 
@@ -650,7 +650,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Test: array too large (%d)", extra)
 	}
 
@@ -676,7 +676,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 
-			if extra > cbg.ByteArrayMaxLen {
+			if extra > 8192 {
 				return fmt.Errorf("t.Test[i]: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -710,7 +710,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Numbers: array too large (%d)", extra)
 	}
 
@@ -801,7 +801,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Arrrrrghay: array too large (%d)", extra)
 	}
 
@@ -952,7 +952,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Bytes ([20]uint8) (array)
-	if len(t.Bytes) > cbg.ByteArrayMaxLen {
+	if len(t.Bytes) > 8192 {
 		return xerrors.Errorf("Byte array in field t.Bytes was too long")
 	}
 
@@ -965,7 +965,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Uint8 ([20]uint8) (array)
-	if len(t.Uint8) > cbg.ByteArrayMaxLen {
+	if len(t.Uint8) > 8192 {
 		return xerrors.Errorf("Byte array in field t.Uint8 was too long")
 	}
 
@@ -978,7 +978,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Uint64 ([20]uint64) (array)
-	if len(t.Uint64) > cbg.MaxLength {
+	if len(t.Uint64) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Uint64 was too long")
 	}
 
@@ -1025,7 +1025,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.ByteArrayMaxLen {
+	if extra > 8192 {
 		return fmt.Errorf("t.Bytes: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -1046,7 +1046,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.ByteArrayMaxLen {
+	if extra > 8192 {
 		return fmt.Errorf("t.Uint8: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -1067,7 +1067,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Uint64: array too large (%d)", extra)
 	}
 
@@ -1137,7 +1137,7 @@ func (t *ThingWithSomeTime) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.CatName (string) (string)
-	if len(t.CatName) > cbg.MaxLength {
+	if len(t.CatName) > 8192 {
 		return xerrors.Errorf("Value in field t.CatName was too long")
 	}
 
@@ -1302,7 +1302,7 @@ func (t *IntArray) MarshalCBOR(w io.Writer) error {
 	cw := cbg.NewCborWriter(w)
 
 	// t.Ints ([]int64) (slice)
-	if len(t.Ints) > cbg.MaxLength {
+	if len(t.Ints) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Ints was too long")
 	}
 
@@ -1339,7 +1339,7 @@ func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Ints: array too large (%d)", extra)
 	}
 
@@ -1393,7 +1393,7 @@ func (t *IntAliasArray) MarshalCBOR(w io.Writer) error {
 	cw := cbg.NewCborWriter(w)
 
 	// t.Ints ([]testing.IntAlias) (slice)
-	if len(t.Ints) > cbg.MaxLength {
+	if len(t.Ints) > 8192 {
 		return xerrors.Errorf("Slice value in field t.Ints was too long")
 	}
 
@@ -1430,7 +1430,7 @@ func (t *IntAliasArray) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("t.Ints: array too large (%d)", extra)
 	}
 
@@ -1634,7 +1634,7 @@ func (t *IntArrayNewType) MarshalCBOR(w io.Writer) error {
 	cw := cbg.NewCborWriter(w)
 
 	// (*t) (testing.IntArrayNewType) (slice)
-	if len((*t)) > cbg.MaxLength {
+	if len((*t)) > 8192 {
 		return xerrors.Errorf("Slice value in field (*t) was too long")
 	}
 
@@ -1671,7 +1671,7 @@ func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("(*t): array too large (%d)", extra)
 	}
 
@@ -1725,7 +1725,7 @@ func (t *IntArrayAliasNewType) MarshalCBOR(w io.Writer) error {
 	cw := cbg.NewCborWriter(w)
 
 	// (*t) (testing.IntArrayAliasNewType) (slice)
-	if len((*t)) > cbg.MaxLength {
+	if len((*t)) > 8192 {
 		return xerrors.Errorf("Slice value in field (*t) was too long")
 	}
 
@@ -1762,7 +1762,7 @@ func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > cbg.MaxLength {
+	if extra > 8192 {
 		return fmt.Errorf("(*t): array too large (%d)", extra)
 	}
 
@@ -1833,7 +1833,7 @@ func (t *MapTransparentType) MarshalCBOR(w io.Writer) error {
 		for _, k := range keys {
 			v := (*t)[k]
 
-			if len(k) > cbg.MaxLength {
+			if len(k) > 8192 {
 				return xerrors.Errorf("Value in field k was too long")
 			}
 
@@ -1844,7 +1844,7 @@ func (t *MapTransparentType) MarshalCBOR(w io.Writer) error {
 				return err
 			}
 
-			if len(v) > cbg.MaxLength {
+			if len(v) > 8192 {
 				return xerrors.Errorf("Value in field v was too long")
 			}
 
