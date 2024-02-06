@@ -38,4 +38,14 @@ func main() {
 	); err != nil {
 		panic(err)
 	}
+
+	err := cbg.Gen{
+		MaxArrayLength: 10,
+		MaxByteLength:  9,
+	}.WriteTupleEncodersToFile("testing/cbor_options_gen.go", "testing",
+		types.LimitedStruct{},
+	)
+	if err != nil {
+		panic(err)
+	}
 }

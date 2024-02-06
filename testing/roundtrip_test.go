@@ -2,6 +2,7 @@ package testing
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -586,5 +587,85 @@ func TestMapTransparentType(t *testing.T) {
 		val := MapTransparentType(map[string]string{"foo": "bar"})
 		recepticle := &MapTransparentType{}
 		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0xa1, 0x63, 0x66, 0x6f, 0x6f, 0x63, 0x62, 0x61, 0x72}))
+	})
+}
+
+func TestConfigurability(t *testing.T) {
+	t.Run("MaxArrayLength", func(t *testing.T) {
+		good, _ := hex.DecodeString("828a0102030405060708090040")
+		bad, _ := hex.DecodeString("828b010203040506070809000040")
+
+		t.Run("Marshal", func(t *testing.T) {
+			ls := LimitedStruct{Arr: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}}
+			recepticle := &LimitedStruct{}
+			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
+
+			ls.Arr = []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0}
+			err := ls.MarshalCBOR(new(bytes.Buffer))
+			if err == nil {
+				t.Fatal("expected error")
+			} else if err.Error() != "Slice value in field t.Arr was too long" {
+				t.Fatal("unexpected error", err)
+			}
+		})
+
+		t.Run("Unmarshal", func(t *testing.T) {
+			ls := LimitedStruct{}
+			err := ls.UnmarshalCBOR(bytes.NewReader(good))
+			if err != nil {
+				t.Fatal(err)
+			}
+			expect := LimitedStruct{Arr: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}}
+			if !reflect.DeepEqual(ls, expect) {
+				t.Fatalf("expected Arr to be %v, but got %v", expect, ls.Arr)
+			}
+
+			ls = LimitedStruct{}
+			err = ls.UnmarshalCBOR(bytes.NewReader(bad))
+			if err == nil {
+				t.Fatal("expected error")
+			} else if err.Error() != "t.Arr: array too large (11)" {
+				t.Fatal("unexpected error", err)
+			}
+		})
+	})
+
+	t.Run("MaxByteLength", func(t *testing.T) {
+		good, _ := hex.DecodeString("828049313233343536373839")
+		bad, _ := hex.DecodeString("82804a31323334353637383930")
+
+		t.Run("Marshal", func(t *testing.T) {
+			ls := LimitedStruct{Byts: []byte("123456789")}
+			recepticle := &LimitedStruct{}
+			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
+
+			ls.Byts = []byte("1234567890")
+			err := ls.MarshalCBOR(new(bytes.Buffer))
+			if err == nil {
+				t.Fatal("expected error")
+			} else if err.Error() != "Byte array in field t.Byts was too long" {
+				t.Fatal("unexpected error", err)
+			}
+		})
+
+		t.Run("Unmarshal", func(t *testing.T) {
+			ls := LimitedStruct{}
+			err := ls.UnmarshalCBOR(bytes.NewReader(good))
+			if err != nil {
+				t.Fatal(err)
+			}
+			expect := LimitedStruct{Byts: []byte("123456789")}
+			if !reflect.DeepEqual(ls, expect) {
+				t.Fatalf("expected Byts to be %v, but got %v", expect, ls.Byts)
+			}
+
+			ls = LimitedStruct{}
+			err = ls.UnmarshalCBOR(bytes.NewReader(bad))
+			if err == nil {
+				t.Fatal("expected error")
+			} else if err.Error() != "t.Byts: byte array too large (10)" {
+				t.Fatal("unexpected error", err)
+			}
+		})
 	})
 }
