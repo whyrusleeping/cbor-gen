@@ -17,6 +17,7 @@ func main() {
 		types.IntArray{},
 		types.IntAliasArray{},
 		types.TupleIntArray{},
+		types.TupleIntArrayOptionals{},
 		types.IntArrayNewType{},
 		types.IntArrayAliasNewType{},
 		types.MapTransparentType{},

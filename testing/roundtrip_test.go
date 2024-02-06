@@ -708,3 +708,31 @@ func TestConfigurability(t *testing.T) {
 		})
 	})
 }
+
+func TestOptionalInts(t *testing.T) {
+	zero := &TupleIntArrayOptionals{}
+	recepticle := &TupleIntArrayOptionals{}
+	testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x84, 0xf6, 0x00, 0x00, 0xf6}))
+
+	val := &TupleIntArrayOptionals{
+		Int1: ptr(int64(1)),
+		Int2: 2,
+		Int3: 3,
+		Int4: ptr(uint64(4)),
+	}
+	recepticle = &TupleIntArrayOptionals{}
+	testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x84, 0x01, 0x02, 0x03, 0x04}))
+
+	val = &TupleIntArrayOptionals{
+		Int1: nil,
+		Int2: 2,
+		Int3: 3,
+		Int4: nil,
+	}
+	recepticle = &TupleIntArrayOptionals{}
+	testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x84, 0xf6, 0x02, 0x03, 0xf6}))
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}

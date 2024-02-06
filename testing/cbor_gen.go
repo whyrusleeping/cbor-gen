@@ -1526,6 +1526,7 @@ func (t *TupleIntArray) MarshalCBOR(w io.Writer) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -1626,6 +1627,193 @@ func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
 		}
 
 		t.Int3 = int64(extraI)
+	}
+	return nil
+}
+
+var lengthBufTupleIntArrayOptionals = []byte{132}
+
+func (t *TupleIntArrayOptionals) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write(lengthBufTupleIntArrayOptionals); err != nil {
+		return err
+	}
+
+	// t.Int1 (int64) (int64)
+	if t.Int1 == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if *t.Int1 >= 0 {
+			if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(*t.Int1)); err != nil {
+				return err
+			}
+		} else {
+			if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-*t.Int1-1)); err != nil {
+				return err
+			}
+		}
+	}
+
+	// t.Int2 (int64) (int64)
+	if t.Int2 >= 0 {
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Int2)); err != nil {
+			return err
+		}
+	} else {
+		if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-t.Int2-1)); err != nil {
+			return err
+		}
+	}
+
+	// t.Int3 (uint64) (uint64)
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Int3)); err != nil {
+		return err
+	}
+
+	// t.Int4 (uint64) (uint64)
+
+	if t.Int4 == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(*t.Int4)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = TupleIntArrayOptionals{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 4 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Int1 (int64) (int64)
+	{
+
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+			maj, extra, err = cr.ReadHeader()
+			var extraI int64
+			if err != nil {
+				return err
+			}
+			switch maj {
+			case cbg.MajUnsignedInt:
+				extraI = int64(extra)
+				if extraI < 0 {
+					return fmt.Errorf("int64 positive overflow")
+				}
+			case cbg.MajNegativeInt:
+				extraI = int64(extra)
+				if extraI < 0 {
+					return fmt.Errorf("int64 negative overflow")
+				}
+				extraI = -1 - extraI
+			default:
+				return fmt.Errorf("wrong type for int64 field: %d", maj)
+			}
+			t.Int1 = &extraI
+		}
+
+	}
+	// t.Int2 (int64) (int64)
+	{
+		maj, extra, err := cr.ReadHeader()
+		var extraI int64
+		if err != nil {
+			return err
+		}
+		switch maj {
+		case cbg.MajUnsignedInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 positive overflow")
+			}
+		case cbg.MajNegativeInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 negative overflow")
+			}
+			extraI = -1 - extraI
+		default:
+			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		}
+
+		t.Int2 = int64(extraI)
+	}
+	// t.Int3 (uint64) (uint64)
+
+	{
+
+		maj, extra, err = cr.ReadHeader()
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
+		}
+		t.Int3 = uint64(extra)
+
+	}
+	// t.Int4 (uint64) (uint64)
+
+	{
+
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajUnsignedInt {
+				return fmt.Errorf("wrong type for uint64 field")
+			}
+			typed := uint64(extra)
+			t.Int4 = &typed
+		}
+
 	}
 	return nil
 }
