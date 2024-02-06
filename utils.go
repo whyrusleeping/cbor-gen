@@ -368,6 +368,10 @@ var stringBufPool = sync.Pool{
 }
 
 func ReadString(r io.Reader) (string, error) {
+	return ReadStringWithMax(r, MaxLength)
+}
+
+func ReadStringWithMax(r io.Reader, maxLength uint64) (string, error) {
 	maj, l, err := CborReadHeader(r)
 	if err != nil {
 		return "", err
@@ -377,7 +381,7 @@ func ReadString(r io.Reader) (string, error) {
 		return "", fmt.Errorf("got tag %d while reading string value (l = %d)", maj, l)
 	}
 
-	if l > MaxLength {
+	if l > maxLength {
 		return "", fmt.Errorf("string in input was too long")
 	}
 

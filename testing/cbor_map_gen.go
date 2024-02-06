@@ -272,7 +272,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -285,7 +285,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Dog":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -498,7 +498,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 						return err
 					}
 
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -600,7 +600,7 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -913,7 +913,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -943,7 +943,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -1006,7 +1006,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 		case "OldStr":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -1579,7 +1579,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -1609,7 +1609,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -1672,7 +1672,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 		case "NewStr":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -1700,7 +1700,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -1763,7 +1763,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 		case "OldStr":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -2011,7 +2011,7 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -2050,7 +2050,7 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 		case "beep":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -2198,7 +2198,7 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -2246,7 +2246,7 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 						return err
 					}
 
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -2258,7 +2258,7 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Beep":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -2358,7 +2358,7 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -2371,7 +2371,7 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Cats":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -2546,7 +2546,7 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -2559,7 +2559,7 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 		case "ap":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -2596,7 +2596,7 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 		case "beep":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -2735,7 +2735,7 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -2765,7 +2765,7 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -2776,7 +2776,7 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 				var v string
 
 				{
-					sval, err := cbg.ReadString(cr)
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
 					if err != nil {
 						return err
 					}
@@ -3005,7 +3005,7 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 	for i := uint64(0); i < n; i++ {
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -3018,7 +3018,7 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Cat":
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}

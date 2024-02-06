@@ -18,7 +18,7 @@ var _ = cid.Undef
 var _ = math.E
 var _ = sort.Sort
 
-var lengthBufLimitedStruct = []byte{130}
+var lengthBufLimitedStruct = []byte{131}
 
 func (t *LimitedStruct) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -61,6 +61,17 @@ func (t *LimitedStruct) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
+	// t.Str (string) (string)
+	if len(t.Str) > 8 {
+		return xerrors.Errorf("Value in field t.Str was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Str))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string(t.Str)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -83,7 +94,7 @@ func (t *LimitedStruct) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 2 {
+	if extra != 3 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -152,5 +163,15 @@ func (t *LimitedStruct) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
+	// t.Str (string) (string)
+
+	{
+		sval, err := cbg.ReadStringWithMax(cr, 8)
+		if err != nil {
+			return err
+		}
+
+		t.Str = string(sval)
+	}
 	return nil
 }

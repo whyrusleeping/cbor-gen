@@ -237,7 +237,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Foo (string) (string)
 
 	{
-		sval, err := cbg.ReadString(cr)
+		sval, err := cbg.ReadStringWithMax(cr, 8192)
 		if err != nil {
 			return err
 		}
@@ -308,7 +308,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.NString (testing.NamedString) (string)
 
 	{
-		sval, err := cbg.ReadString(cr)
+		sval, err := cbg.ReadStringWithMax(cr, 8192)
 		if err != nil {
 			return err
 		}
@@ -344,7 +344,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 
 			{
-				sval, err := cbg.ReadString(cr)
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
 				if err != nil {
 					return err
 				}
@@ -696,7 +696,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Dog (string) (string)
 
 	{
-		sval, err := cbg.ReadString(cr)
+		sval, err := cbg.ReadStringWithMax(cr, 8192)
 		if err != nil {
 			return err
 		}
@@ -1210,7 +1210,7 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.CatName (string) (string)
 
 	{
-		sval, err := cbg.ReadString(cr)
+		sval, err := cbg.ReadStringWithMax(cr, 8192)
 		if err != nil {
 			return err
 		}
@@ -1888,7 +1888,7 @@ func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
 		var k string
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}
@@ -1899,7 +1899,7 @@ func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
 		var v string
 
 		{
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
 			if err != nil {
 				return err
 			}

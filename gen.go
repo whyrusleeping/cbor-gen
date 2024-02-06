@@ -29,8 +29,16 @@ var (
 // Gen is a configurable code generator for CBOR types. Use this instead of the convenience
 // functions to have more control over the generated code.
 type Gen struct {
-	MaxArrayLength int // Default: 8192 (MaxLength)
-	MaxByteLength  int // Default: 2<<20 (ByteArrayMaxLen)
+	MaxArrayLength  int // Default: 8192 (MaxLength)
+	MaxByteLength   int // Default: 2<<20 (ByteArrayMaxLen)
+	MaxStringLength int // Default: 8192 (MaxLength)
+}
+
+func (g Gen) maxArrayLength() int {
+	if g.MaxArrayLength == 0 {
+		return MaxLength
+	}
+	return g.MaxArrayLength
 }
 
 func (g Gen) maxByteLength() int {
@@ -40,11 +48,11 @@ func (g Gen) maxByteLength() int {
 	return g.MaxByteLength
 }
 
-func (g Gen) maxArrayLength() int {
-	if g.MaxArrayLength == 0 {
+func (g Gen) maxStringLength() int {
+	if g.MaxStringLength == 0 {
 		return MaxLength
 	}
-	return g.MaxArrayLength
+	return g.MaxStringLength
 }
 
 func (g Gen) doTemplate(w io.Writer, info interface{}, templ string) error {
@@ -73,6 +81,8 @@ func (g Gen) doTemplate(w io.Writer, info interface{}, templ string) error {
 					return fmt.Sprintf("%d", g.maxByteLength())
 				case "MaxArrayLength":
 					return fmt.Sprintf("%d", g.maxArrayLength())
+				case "MaxStringLength":
+					return fmt.Sprintf("%d", g.maxStringLength())
 				default:
 					panic(fmt.Sprintf("error: unknown property [%s]", prop))
 				}
@@ -394,7 +404,7 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 			return err
 		}
 	} else {
-		if len(*{{ .Name }}) > {{ Cfg "MaxArrayLength" | MaxLen .MaxLen }} {
+		if len(*{{ .Name }}) > {{ Cfg "MaxStringLength" | MaxLen .MaxLen }} {
 			return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 		}
 
@@ -417,7 +427,7 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	return g.doTemplate(w, f, `
-	if len({{ .Name }}) > {{ Cfg "MaxArrayLength" | MaxLen .MaxLen }} {
+	if len({{ .Name }}) > {{ Cfg "MaxStringLength" | MaxLen .MaxLen }} {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
@@ -848,7 +858,7 @@ func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
 				return err
 			}
 
-			sval, err := cbg.ReadString(cr)
+			sval, err := cbg.ReadStringWithMax(cr, {{ Cfg "MaxStringLength" }})
 			if err != nil {
 				return err
 			}
@@ -863,7 +873,7 @@ func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
 	}
 	return g.doTemplate(w, f, `
 	{
-		sval, err := cbg.ReadString(cr)
+		sval, err := cbg.ReadStringWithMax(cr, {{ Cfg "MaxStringLength" }})
 		if err != nil {
 			return err
 		}

@@ -40,8 +40,9 @@ func main() {
 	}
 
 	err := cbg.Gen{
-		MaxArrayLength: 10,
-		MaxByteLength:  9,
+		MaxArrayLength:  10,
+		MaxByteLength:   9,
+		MaxStringLength: 8,
 	}.WriteTupleEncodersToFile("testing/cbor_options_gen.go", "testing",
 		types.LimitedStruct{},
 	)
