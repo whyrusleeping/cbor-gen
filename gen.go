@@ -1019,7 +1019,7 @@ func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 		default:
 			return fmt.Errorf("wrong type for int64 field: %d", maj)
 		}
-		{{ .Name }} = &extraI
+		{{ .Name }} = (*{{ .TypeName }})(&extraI)
 	}
 	{{ else }}maj, extra, err := {{ ReadHeader "cr" }}
 	var extraI int64

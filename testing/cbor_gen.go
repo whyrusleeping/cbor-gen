@@ -1748,7 +1748,7 @@ func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
 			default:
 				return fmt.Errorf("wrong type for int64 field: %d", maj)
 			}
-			t.Int1 = &extraI
+			t.Int1 = (*int64)(&extraI)
 		}
 
 	}
