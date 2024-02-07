@@ -283,10 +283,10 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Signed (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
-		var extraI int64
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -618,10 +618,10 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -1185,10 +1185,10 @@ func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Stuff (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
-		var extraI int64
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -1361,10 +1361,10 @@ func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -1452,10 +1452,10 @@ func (t *IntAliasArray) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -1556,10 +1556,10 @@ func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Int1 (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
-		var extraI int64
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -1581,10 +1581,10 @@ func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Int2 (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
-		var extraI int64
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -1606,10 +1606,10 @@ func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Int3 (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
-		var extraI int64
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -1728,11 +1728,11 @@ func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
 			if err := cr.UnreadByte(); err != nil {
 				return err
 			}
-			maj, extra, err = cr.ReadHeader()
-			var extraI int64
+			maj, extra, err := cr.ReadHeader()
 			if err != nil {
 				return err
 			}
+			var extraI int64
 			switch maj {
 			case cbg.MajUnsignedInt:
 				extraI = int64(extra)
@@ -1748,17 +1748,17 @@ func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
 			default:
 				return fmt.Errorf("wrong type for int64 field: %d", maj)
 			}
+
 			t.Int1 = (*int64)(&extraI)
 		}
-
 	}
 	// t.Int2 (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
-		var extraI int64
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -1881,10 +1881,10 @@ func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -1972,10 +1972,10 @@ func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)

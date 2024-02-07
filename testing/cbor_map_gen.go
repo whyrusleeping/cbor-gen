@@ -511,10 +511,10 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 		case "SixtyThreeBitIntegerWithASignBit":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -2025,10 +2025,10 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 		case "foo":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -2212,10 +2212,10 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Cat":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -2384,10 +2384,10 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Thing":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -2573,10 +2573,10 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 		case "foo":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -2610,10 +2610,10 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Drond":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)
@@ -3087,10 +3087,10 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Beep":
 			{
 				maj, extra, err := cr.ReadHeader()
-				var extraI int64
 				if err != nil {
 					return err
 				}
+				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
 					extraI = int64(extra)

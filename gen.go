@@ -999,11 +999,11 @@ func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 		if err := cr.UnreadByte(); err != nil {
 			return err
 		}
-		maj, extra, err = {{ ReadHeader "cr" }}
-		var extraI int64
+{{ end }}maj, extra, err := {{ ReadHeader "cr" }}
 		if err != nil {
 			return err
 		}
+		var extraI int64
 		switch maj {
 		case cbg.MajUnsignedInt:
 			extraI = int64(extra)
@@ -1019,31 +1019,9 @@ func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 		default:
 			return fmt.Errorf("wrong type for int64 field: %d", maj)
 		}
-		{{ .Name }} = (*{{ .TypeName }})(&extraI)
-	}
-	{{ else }}maj, extra, err := {{ ReadHeader "cr" }}
-	var extraI int64
-	if err != nil {
-		return err
-	}
-	switch maj {
-	case cbg.MajUnsignedInt:
-		extraI = int64(extra)
-		if extraI < 0 {
-			return fmt.Errorf("int64 positive overflow")
-	   }
-	case cbg.MajNegativeInt:
-		extraI = int64(extra)
-		if extraI < 0 {
-			return fmt.Errorf("int64 negative overflow")
-		}
-		extraI = -1 - extraI
-	default:
-		return fmt.Errorf("wrong type for int64 field: %d", maj)
-	}
 
-	{{ .Name }} = {{ .TypeName }}(extraI){{ end }}
-	}
+		{{ .Name }} = {{ if .Pointer }}(*{{ .TypeName }})(&extraI){{ else }}{{ .TypeName }}(extraI){{ end }}
+		{{ if .Pointer }}}{{ end }}}
 `)
 }
 
