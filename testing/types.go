@@ -165,6 +165,13 @@ type TupleIntArray struct {
 	Int3 int64
 }
 
+type TupleIntArrayOptionals struct {
+	Int1 *int64
+	Int2 int64
+	Int3 uint64
+	Int4 *uint64
+}
+
 type MapTransparentType map[string]string
 
 type LimitedStruct struct {

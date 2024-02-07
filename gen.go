@@ -510,20 +510,28 @@ func (g Gen) emitCborMarshalUint8Field(w io.Writer, f Field) error {
 }
 
 func (g Gen) emitCborMarshalInt64Field(w io.Writer, f Field) error {
-	if f.Pointer {
-		return fmt.Errorf("pointers to integers not supported")
-	}
-
 	// if negative
 	// val = -1 - cbor
 	// cbor = -val -1
-
-	return g.doTemplate(w, f, `
+	return g.doTemplate(w, f, `{{ if .Pointer }}
+	if {{ .Name }} == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if {{ (print "*" .Name) }} >= 0 {
+		{{ MajorType "cw" "cbg.MajUnsignedInt" (print "*" .Name) }}
+		} else {
+		{{ MajorType "cw" "cbg.MajNegativeInt" (print "-*" .Name "-1") }}
+		}
+	}
+{{ else }}
 	if {{ .Name }} >= 0 {
 	{{ MajorType "cw" "cbg.MajUnsignedInt" .Name }}
 	} else {
 	{{ MajorType "cw" "cbg.MajNegativeInt" (print "-" .Name "-1") }}
 	}
+{{ end }}
 `)
 }
 
@@ -982,29 +990,42 @@ func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
 
 func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 	return g.doTemplate(w, f, `{
-	maj, extra, err := {{ ReadHeader "cr" }}
-	var extraI int64
+	{{ if .Pointer }}
+	b, err := cr.ReadByte()
 	if err != nil {
 		return err
 	}
-	switch maj {
-	case cbg.MajUnsignedInt:
-		extraI = int64(extra)
-		if extraI < 0 {
-			return fmt.Errorf("int64 positive overflow")
-	   }
-	case cbg.MajNegativeInt:
-		extraI = int64(extra)
-		if extraI < 0 {
-			return fmt.Errorf("int64 negative overflow")
+	if b != cbg.CborNull[0] {
+		if err := cr.UnreadByte(); err != nil {
+			return err
 		}
-		extraI = -1 - extraI
-	default:
-		return fmt.Errorf("wrong type for int64 field: %d", maj)
-	}
+{{ end }}maj, extra, err := {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
+		var extraI int64
+		switch maj {
+		case cbg.MajUnsignedInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 positive overflow")
+			}
+		case cbg.MajNegativeInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 negative overflow")
+			}
+			extraI = -1 - extraI
+		default:
+			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		}
 
-	{{ .Name }} = {{ .TypeName }}(extraI)
+{{ if .Pointer }}
+		{{ .Name }} = (*{{ .TypeName }})(&extraI)
 }
+{{ else }}
+		{{ .Name }} = {{ .TypeName }}(extraI)
+{{ end }}}
 `)
 }
 
