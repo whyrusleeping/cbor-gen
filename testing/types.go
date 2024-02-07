@@ -166,3 +166,9 @@ type TupleIntArray struct {
 }
 
 type MapTransparentType map[string]string
+
+type LimitedStruct struct {
+	Arr  []uint64
+	Byts []byte
+	Str  string
+}
