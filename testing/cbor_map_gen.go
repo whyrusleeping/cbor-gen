@@ -73,7 +73,7 @@ func (t *SimpleTypeTree) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Test {
-		if len(v) > 8192 {
+		if len(v) > 2097152 {
 			return xerrors.Errorf("Byte array in field v was too long")
 		}
 
@@ -326,7 +326,7 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 						return err
 					}
 
-					if extra > 8192 {
+					if extra > 2097152 {
 						return fmt.Errorf("t.Test[i]: byte array too large (%d)", extra)
 					}
 					if maj != cbg.MajByteString {
@@ -794,7 +794,7 @@ func (t *SimpleStructV1) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if len(t.OldBytes) > 8192 {
+	if len(t.OldBytes) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.OldBytes was too long")
 	}
 
@@ -1060,7 +1060,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 
-			if extra > 8192 {
+			if extra > 2097152 {
 				return fmt.Errorf("t.OldBytes: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -1454,7 +1454,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if len(t.NewBytes) > 8192 {
+	if len(t.NewBytes) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.NewBytes was too long")
 	}
 
@@ -1504,7 +1504,7 @@ func (t *SimpleStructV2) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if len(t.OldBytes) > 8192 {
+	if len(t.OldBytes) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.OldBytes was too long")
 	}
 
@@ -1817,7 +1817,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 
-			if extra > 8192 {
+			if extra > 2097152 {
 				return fmt.Errorf("t.NewBytes: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -1879,7 +1879,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 
-			if extra > 8192 {
+			if extra > 2097152 {
 				return fmt.Errorf("t.OldBytes: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -2901,7 +2901,7 @@ func (t *TestSliceNilPreserve) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if len(t.Other) > 8192 {
+	if len(t.Other) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.Other was too long")
 	}
 
@@ -2952,7 +2952,7 @@ func (t *TestSliceNilPreserve) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	if len(t.NotOther) > 8192 {
+	if len(t.NotOther) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.NotOther was too long")
 	}
 
@@ -3114,7 +3114,7 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 
-			if extra > 8192 {
+			if extra > 2097152 {
 				return fmt.Errorf("t.Other: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -3191,7 +3191,7 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 						return err
 					}
 
-					if extra > 8192 {
+					if extra > 2097152 {
 						return fmt.Errorf("t.NotOther: byte array too large (%d)", extra)
 					}
 					if maj != cbg.MajByteString {

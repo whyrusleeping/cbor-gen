@@ -152,7 +152,7 @@ func (t *SimpleTypeOne) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Binary ([]uint8) (slice)
-	if len(t.Binary) > 8192 {
+	if len(t.Binary) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.Binary was too long")
 	}
 
@@ -265,7 +265,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > 8192 {
+	if extra > 2097152 {
 		return fmt.Errorf("t.Binary: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -422,7 +422,7 @@ func (t *SimpleTypeTwo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 	for _, v := range t.Test {
-		if len(v) > 8192 {
+		if len(v) > 2097152 {
 			return xerrors.Errorf("Byte array in field v was too long")
 		}
 
@@ -676,7 +676,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 				return err
 			}
 
-			if extra > 8192 {
+			if extra > 2097152 {
 				return fmt.Errorf("t.Test[i]: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -952,7 +952,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Bytes ([20]uint8) (array)
-	if len(t.Bytes) > 8192 {
+	if len(t.Bytes) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.Bytes was too long")
 	}
 
@@ -965,7 +965,7 @@ func (t *FixedArrays) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Uint8 ([20]uint8) (array)
-	if len(t.Uint8) > 8192 {
+	if len(t.Uint8) > 2097152 {
 		return xerrors.Errorf("Byte array in field t.Uint8 was too long")
 	}
 
@@ -1025,7 +1025,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > 8192 {
+	if extra > 2097152 {
 		return fmt.Errorf("t.Bytes: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -1046,7 +1046,7 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	if extra > 8192 {
+	if extra > 2097152 {
 		return fmt.Errorf("t.Uint8: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {

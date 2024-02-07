@@ -43,7 +43,7 @@ func (g Gen) maxArrayLength() int {
 
 func (g Gen) maxByteLength() int {
 	if g.MaxByteLength == 0 {
-		return MaxLength
+		return ByteArrayMaxLen
 	}
 	return g.MaxByteLength
 }
