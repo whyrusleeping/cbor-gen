@@ -1020,8 +1020,12 @@ func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 			return fmt.Errorf("wrong type for int64 field: %d", maj)
 		}
 
-		{{ .Name }} = {{ if .Pointer }}(*{{ .TypeName }})(&extraI){{ else }}{{ .TypeName }}(extraI){{ end }}
-		{{ if .Pointer }}}{{ end }}}
+{{ if .Pointer }}
+		{{ .Name }} = (*{{ .TypeName }})(&extraI)
+}
+{{ else }}
+		{{ .Name }} = {{ .TypeName }}(extraI)
+{{ end }}}
 `)
 }
 
