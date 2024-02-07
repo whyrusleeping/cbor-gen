@@ -66,26 +66,23 @@ func (g Gen) doTemplate(w io.Writer, info interface{}, templ string) error {
 			"ReadHeader": func(rdr string) string {
 				return fmt.Sprintf(`%s.ReadHeader()`, rdr)
 			},
-			"MaxLen": func(val int, def string) string {
+			"MaxLen": func(val int, defaultType string) string {
 				if val <= 0 {
-					return def
+					switch defaultType {
+					case "Bytes":
+						val = g.maxByteLength()
+					case "Array":
+						val = g.maxArrayLength()
+					case "String":
+						val = g.maxStringLength()
+					default:
+						panic(fmt.Sprintf("error: unknown property [%s]", defaultType))
+					}
 				}
 				return fmt.Sprintf("%d", val)
 			},
 			"Deref": func(sp *string) string {
 				return *sp
-			},
-			"Cfg": func(prop string) string {
-				switch prop {
-				case "MaxByteLength":
-					return fmt.Sprintf("%d", g.maxByteLength())
-				case "MaxArrayLength":
-					return fmt.Sprintf("%d", g.maxArrayLength())
-				case "MaxStringLength":
-					return fmt.Sprintf("%d", g.maxStringLength())
-				default:
-					panic(fmt.Sprintf("error: unknown property [%s]", prop))
-				}
 			},
 		}).Parse(templ))
 
@@ -404,7 +401,7 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 			return err
 		}
 	} else {
-		if len(*{{ .Name }}) > {{ Cfg "MaxStringLength" | MaxLen .MaxLen }} {
+		if len(*{{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
 			return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 		}
 
@@ -427,7 +424,7 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 	}
 
 	return g.doTemplate(w, f, `
-	if len({{ .Name }}) > {{ Cfg "MaxStringLength" | MaxLen .MaxLen }} {
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
 
@@ -618,7 +615,7 @@ func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return g.doTemplate(w, f, `
-	if len({{ .Name }}) > {{ Cfg "MaxByteLength" | MaxLen .MaxLen }} {
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "Bytes" }} {
 		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
@@ -648,7 +645,7 @@ func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	err := g.doTemplate(w, f, `
-	if len({{ .Name }}) > {{ Cfg "MaxArrayLength" | MaxLen .MaxLen }} {
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "Array" }} {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
@@ -709,7 +706,7 @@ func (g Gen) emitCborMarshalArrayField(w io.Writer, f Field) error {
 	// Note: this re-slices the slice to deal with arrays.
 	if e.Kind() == reflect.Uint8 {
 		return g.doTemplate(w, f, `
-	if len({{ .Name }}) > {{ Cfg "MaxByteLength" | MaxLen .MaxLen }} {
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "Bytes" }} {
 		return xerrors.Errorf("Byte array in field {{ .Name }} was too long")
 	}
 
@@ -728,7 +725,7 @@ func (g Gen) emitCborMarshalArrayField(w io.Writer, f Field) error {
 	}
 
 	err := g.doTemplate(w, f, `
-	if len({{ .Name }}) > {{ Cfg "MaxArrayLength" | MaxLen .MaxLen }} {
+	if len({{ .Name }}) > {{ MaxLen .MaxLen "Array" }} {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
 
@@ -858,7 +855,7 @@ func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
 				return err
 			}
 
-			sval, err := cbg.ReadStringWithMax(cr, {{ Cfg "MaxStringLength" }})
+			sval, err := cbg.ReadStringWithMax(cr, {{ MaxLen 0 "String" }})
 			if err != nil {
 				return err
 			}
@@ -873,7 +870,7 @@ func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
 	}
 	return g.doTemplate(w, f, `
 	{
-		sval, err := cbg.ReadStringWithMax(cr, {{ Cfg "MaxStringLength" }})
+		sval, err := cbg.ReadStringWithMax(cr, {{  MaxLen 0 "String" }})
 		if err != nil {
 			return err
 		}
@@ -1242,7 +1239,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return g.doTemplate(w, f, `
-			if extra > {{ Cfg "MaxByteLength" | MaxLen .MaxLen }} {
+			if extra > {{ MaxLen .MaxLen "Bytes" }} {
 				return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
 			}
 			if maj != cbg.MajByteString {
@@ -1267,7 +1264,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	if err := g.doTemplate(w, f, `
-	if extra > {{ Cfg "MaxArrayLength" | MaxLen .MaxLen }} {
+	if extra > {{ MaxLen .MaxLen "Array" }} {
 		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
 	}
 `); err != nil {
@@ -1402,7 +1399,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return g.doTemplate(w, f, `
-	if extra > {{ Cfg "MaxByteLength" | MaxLen .MaxLen }} {
+	if extra > {{ MaxLen .MaxLen "Bytes" }} {
 		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
 	}
 	if maj != cbg.MajByteString {
@@ -1420,7 +1417,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 	}
 
 	if err := g.doTemplate(w, f, `
-	if extra > {{ Cfg "MaxArrayLength" | MaxLen .MaxLen }} {
+	if extra > {{ MaxLen .MaxLen "Array" }} {
 		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
 	}
 `); err != nil {
