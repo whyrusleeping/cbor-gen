@@ -54,6 +54,10 @@ func TestNilPreserveWorks(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(TestSliceNilPreserve{}))
 }
 
+func TestLongStrings(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(LongString{}))
+}
+
 type RoundTripOptions struct {
 	Golden []byte
 }
@@ -118,6 +122,7 @@ func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 			t.Fatal("failed to generate test value")
 		}
 
+		fmt.Printf("VAL: %#v\n", val)
 		obj := val.Addr().Interface().(cbg.CBORMarshaler)
 		nobj := reflect.New(typ).Interface().(cbg.CBORUnmarshaler)
 		testValueRoundtrip(t, obj, nobj)

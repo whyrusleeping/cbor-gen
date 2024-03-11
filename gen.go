@@ -616,9 +616,6 @@ func (g Gen) emitCborMarshalMapField(w io.Writer, f Field) error {
 }
 
 func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
-	if f.Pointer {
-		return fmt.Errorf("pointers to slices not supported")
-	}
 	e := f.Type.Elem()
 
 	if e.Kind() == reflect.Uint8 {
