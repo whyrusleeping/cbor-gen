@@ -1,6 +1,9 @@
 package testing
 
 import (
+	"math/rand"
+	"reflect"
+
 	"github.com/ipfs/go-cid"
 
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -178,4 +181,16 @@ type LimitedStruct struct {
 	Arr  []uint64
 	Byts []byte
 	Str  string
+}
+
+type LongString struct {
+	Val string
+}
+
+func (ls LongString) Generate(rand *rand.Rand, size int) reflect.Value {
+	ols := new(LongString)
+	s := make([]byte, 9999)
+	rand.Read(s)
+	ols.Val = string(s)
+	return reflect.ValueOf(ols).Elem()
 }

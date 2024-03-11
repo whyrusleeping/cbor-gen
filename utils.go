@@ -386,6 +386,9 @@ func ReadStringWithMax(r io.Reader, maxLength uint64) (string, error) {
 	}
 
 	bufp := stringBufPool.Get().(*[]byte)
+	if cap(*bufp) < int(l) {
+		*bufp = append((*bufp)[:cap(*bufp)], make([]byte, int(l)-cap(*bufp))...)
+	}
 	buf := (*bufp)[:l] // shares same backing array as pooled slice
 	defer func() {
 		// optimizes to memclr
