@@ -24,10 +24,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 }
 
 func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
-	// Reuse any existing buffers.
-	reusedBuf := d.Raw[:0]
-	d.Raw = nil
-	buf := bytes.NewBuffer(reusedBuf)
+	buf := bytes.NewBuffer(nil)
 
 	// Allocate some scratch space.
 	scratch := make([]byte, maxHeaderSize)
@@ -90,6 +87,9 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 			return fmt.Errorf("unhandled deferred cbor type: %d", maj)
 		}
 	}
-	d.Raw = buf.Bytes()
+	// Reuse existing buffer. Also, copy to "give back" the allocation in the byte buffer (which
+	// is likely significant).
+	d.Raw = d.Raw[:0]
+	d.Raw = append(d.Raw, buf.Bytes()...)
 	return nil
 }
