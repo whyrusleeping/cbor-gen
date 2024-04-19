@@ -5,7 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 )
+
+var deferredBufferPool sync.Pool = sync.Pool{
+	New: func() any {
+		return bytes.NewBuffer(nil)
+	},
+}
 
 type Deferred struct {
 	Raw []byte
@@ -24,7 +31,12 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 }
 
 func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
-	buf := bytes.NewBuffer(nil)
+	buf := deferredBufferPool.Get().(*bytes.Buffer)
+
+	defer func() {
+		buf.Reset()
+		deferredBufferPool.Put(buf)
+	}()
 
 	// Allocate some scratch space.
 	scratch := make([]byte, maxHeaderSize)
