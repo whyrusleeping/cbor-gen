@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-var deferredBufferPool sync.Pool = sync.Pool{
+var deferredBufferPool = sync.Pool{
 	New: func() any {
 		return bytes.NewBuffer(nil)
 	},
