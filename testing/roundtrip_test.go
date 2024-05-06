@@ -76,7 +76,7 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalCBOR(buf); err != nil {
-		t.Fatal("i guess its fine to fail marshaling")
+		t.Fatal("i guess its fine to fail marshalling")
 	}
 
 	enc := buf.Bytes()
@@ -130,7 +130,7 @@ func TestDeferredContainer(t *testing.T) {
 	testValueRoundtrip(t, zero, recepticle)
 }
 
-func TestNilValueDeferredUnmarshaling(t *testing.T) {
+func TestNilValueDeferredUnmarshalling(t *testing.T) {
 	var zero DeferredContainer
 	zero.Deferred = &cbg.Deferred{Raw: []byte{0xf6}}
 
@@ -221,7 +221,7 @@ func TestLessToMoreFieldsRoundTrip(t *testing.T) {
 
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalCBOR(buf); err != nil {
-		t.Fatal("failed marshaling", err)
+		t.Fatal("failed marshalling", err)
 	}
 
 	enc := buf.Bytes()
@@ -318,7 +318,7 @@ func TestMoreToLessFieldsRoundTrip(t *testing.T) {
 
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalCBOR(buf); err != nil {
-		t.Fatal("failed marshaling", err)
+		t.Fatal("failed marshalling", err)
 	}
 
 	enc := buf.Bytes()

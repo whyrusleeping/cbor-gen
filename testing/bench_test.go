@@ -13,7 +13,7 @@ import (
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
-func BenchmarkMarshaling(b *testing.B) {
+func BenchmarkMarshalling(b *testing.B) {
 	r := rand.New(rand.NewSource(56887))
 	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
 	if !ok {
@@ -32,7 +32,7 @@ func BenchmarkMarshaling(b *testing.B) {
 	}
 }
 
-func BenchmarkUnmarshaling(b *testing.B) {
+func BenchmarkUnmarshalling(b *testing.B) {
 	r := rand.New(rand.NewSource(123456))
 	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
 	if !ok {
@@ -117,7 +117,7 @@ func BenchmarkDeferred(b *testing.B) {
 	}
 }
 
-func BenchmarkMapMarshaling(b *testing.B) {
+func BenchmarkMapMarshalling(b *testing.B) {
 	r := rand.New(rand.NewSource(56887))
 	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTree{}), r)
 	if !ok {
@@ -136,7 +136,7 @@ func BenchmarkMapMarshaling(b *testing.B) {
 	}
 }
 
-func BenchmarkMapUnmarshaling(b *testing.B) {
+func BenchmarkMapUnmarshalling(b *testing.B) {
 	r := rand.New(rand.NewSource(123456))
 	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTree{}), r)
 	if !ok {
