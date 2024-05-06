@@ -3,7 +3,6 @@ package testing
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -26,7 +25,7 @@ func BenchmarkMarshaling(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err := tt.MarshalCBOR(ioutil.Discard); err != nil {
+		if err := tt.MarshalCBOR(io.Discard); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -130,7 +129,7 @@ func BenchmarkMapMarshaling(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err := tt.MarshalCBOR(ioutil.Discard); err != nil {
+		if err := tt.MarshalCBOR(io.Discard); err != nil {
 			b.Fatal(err)
 		}
 	}

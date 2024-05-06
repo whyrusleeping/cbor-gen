@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 
 	cid "github.com/ipfs/go-cid"
@@ -115,7 +114,7 @@ func discard(br io.Reader, n int) error {
 		}
 		return err
 	default:
-		discarded, err := io.CopyN(ioutil.Discard, br, int64(n))
+		discarded, err := io.CopyN(io.Discard, br, int64(n))
 		if discarded != 0 && discarded < int64(n) && err == io.EOF {
 			return io.ErrUnexpectedEOF
 		}
