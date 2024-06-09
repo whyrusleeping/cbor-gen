@@ -122,7 +122,6 @@ func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 			t.Fatal("failed to generate test value")
 		}
 
-		fmt.Printf("VAL: %#v\n", val)
 		obj := val.Addr().Interface().(cbg.CBORMarshaler)
 		nobj := reflect.New(typ).Interface().(cbg.CBORUnmarshaler)
 		testValueRoundtrip(t, obj, nobj)
