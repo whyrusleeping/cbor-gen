@@ -54,6 +54,10 @@ func TestNilPreserveWorks(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(TestSliceNilPreserve{}))
 }
 
+func TestLongStrings(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(LongString{}))
+}
+
 type RoundTripOptions struct {
 	Golden []byte
 }

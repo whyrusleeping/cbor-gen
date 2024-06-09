@@ -50,4 +50,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = cbg.Gen{
+		MaxArrayLength:  10,
+		MaxByteLength:   9,
+		MaxStringLength: 10000,
+	}.WriteTupleEncodersToFile("testing/cbor_options_gen2.go", "testing",
+		types.LongString{},
+	)
+	if err != nil {
+		panic(err)
+	}
 }
