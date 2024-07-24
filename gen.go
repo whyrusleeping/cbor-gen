@@ -440,6 +440,9 @@ func (g Gen) emitCborMarshalStructField(w io.Writer, f Field) error {
 	case bigIntType:
 		return g.doTemplate(w, f, `
 	{
+		if {{ .Name }} != nil && {{ .Name }}.Sign() < 0 {
+			return xerrors.Errorf("Value in field {{ .Name | js }} was a negative big-integer (not supported)")
+		}
 		if err := cw.CborWriteHeader(cbg.MajTag, 2); err != nil {
 			return err
 		}

@@ -21,6 +21,7 @@ func main() {
 		types.IntArrayNewType{},
 		types.IntArrayAliasNewType{},
 		types.MapTransparentType{},
+		types.BigIntContainer{},
 	); err != nil {
 		panic(err)
 	}
