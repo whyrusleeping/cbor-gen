@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"math/big"
 	"math/rand"
 	"reflect"
 
@@ -193,4 +194,8 @@ func (ls LongString) Generate(rand *rand.Rand, size int) reflect.Value {
 	rand.Read(s)
 	ols.Val = string(s)
 	return reflect.ValueOf(ols).Elem()
+}
+
+type BigIntContainer struct {
+	Int *big.Int
 }

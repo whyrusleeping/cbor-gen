@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -56,6 +57,38 @@ func TestNilPreserveWorks(t *testing.T) {
 
 func TestLongStrings(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(LongString{}))
+}
+
+func TestBigInt(t *testing.T) {
+	for _, v := range []BigIntContainer{
+		{Int: big.NewInt(100)},
+		{Int: big.NewInt(0)},
+		{Int: nil},
+	} {
+
+		var buf bytes.Buffer
+		if err := v.MarshalCBOR(&buf); err != nil {
+			t.Fatal(err)
+		}
+
+		var o BigIntContainer
+		if err := o.UnmarshalCBOR(&buf); err != nil {
+			t.Fatal(err)
+		}
+		if v.Int == nil {
+			if o.Int.Sign() != 0 {
+				t.Fatal("expected nil to serialize to 0")
+			}
+		} else if v.Int.Cmp(o.Int) != 0 {
+			t.Fatal("did not round-trip")
+		}
+	}
+	var buf bytes.Buffer
+	v := BigIntContainer{Int: big.NewInt(-1)}
+	err := v.MarshalCBOR(&buf)
+	if err == nil {
+		t.Fatal("marshalling a negative int should have failed")
+	}
 }
 
 type RoundTripOptions struct {

@@ -11,6 +11,7 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	xerrors "golang.org/x/xerrors"
+	big "math/big"
 )
 
 var _ = xerrors.Errorf
@@ -2097,6 +2098,102 @@ func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
 
 		(*t)[k] = v
 
+	}
+	return nil
+}
+
+var lengthBufBigIntContainer = []byte{129}
+
+func (t *BigIntContainer) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write(lengthBufBigIntContainer); err != nil {
+		return err
+	}
+
+	// t.Int (big.Int) (struct)
+	{
+		if t.Int != nil && t.Int.Sign() < 0 {
+			return xerrors.Errorf("Value in field t.Int was a negative big-integer (not supported)")
+		}
+		if err := cw.CborWriteHeader(cbg.MajTag, 2); err != nil {
+			return err
+		}
+		var b []byte
+		if t.Int != nil {
+			b = t.Int.Bytes()
+		}
+
+		if err := cw.CborWriteHeader(cbg.MajByteString, uint64(len(b))); err != nil {
+			return err
+		}
+		if _, err := cw.Write(b); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *BigIntContainer) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = BigIntContainer{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 1 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Int (big.Int) (struct)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajTag || extra != 2 {
+		return fmt.Errorf("big ints should be cbor bignums")
+	}
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("big ints should be tagged cbor byte strings")
+	}
+
+	if extra > 256 {
+		return fmt.Errorf("t.Int: cbor bignum was too large")
+	}
+
+	if extra > 0 {
+		buf := make([]byte, extra)
+		if _, err := io.ReadFull(cr, buf); err != nil {
+			return err
+		}
+		t.Int = big.NewInt(0).SetBytes(buf)
+	} else {
+		t.Int = big.NewInt(0)
 	}
 	return nil
 }
