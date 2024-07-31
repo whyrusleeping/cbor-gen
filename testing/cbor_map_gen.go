@@ -3218,3 +3218,226 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 
 	return nil
 }
+func (t *StringPtrSlices) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{162}); err != nil {
+		return err
+	}
+
+	// t.Strings ([]string) (slice)
+	if len("Strings") > 8192 {
+		return xerrors.Errorf("Value in field \"Strings\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Strings"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("Strings")); err != nil {
+		return err
+	}
+
+	if len(t.Strings) > 8192 {
+		return xerrors.Errorf("Slice value in field t.Strings was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Strings))); err != nil {
+		return err
+	}
+	for _, v := range t.Strings {
+		if len(v) > 8192 {
+			return xerrors.Errorf("Value in field v was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(v))); err != nil {
+			return err
+		}
+		if _, err := cw.WriteString(string(v)); err != nil {
+			return err
+		}
+
+	}
+
+	// t.StringPtrs ([]*string) (slice)
+	if len("StringPtrs") > 8192 {
+		return xerrors.Errorf("Value in field \"StringPtrs\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("StringPtrs"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("StringPtrs")); err != nil {
+		return err
+	}
+
+	if len(t.StringPtrs) > 8192 {
+		return xerrors.Errorf("Slice value in field t.StringPtrs was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.StringPtrs))); err != nil {
+		return err
+	}
+	for _, v := range t.StringPtrs {
+		if v == nil {
+			if _, err := cw.Write(cbg.CborNull); err != nil {
+				return err
+			}
+		} else {
+			if len(*v) > 8192 {
+				return xerrors.Errorf("Value in field v was too long")
+			}
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(*v))); err != nil {
+				return err
+			}
+			if _, err := cw.WriteString(string(*v)); err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = StringPtrSlices{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("StringPtrSlices: map struct too large (%d)", extra)
+	}
+
+	var name string
+	n := extra
+
+	for i := uint64(0); i < n; i++ {
+
+		{
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
+			if err != nil {
+				return err
+			}
+
+			name = string(sval)
+		}
+
+		switch name {
+		// t.Strings ([]string) (slice)
+		case "Strings":
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > 8192 {
+				return fmt.Errorf("t.Strings: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.Strings = make([]string, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					{
+						sval, err := cbg.ReadStringWithMax(cr, 8192)
+						if err != nil {
+							return err
+						}
+
+						t.Strings[i] = string(sval)
+					}
+
+				}
+			}
+			// t.StringPtrs ([]*string) (slice)
+		case "StringPtrs":
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > 8192 {
+				return fmt.Errorf("t.StringPtrs: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.StringPtrs = make([]*string, extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					{
+						b, err := cr.ReadByte()
+						if err != nil {
+							return err
+						}
+						if b != cbg.CborNull[0] {
+							if err := cr.UnreadByte(); err != nil {
+								return err
+							}
+
+							sval, err := cbg.ReadStringWithMax(cr, 8192)
+							if err != nil {
+								return err
+							}
+
+							t.StringPtrs[i] = (*string)(&sval)
+						}
+					}
+
+				}
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(r, func(cid.Cid) {})
+		}
+	}
+
+	return nil
+}

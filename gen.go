@@ -1372,9 +1372,10 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	case reflect.String:
 		subf := Field{
-			Type: e,
-			Pkg:  f.Pkg,
-			Name: f.Name + "[" + f.IterLabel + "]",
+			Type:    e,
+			Pkg:     f.Pkg,
+			Pointer: pointer,
+			Name:    f.Name + "[" + f.IterLabel + "]",
 		}
 		err := g.emitCborUnmarshalStringField(w, subf)
 		if err != nil {

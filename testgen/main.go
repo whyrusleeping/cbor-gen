@@ -37,6 +37,7 @@ func main() {
 		types.TestCanonicalFieldOrder{},
 		types.MapStringString{},
 		types.TestSliceNilPreserve{},
+		types.StringPtrSlices{},
 	); err != nil {
 		panic(err)
 	}
