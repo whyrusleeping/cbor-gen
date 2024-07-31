@@ -199,3 +199,8 @@ func (ls LongString) Generate(rand *rand.Rand, size int) reflect.Value {
 type BigIntContainer struct {
 	Int *big.Int
 }
+
+type StringPtrSlices struct {
+	Strings    []string
+	StringPtrs []*string
+}

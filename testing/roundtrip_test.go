@@ -770,6 +770,22 @@ func TestOptionalInts(t *testing.T) {
 	testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x84, 0xf6, 0x02, 0x03, 0xf6}))
 }
 
+func TestStringPtrSlices(t *testing.T) {
+	foo := "foo"
+	bar := "bar"
+	ob := StringPtrSlices{
+		Strings: []string{
+			"a", "b", "c",
+		},
+		StringPtrs: []*string{
+			&foo, nil, &bar,
+		},
+	}
+	ob2 := StringPtrSlices{}
+
+	testValueRoundtrip(t, &ob, &ob2)
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
