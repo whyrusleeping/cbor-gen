@@ -60,7 +60,6 @@ func resolvePkgName(path, typeName string) string {
 			return tryName
 		}
 	}
-
 }
 
 type Import struct {
@@ -75,7 +74,7 @@ func ImportsForType(currPkg string, t reflect.Type) []Import {
 		return dedupImports(append(ImportsForType(currPkg, t.Key()), ImportsForType(currPkg, t.Elem())...))
 	default:
 		path := t.PkgPath()
-		if path == "" || path == currPkg {
+		if path == "" || path == currPkg || path == "main" {
 			// built-in or in current package.
 			return nil
 		}
