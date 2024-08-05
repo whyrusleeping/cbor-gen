@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,14 +18,25 @@ const MaxLength = 8192
 
 const ByteArrayMaxLen = 2 << 20
 
-const MaxLenTag = "maxlen"
-const NoUsrMaxLen = -1
+const (
+	MaxLenTag   = "maxlen"
+	NoUsrMaxLen = -1
+)
 
 var (
 	cidType      = reflect.TypeOf(cid.Cid{})
 	bigIntType   = reflect.TypeOf(big.Int{})
 	deferredType = reflect.TypeOf(Deferred{})
 )
+
+// CborSerializer is a base interface for CBOR serializers that can be used as
+// a generic type T such that a serialization and deserialization methods
+// will be called on any field of type T.
+type CborSerializer[V any] interface {
+	New() V
+	MarshalCBOR(w io.Writer) error
+	UnmarshalCBOR(r io.Reader) error
+}
 
 // Gen is a configurable code generator for CBOR types. Use this instead of the convenience
 // functions to have more control over the generated code.
@@ -169,10 +181,40 @@ func typeName(pkg string, t reflect.Type) string {
 			// It's a built-in.
 			return t.String()
 		} else if pkgPath == pkg {
-			return t.Name()
+			return genericName(t.Name())
 		}
-		return fmt.Sprintf("%s.%s", resolvePkgName(pkgPath, t.String()), t.Name())
+		return fmt.Sprintf("%s.%s", resolvePkgName(pkgPath, t.String()), genericName(t.Name()))
 	}
+}
+
+// nameForms returns the type name without generic specifier, a safe name for
+// use in variable names, and a generic placeholder if the type is a generic
+// type.
+func nameForms(typeName string) (string, string, string) {
+	re := regexp.MustCompile(`^(.*?)\[(.*?)\]$`)
+	matches := re.FindStringSubmatch(typeName)
+
+	name := typeName
+	safeName := typeName
+	genericPlaceholder := ""
+
+	if len(matches) == 3 {
+		name = matches[1] + "[T]"
+		safeName = matches[1]
+		genericPlaceholder = matches[2]
+	}
+
+	return name, safeName, genericPlaceholder
+}
+
+func genericName(name string) string {
+	name, _, _ = nameForms(name)
+	return name
+}
+
+// genericSafeName replaces [GenericPlaceholder] with [T] for nicer comment printing
+func (gti GenTypeInfo) genericSafeName(name string) string {
+	return strings.ReplaceAll(name, "["+gti.GenericPlaceholder+"]", "[T]")
 }
 
 func (f Field) TypeName() string {
@@ -196,9 +238,11 @@ func (f Field) Len() int {
 }
 
 type GenTypeInfo struct {
-	Name        string
-	Fields      []Field
-	Transparent bool
+	Name               string
+	SafeName           string // Name of the type, but safe to use in a variable name
+	GenericPlaceholder string // Placeholder for generic types that was originally passed in
+	Fields             []Field
+	Transparent        bool
 }
 
 func (gti *GenTypeInfo) Imports() []Import {
@@ -237,15 +281,21 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 
 	pkg := t.PkgPath()
 
+	name, safeName, genericPlaceholder := nameForms(t.Name())
+
 	out := GenTypeInfo{
-		Name:        t.Name(),
-		Transparent: false,
+		Name:               name,
+		SafeName:           safeName,
+		GenericPlaceholder: genericPlaceholder,
+		Transparent:        false,
 	}
 
 	if t.Kind() != reflect.Struct {
 		return &GenTypeInfo{
-			Name:        t.Name(),
-			Transparent: true,
+			Name:               name,
+			SafeName:           safeName,
+			GenericPlaceholder: genericPlaceholder,
+			Transparent:        true,
 			Fields: []Field{
 				{
 					Name:        FieldNameSelf,
@@ -431,7 +481,6 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 		return err
 	}
 `)
-
 	}
 
 	return g.doTemplate(w, f, `
@@ -791,7 +840,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	cw := cbg.NewCborWriter(w)
 `)
 	} else {
-		err = g.doTemplate(w, gti, `var lengthBuf{{ .Name }} = {{ .TupleHeaderAsByteString }}
+		err = g.doTemplate(w, gti, `var lengthBuf{{ .SafeName }} = {{ .TupleHeaderAsByteString }}
 func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -800,7 +849,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 
 	cw := cbg.NewCborWriter(w)
 
-	if _, err := cw.Write(lengthBuf{{ .Name }}); err != nil {
+	if _, err := cw.Write(lengthBuf{{ .SafeName }}); err != nil {
 		return err
 	}
 
@@ -816,7 +865,18 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 		} else {
 			f.Name = "t." + f.Name
 		}
-		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+
+		if f.Type.String() == gti.GenericPlaceholder {
+			g.doTemplate(w, f, `
+				// {{ .Name }} (T)
+			  if err := {{ .Name }}.MarshalCBOR(cw); err != nil {
+					return err
+				}
+			`)
+			continue
+		}
+
+		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1602,7 +1662,23 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		} else {
 			f.Name = "t." + f.Name
 		}
-		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
+
+		if f.Type.String() == gti.GenericPlaceholder {
+			g.doTemplate(w, f, `
+				// {{ .Name }} (T)
+		    {
+					var value T
+					value = value.New()
+					if err := value.UnmarshalCBOR(cr); err != nil {
+						return xerrors.Errorf("failed to read field: %w", err)
+					}
+					{{ .Name }} = value
+				}
+			`)
+			continue
+		}
+
+		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1761,7 +1837,7 @@ func (g Gen) emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	})
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
 
 		if f.OmitEmpty {
 			if err := g.doTemplate(w, f, "\nif t.{{.Name}} != {{ .EmptyVal }} {\n"); err != nil {
@@ -1874,7 +1950,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
+		fmt.Fprintf(w, "// t.%s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
 
 		err := g.doTemplate(w, f, `
 		case "{{ .MapKey }}":
