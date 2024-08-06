@@ -511,8 +511,7 @@ func TestMapOfStringToString(t *testing.T) {
 	fmt.Println(out)
 }
 
-//TODO same for strings
-
+// TODO same for strings
 func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip", func(t *testing.T) {
 		zero := &IntArray{}
@@ -788,4 +787,126 @@ func TestStringPtrSlices(t *testing.T) {
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+func TestGenerics(t *testing.T) {
+	cba1 := CborByteArray([]byte("hello"))
+	cba2 := CborByteArray([]byte("world"))
+	cbi := CborInt(456)
+	gs := GenericStruct[*CborByteArray, *CborInt]{
+		Boop:  123,
+		Thing: &cba1,
+		Sub: SubGenericStruct[*CborByteArray, *CborInt]{
+			Sub1: &cba2,
+			Sub2: &cbi,
+			Bam:  "bam!",
+		},
+	}
+	buf := new(bytes.Buffer)
+	if err := gs.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	expected, _ := hex.DecodeString("83187b4568656c6c6f8345776f726c641901c86462616d21")
+	/*
+		83                                                # array(3)
+			18 7b                                           #   uint(123)
+			45                                              #   bytes(5)
+				68656c6c6f                                    #     "hello"
+			83                                              #   array(3)
+				45                                            #     bytes(5)
+					776f726c64                                  #       "world"
+				19 01c8                                       #     uint(456)
+				64                                            #     string(4)
+					62616d21                                    #       "bam!"
+	*/
+	if !bytes.Equal(buf.Bytes(), expected) {
+		t.Fatalf("expected %x, got %x", expected, buf.Bytes())
+	}
+
+	var out GenericStruct[*CborByteArray, *CborInt]
+	if err := (&out).UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	if !cmp.Equal(gs, out) {
+		t.Fatal("not equal")
+	}
+}
+
+type CborInt int64
+
+func (c *CborInt) New() *CborInt {
+	return new(CborInt)
+}
+
+func (ci *CborInt) MarshalCBOR(w io.Writer) error {
+	v := int64(*ci)
+	if v >= 0 {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajUnsignedInt, uint64(v)); err != nil {
+			return err
+		}
+	} else {
+		if err := cbg.WriteMajorTypeHeader(w, cbg.MajNegativeInt, uint64(-v)-1); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ci *CborInt) UnmarshalCBOR(r io.Reader) error {
+	maj, extra, err := cbg.CborReadHeader(r)
+	if err != nil {
+		return err
+	}
+	var extraI int64
+	switch maj {
+	case cbg.MajUnsignedInt:
+		extraI = int64(extra)
+		if extraI < 0 {
+			return fmt.Errorf("int64 positive overflow")
+		}
+	case cbg.MajNegativeInt:
+		extraI = int64(extra)
+		if extraI < 0 {
+			return fmt.Errorf("int64 negative overflow")
+		}
+		extraI = -1 - extraI
+	default:
+		return fmt.Errorf("wrong type for int64 field: %d", maj)
+	}
+
+	*ci = CborInt(extraI)
+	return nil
+}
+
+type CborByteArray []byte
+
+func (c *CborByteArray) New() *CborByteArray {
+	return new(CborByteArray)
+}
+
+func (c CborByteArray) MarshalCBOR(w io.Writer) error {
+	if err := cbg.WriteMajorTypeHeader(w, cbg.MajByteString, uint64(len(c))); err != nil {
+		return err
+	}
+	_, err := w.Write(c)
+	return err
+}
+
+func (c *CborByteArray) UnmarshalCBOR(r io.Reader) error {
+	maj, extra, err := cbg.CborReadHeader(r)
+	if err != nil {
+		return err
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+	if uint64(cap(*c)) < extra {
+		*c = make([]byte, extra)
+	}
+	if _, err := io.ReadFull(r, *c); err != nil {
+		return err
+	}
+	return nil
 }

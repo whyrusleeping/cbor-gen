@@ -12,8 +12,10 @@ import (
 
 const Thingc = 3
 
-type NamedNumber uint64
-type NamedString string
+type (
+	NamedNumber uint64
+	NamedString string
+)
 
 type SignedArray struct {
 	Signed []uint64
@@ -203,4 +205,16 @@ type BigIntContainer struct {
 type StringPtrSlices struct {
 	Strings    []string
 	StringPtrs []*string
+}
+
+type GenericStruct[A cbg.CBORSerializer[A], B cbg.CBORSerializer[B]] struct {
+	Boop  int64
+	Thing A
+	Sub   SubGenericStruct[A, B]
+}
+
+type SubGenericStruct[A cbg.CBORSerializer[A], B cbg.CBORSerializer[B]] struct {
+	Sub1 A
+	Sub2 B
+	Bam  string
 }
