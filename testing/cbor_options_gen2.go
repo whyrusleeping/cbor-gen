@@ -36,13 +36,13 @@ func (t *LongString) MarshalCBOR(w io.Writer) error {
 	if len(t.Val) > 10000 {
 		return xerrors.Errorf("Value in field t.Val was too long")
 	}
-
 	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Val))); err != nil {
 		return err
 	}
 	if _, err := cw.WriteString(string(t.Val)); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -70,7 +70,6 @@ func (t *LongString) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	// t.Val (string) (string)
-
 	{
 		sval, err := cbg.ReadStringWithMax(cr, 10000)
 		if err != nil {
@@ -79,5 +78,6 @@ func (t *LongString) UnmarshalCBOR(r io.Reader) (err error) {
 
 		t.Val = string(sval)
 	}
+
 	return nil
 }

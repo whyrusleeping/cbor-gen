@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,10 +30,10 @@ var (
 	deferredType = reflect.TypeOf(Deferred{})
 )
 
-// CborSerializer is a base interface for CBOR serializers that can be used as
+// CBORSerializer is a base interface for CBOR serializers that can be used as
 // a generic type T such that a serialization and deserialization methods
 // will be called on any field of type T.
-type CborSerializer[V any] interface {
+type CBORSerializer[V any] interface {
 	New() V
 	MarshalCBOR(w io.Writer) error
 	UnmarshalCBOR(r io.Reader) error
@@ -187,24 +188,39 @@ func typeName(pkg string, t reflect.Type) string {
 	}
 }
 
+func getGenericTypeParameter(index int) string {
+	parameterLetters := "TUVWXYZ"
+	if index < len(parameterLetters) {
+		return string(parameterLetters[index])
+	}
+	return "T" + strconv.Itoa(index-len(parameterLetters)+1)
+}
+
 // nameForms returns the type name without generic specifier, a safe name for
-// use in variable names, and a generic placeholder if the type is a generic
-// type.
-func nameForms(typeName string) (string, string, string) {
-	re := regexp.MustCompile(`^(.*?)\[(.*?)\]$`)
+// use in variable names, and a list of generic placeholders if the type is a
+// generic type.
+func nameForms(typeName string) (string, string, []string) {
+	re := regexp.MustCompile(`^(.*?)\[(.*)\]$`)
 	matches := re.FindStringSubmatch(typeName)
 
 	name := typeName
 	safeName := typeName
-	genericPlaceholder := ""
+	var genericPlaceholders []string
 
 	if len(matches) == 3 {
-		name = matches[1] + "[T]"
 		safeName = matches[1]
-		genericPlaceholder = matches[2]
+		genericPlaceholders = strings.Split(matches[2], ",")
+		for i := range genericPlaceholders {
+			genericPlaceholders[i] = strings.TrimSpace(genericPlaceholders[i])
+		}
+		var genericTypes []string
+		for i := range genericPlaceholders {
+			genericTypes = append(genericTypes, getGenericTypeParameter(i))
+		}
+		name = matches[1] + "[" + strings.Join(genericTypes, ",") + "]"
 	}
 
-	return name, safeName, genericPlaceholder
+	return name, safeName, genericPlaceholders
 }
 
 func genericName(name string) string {
@@ -214,7 +230,10 @@ func genericName(name string) string {
 
 // genericSafeName replaces [GenericPlaceholder] with [T] for nicer comment printing
 func (gti GenTypeInfo) genericSafeName(name string) string {
-	return strings.ReplaceAll(name, "["+gti.GenericPlaceholder+"]", "[T]")
+	for i, placeholder := range gti.GenericPlaceholders {
+		name = strings.ReplaceAll(name, placeholder, getGenericTypeParameter(i))
+	}
+	return name
 }
 
 func (f Field) TypeName() string {
@@ -238,11 +257,11 @@ func (f Field) Len() int {
 }
 
 type GenTypeInfo struct {
-	Name               string
-	SafeName           string // Name of the type, but safe to use in a variable name
-	GenericPlaceholder string // Placeholder for generic types that was originally passed in
-	Fields             []Field
-	Transparent        bool
+	Name                string
+	SafeName            string   // Name of the type, but safe to use in a variable name
+	GenericPlaceholders []string // Placeholder for generic types that was originally passed in
+	Fields              []Field
+	Transparent         bool
 }
 
 func (gti *GenTypeInfo) Imports() []Import {
@@ -281,21 +300,21 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 
 	pkg := t.PkgPath()
 
-	name, safeName, genericPlaceholder := nameForms(t.Name())
+	name, safeName, genericPlaceholders := nameForms(t.Name())
 
 	out := GenTypeInfo{
-		Name:               name,
-		SafeName:           safeName,
-		GenericPlaceholder: genericPlaceholder,
-		Transparent:        false,
+		Name:                name,
+		SafeName:            safeName,
+		GenericPlaceholders: genericPlaceholders,
+		Transparent:         false,
 	}
 
 	if t.Kind() != reflect.Struct {
 		return &GenTypeInfo{
-			Name:               name,
-			SafeName:           safeName,
-			GenericPlaceholder: genericPlaceholder,
-			Transparent:        true,
+			Name:                name,
+			SafeName:            safeName,
+			GenericPlaceholders: genericPlaceholders,
+			Transparent:         true,
 			Fields: []Field{
 				{
 					Name:        FieldNameSelf,
@@ -465,7 +484,6 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 		if len(*{{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
 			return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 		}
-
 		{{ MajorType "cw" "cbg.MajTextString" (print "len(*" .Name ")") }}
 		if _, err := cw.WriteString(string(*{{ .Name }})); err != nil {
 			return err
@@ -487,7 +505,6 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
-
 	{{ MajorType "cw" "cbg.MajTextString" (print "len(" .Name ")") }}
 	if _, err := cw.WriteString(string({{ .Name }})); err != nil {
 		return err
@@ -521,8 +538,7 @@ func (g Gen) emitCborMarshalStructField(w io.Writer, f Field) error {
 `)
 
 	case cidType:
-		return g.doTemplate(w, f, `
-{{ if .Pointer }}
+		return g.doTemplate(w, f, `{{ if .Pointer }}
 	if {{ .Name }} == nil {
 		if _, err := cw.Write(cbg.CborNull); err != nil {
 			return err
@@ -535,9 +551,7 @@ func (g Gen) emitCborMarshalStructField(w io.Writer, f Field) error {
 {{ else }}
 	if err := cbg.WriteCid(cw, {{ .Name }}); err != nil {
 		return xerrors.Errorf("failed to write cid field {{ .Name }}: %w", err)
-	}
-{{ end }}
-`)
+	} {{ end }}`)
 	default:
 		return g.doTemplate(w, f, `
 	if err := {{ .Name }}.MarshalCBOR(cw); err != nil {
@@ -548,8 +562,7 @@ func (g Gen) emitCborMarshalStructField(w io.Writer, f Field) error {
 }
 
 func (g Gen) emitCborMarshalUint64Field(w io.Writer, f Field) error {
-	return g.doTemplate(w, f, `
-{{ if .Pointer }}
+	return g.doTemplate(w, f, `{{ if .Pointer }}
 	if {{ .Name }} == nil {
 		if _, err := cw.Write(cbg.CborNull); err != nil {
 			return err
@@ -559,8 +572,7 @@ func (g Gen) emitCborMarshalUint64Field(w io.Writer, f Field) error {
 	}
 {{ else }}
 	{{ MajorType "cw" "cbg.MajUnsignedInt" .Name }}
-{{ end }}
-`)
+{{ end }}`)
 }
 
 func (g Gen) emitCborMarshalUint8Field(w io.Writer, f Field) error {
@@ -593,8 +605,7 @@ func (g Gen) emitCborMarshalInt64Field(w io.Writer, f Field) error {
 	{{ MajorType "cw" "cbg.MajUnsignedInt" .Name }}
 	} else {
 	{{ MajorType "cw" "cbg.MajNegativeInt" (print "-" .Name "-1") }}
-	}
-{{ end }}
+	} {{ end }}
 `)
 }
 
@@ -705,8 +716,7 @@ func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
 		}
 	{{ if .PreserveNil }}
 	}
-	{{ end }}
-`)
+{{ end }}`)
 	}
 
 	var pointer bool
@@ -756,11 +766,9 @@ func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	// array end
-	if err := g.doTemplate(w, f, `
-	{{ if .PreserveNil }}
+	if err := g.doTemplate(w, f, `{{ if .PreserveNil }}
 		}
-	{{ end }}
-	}
+	{{ end }} }
 `); err != nil {
 		return err
 	}
@@ -799,7 +807,6 @@ func (g Gen) emitCborMarshalArrayField(w io.Writer, f Field) error {
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "Array" }} {
 		return xerrors.Errorf("Slice value in field {{ .Name }} was too long")
 	}
-
 	{{ MajorType "cw" "cbg.MajArray" ( print "len(" .Name ")" ) }}
 	for _, v := range {{ .Name }} {`)
 	if err != nil {
@@ -866,9 +873,14 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 			f.Name = "t." + f.Name
 		}
 
-		if f.Type.String() == gti.GenericPlaceholder {
-			g.doTemplate(w, f, `
-				// {{ .Name }} (T)
+		genericIndex := slices.Index(gti.GenericPlaceholders, f.Type.String())
+		if genericIndex != -1 {
+			data := map[string]interface{}{
+				"Name":         f.Name,
+				"GenericParam": getGenericTypeParameter(genericIndex),
+			}
+			g.doTemplate(w, data, `
+				// {{ .Name }} ({{ .GenericParam }})
 			  if err := {{ .Name }}.MarshalCBOR(cw); err != nil {
 					return err
 				}
@@ -920,7 +932,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+	fmt.Fprintf(w, "\n\treturn nil\n}\n\n")
 	return nil
 }
 
@@ -1000,8 +1012,7 @@ func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
 `)
 	case cidType:
 		return g.doTemplate(w, f, `
-	{
-{{ if .Pointer }}
+	{ {{ if .Pointer }}
 		b, err := cr.ReadByte()
 		if err != nil {
 			return err
@@ -1020,13 +1031,11 @@ func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
 		}
 {{ else }}
 		{{ .Name }} = c
-{{ end }}
-	}
+{{ end }} }
 `)
 	case deferredType:
 		return g.doTemplate(w, f, `
-	{
-{{ if .Pointer }}
+	{ {{ if .Pointer }}
 		{{ .Name }} = new(cbg.Deferred)
 {{ end }}
 		if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
@@ -1037,34 +1046,32 @@ func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
 
 	default:
 		return g.doTemplate(w, f, `
-	{
-{{ if .Pointer }}
-		b, err := cr.ReadByte()
-		if err != nil {
-			return err
-		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-			{{ .Name }} = new({{ .TypeName }})
-			if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-				return xerrors.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
-			}
-		}
+{ {{ if .Pointer }}
+        b, err := cr.ReadByte()
+        if err != nil {
+            return err
+        }
+        if b != cbg.CborNull[0] {
+            if err := cr.UnreadByte(); err != nil {
+                return err
+            }
+            {{ .Name }} = new({{ .TypeName }})
+            if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
+                return xerrors.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
+            }
+        }
 {{ else }}
-		if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-			return xerrors.Errorf("unmarshaling {{ .Name }}: %w", err)
-		}
-{{ end }}
-	}
+        if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
+            return xerrors.Errorf("unmarshaling {{ .Name }}: %w", err)
+        }
+{{ end }} }
 `)
 	}
 }
 
 func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
-	return g.doTemplate(w, f, `{
-	{{ if .Pointer }}
+	return g.doTemplate(w, f, `
+{ {{ if .Pointer }}
 	b, err := cr.ReadByte()
 	if err != nil {
 		return err
@@ -1093,7 +1100,6 @@ func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 		default:
 			return fmt.Errorf("wrong type for int64 field: %d", maj)
 		}
-
 {{ if .Pointer }}
 		{{ .Name }} = (*{{ .TypeName }})(&extraI)
 }
@@ -1105,8 +1111,7 @@ func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
 
 func (g Gen) emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 	return g.doTemplate(w, f, `
-	{
-{{ if .Pointer }}
+	{ {{ if .Pointer }}
 	b, err := cr.ReadByte()
 	if err != nil {
 		return err
@@ -1134,8 +1139,7 @@ func (g Gen) emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
 	{{ .Name }} = {{ .TypeName }}(extra)
-{{ end }}
-	}
+{{ end }} }
 `)
 }
 
@@ -1310,8 +1314,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		e = e.Elem()
 	}
 
-	err := g.doTemplate(w, f, `
-	{{ if .PreserveNil }}
+	err := g.doTemplate(w, f, `{{ if .PreserveNil }}
 	{
 		b, err := cr.ReadByte()
 		if err != nil {
@@ -1350,12 +1353,10 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			if _, err := io.ReadFull(cr, {{ .Name }}); err != nil {
 				return err
 			}
-
 	{{ if .PreserveNil }}
 		}
 	}
-	{{ end }}
-`)
+	{{ end }}`)
 	}
 
 	if err := g.doTemplate(w, f, `
@@ -1457,12 +1458,10 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		return fmt.Errorf("do not yet support slices of %s yet", e.Elem())
 	}
 
-	if err := g.doTemplate(w, f, `
-	{{ if .PreserveNil }}
+	if err := g.doTemplate(w, f, `{{ if .PreserveNil }}
 				}
 			}
-	{{ end }}
-		}
+{{ end }}	}
 	}
 	`); err != nil {
 		return err
@@ -1663,22 +1662,28 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 			f.Name = "t." + f.Name
 		}
 
-		if f.Type.String() == gti.GenericPlaceholder {
-			g.doTemplate(w, f, `
-				// {{ .Name }} (T)
+		genericIndex := slices.Index(gti.GenericPlaceholders, f.Type.String())
+		if genericIndex != -1 {
+			data := map[string]interface{}{
+				"Name":         f.Name,
+				"GenericParam": getGenericTypeParameter(genericIndex),
+			}
+			g.doTemplate(w, data, `
+				// {{ .Name }} ({{ .GenericParam }})
 		    {
-					var value T
+					var value {{ .GenericParam }}
 					value = value.New()
 					if err := value.UnmarshalCBOR(cr); err != nil {
 						return xerrors.Errorf("failed to read field: %w", err)
 					}
 					{{ .Name }} = value
 				}
+
 			`)
 			continue
 		}
 
-		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
+		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1722,7 +1727,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		}
 	}
 
-	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+	fmt.Fprintf(w, "\n\treturn nil\n}\n\n")
 
 	return nil
 }
@@ -1900,7 +1905,7 @@ func (g Gen) emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		}
 	}
 
-	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+	fmt.Fprintf(w, "\n\treturn nil\n}\n\n")
 	return nil
 }
 
