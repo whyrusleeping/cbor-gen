@@ -521,11 +521,43 @@ type tnAnySorter []tnAny
 func (tas *tnAnySorter) Len() int {
 	return len(*tas)
 }
+
 func (tas *tnAnySorter) Less(i, j int) bool {
 	return (*tas)[i].name < (*tas)[j].name
 }
+
 func (tas *tnAnySorter) Swap(i, j int) {
 	t := (*tas)[i]
 	(*tas)[i] = (*tas)[j]
 	(*tas)[j] = t
+}
+
+// NullableMarshalCBOR can be used as a wrapper around a CBORSerializer that doesn't support
+// handling of null values itself. If the value is nil, it will write a CBOR null value, otherwise
+// it will call the MarshalCBOR method on the serializer.
+func NullableMarshalCBOR(w io.Writer, s CBORSerializer) error {
+	cw := NewCborWriter(w)
+	if s == nil {
+		_, err := cw.Write(CborNull)
+		return err
+	}
+	return s.MarshalCBOR(w)
+}
+
+// NullableUnmarshalCBOR can be used as a wrapper around a CBORSerializer that doesn't support
+// handling of null values itself. If the reader contains a CBOR null value, it will not call the
+// UnmarshalCBOR method on the serializer, otherwise it will call it.
+func NullableUnmarshalCBOR(r io.Reader, s CBORSerializer) error {
+	cr := NewCborReader(r)
+	if b, err := cr.ReadByte(); err != nil {
+		return err
+	} else if b != CborNull[0] {
+		if err := cr.UnreadByte(); err != nil {
+			return err
+		}
+		if err := s.UnmarshalCBOR(cr); err != nil {
+			return err
+		}
+	}
+	return nil
 }

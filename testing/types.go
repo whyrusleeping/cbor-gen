@@ -207,14 +207,19 @@ type StringPtrSlices struct {
 	StringPtrs []*string
 }
 
-type GenericStruct[A cbg.CBORSerializer[A], B cbg.CBORSerializer[B]] struct {
+type GenericStruct[A cbg.CBORGeneric[A], B cbg.CBORGeneric[B]] struct {
 	Boop  int64
 	Thing A
 	Sub   SubGenericStruct[A, B]
 }
 
-type SubGenericStruct[A cbg.CBORSerializer[A], B cbg.CBORSerializer[B]] struct {
+type SubGenericStruct[A cbg.CBORGeneric[A], B cbg.CBORGeneric[B]] struct {
 	Sub1 A
 	Sub2 B
 	Bam  string
 }
+
+type (
+	CborByteArray []byte
+	CborInt       int64
+)
