@@ -24,8 +24,8 @@ func main() {
 		types.IntArrayAliasNewType{},
 		types.MapTransparentType{},
 		types.BigIntContainer{},
-		types.GenericStruct[dummy1, dummy2]{},
-		types.SubGenericStruct[dummy1, dummy2]{},
+		types.GenericStruct[*dummy1, dummy2]{},
+		types.SubGenericStruct[*dummy1, dummy2]{},
 	); err != nil {
 		panic(err)
 	}
@@ -75,12 +75,15 @@ type (
 	dummy2 int64
 )
 
-func (d dummy1) New() dummy1                   { return dummy1(0) }
-func (d dummy1) Equals(dummy1) bool            { return false }
-func (d dummy1) MarshalCBOR(io.Writer) error   { return nil }
-func (d dummy1) UnmarshalCBOR(io.Reader) error { return nil }
+// dummy generic types that cbor-gen will replace, should be able to be handle both pointer and
+// value types
+var (
+	_ cbg.CBORSerializer[*dummy1] = (*dummy1)(nil)
+	_ cbg.CBORSerializer[dummy2]  = dummy2(0)
+)
 
-func (d dummy2) New() dummy2                   { return dummy2(0) }
-func (d dummy2) Equals(dummy2) bool            { return false }
-func (d dummy2) MarshalCBOR(io.Writer) error   { return nil }
-func (d dummy2) UnmarshalCBOR(io.Reader) error { return nil }
+func (d *dummy1) ToCBOR(io.Writer) error              { return nil }
+func (d *dummy1) FromCBOR(io.Reader) (*dummy1, error) { return d, nil }
+
+func (d dummy2) ToCBOR(io.Writer) error             { return nil }
+func (d dummy2) FromCBOR(io.Reader) (dummy2, error) { return d, nil }
