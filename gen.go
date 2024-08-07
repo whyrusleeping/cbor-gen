@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"reflect"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,13 +29,19 @@ var (
 	deferredType = reflect.TypeOf(Deferred{})
 )
 
-// CBORSerializer is a base interface for CBOR serializers that can be used as
-// a generic type T such that a serialization and deserialization methods
-// will be called on any field of type T.
+// CBORSerializer is a base interface for CBOR serializers that can be used as a generic type T such
+// that a serialization and deserialization methods will be called on any field of type T.
+//
+// Nullable fields are not handled by the cbor-gen generated code for generic types but should be
+// handled by the ToCBOR and FromCBOR methods of the type.
 type CBORSerializer[V any] interface {
-	New() V
-	MarshalCBOR(w io.Writer) error
-	UnmarshalCBOR(r io.Reader) error
+	// ToCBOR serializes the value to the given writer. Where this value type is a pointer, ToCBOR
+	// should handle nil values by writing a CBOR null value.
+	ToCBOR(w io.Writer) error
+	// FromCBOR deserializes the value from the given reader and returns an instance of the value type
+	// or a copy of the called value which is modified by the deserialization process.
+	// Where this value type is a pointer, FromCBOR should handle CBOR null values by returning nil.
+	FromCBOR(r io.Reader) (V, error)
 }
 
 // Gen is a configurable code generator for CBOR types. Use this instead of the convenience
@@ -231,9 +236,35 @@ func genericName(name string) string {
 // genericSafeName replaces [GenericPlaceholder] with [T] for nicer comment printing
 func (gti GenTypeInfo) genericSafeName(name string) string {
 	for i, placeholder := range gti.GenericPlaceholders {
-		name = strings.ReplaceAll(name, placeholder, getGenericTypeParameter(i))
+		genericType := getGenericTypeParameter(i)
+		trimmedPlaceholder := strings.TrimPrefix(placeholder, "*")
+		if name == placeholder || name == trimmedPlaceholder {
+			name = genericType
+		} else {
+			re := regexp.MustCompile(`\[(.*?)\]`)
+			name = re.ReplaceAllStringFunc(name, func(match string) string {
+				inner := match[1 : len(match)-1]
+				parts := strings.Split(inner, ",")
+				for j, part := range parts {
+					if part == placeholder {
+						parts[j] = genericType
+					}
+				}
+				return "[" + strings.Join(parts, ",") + "]"
+			})
+		}
 	}
 	return name
+}
+
+func (gti GenTypeInfo) toGenericTypeParam(name string) string {
+	for i, placeholder := range gti.GenericPlaceholders {
+		trimmedPlaceholder := strings.TrimPrefix(placeholder, "*")
+		if name == placeholder || name == trimmedPlaceholder {
+			return getGenericTypeParameter(i)
+		}
+	}
+	return ""
 }
 
 func (f Field) TypeName() string {
@@ -873,15 +904,15 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 			f.Name = "t." + f.Name
 		}
 
-		genericIndex := slices.Index(gti.GenericPlaceholders, f.Type.String())
-		if genericIndex != -1 {
+		genericParam := gti.toGenericTypeParam(f.Type.String())
+		if genericParam != "" {
 			data := map[string]interface{}{
 				"Name":         f.Name,
-				"GenericParam": getGenericTypeParameter(genericIndex),
+				"GenericParam": genericParam,
 			}
 			g.doTemplate(w, data, `
 				// {{ .Name }} ({{ .GenericParam }})
-			  if err := {{ .Name }}.MarshalCBOR(cw); err != nil {
+			  if err := {{ .Name }}.ToCBOR(cw); err != nil {
 					return err
 				}
 			`)
@@ -1662,18 +1693,18 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 			f.Name = "t." + f.Name
 		}
 
-		genericIndex := slices.Index(gti.GenericPlaceholders, f.Type.String())
-		if genericIndex != -1 {
+		genericParam := gti.toGenericTypeParam(f.Type.String())
+		if genericParam != "" {
 			data := map[string]interface{}{
 				"Name":         f.Name,
-				"GenericParam": getGenericTypeParameter(genericIndex),
+				"GenericParam": genericParam,
 			}
 			g.doTemplate(w, data, `
 				// {{ .Name }} ({{ .GenericParam }})
 		    {
 					var value {{ .GenericParam }}
-					value = value.New()
-					if err := value.UnmarshalCBOR(cr); err != nil {
+					var err error
+					if value, err = value.FromCBOR(cr); err != nil {
 						return xerrors.Errorf("failed to read field: %w", err)
 					}
 					{{ .Name }} = value

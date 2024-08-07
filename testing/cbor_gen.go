@@ -2178,7 +2178,7 @@ func (t *GenericStruct[T, U]) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Thing (T)
-	if err := t.Thing.MarshalCBOR(cw); err != nil {
+	if err := t.Thing.ToCBOR(cw); err != nil {
 		return err
 	}
 
@@ -2242,8 +2242,8 @@ func (t *GenericStruct[T, U]) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Thing (T)
 	{
 		var value T
-		value = value.New()
-		if err := value.UnmarshalCBOR(cr); err != nil {
+		var err error
+		if value, err = value.FromCBOR(cr); err != nil {
 			return xerrors.Errorf("failed to read field: %w", err)
 		}
 		t.Thing = value
@@ -2274,12 +2274,12 @@ func (t *SubGenericStruct[T, U]) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Sub1 (T)
-	if err := t.Sub1.MarshalCBOR(cw); err != nil {
+	if err := t.Sub1.ToCBOR(cw); err != nil {
 		return err
 	}
 
 	// t.Sub2 (U)
-	if err := t.Sub2.MarshalCBOR(cw); err != nil {
+	if err := t.Sub2.ToCBOR(cw); err != nil {
 		return err
 	}
 
@@ -2323,8 +2323,8 @@ func (t *SubGenericStruct[T, U]) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Sub1 (T)
 	{
 		var value T
-		value = value.New()
-		if err := value.UnmarshalCBOR(cr); err != nil {
+		var err error
+		if value, err = value.FromCBOR(cr); err != nil {
 			return xerrors.Errorf("failed to read field: %w", err)
 		}
 		t.Sub1 = value
@@ -2333,8 +2333,8 @@ func (t *SubGenericStruct[T, U]) UnmarshalCBOR(r io.Reader) (err error) {
 	// t.Sub2 (U)
 	{
 		var value U
-		value = value.New()
-		if err := value.UnmarshalCBOR(cr); err != nil {
+		var err error
+		if value, err = value.FromCBOR(cr); err != nil {
 			return xerrors.Errorf("failed to read field: %w", err)
 		}
 		t.Sub2 = value
