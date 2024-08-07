@@ -226,3 +226,27 @@ func (tr *testReader1Byte) Read(p []byte) (n int, err error) {
 	tr.emptied = true
 	return 1, io.EOF
 }
+
+type TTA struct{}
+type TTA_B struct{}
+type TTB struct{}
+
+func TestTypeSorter(t *testing.T) {
+	sortedTypes := sortTypeNames([]any{
+		TTA_B{},
+		TTB{},
+		TTA{},
+	})
+	_, ok := sortedTypes[0].(TTA)
+	if !ok {
+		t.Errorf("wanted [0]TTA, got %T", sortedTypes[0])
+	}
+	_, ok = sortedTypes[1].(TTA_B)
+	if !ok {
+		t.Errorf("wanted [0]TTA_B, got %T", sortedTypes[1])
+	}
+	_, ok = sortedTypes[2].(TTB)
+	if !ok {
+		t.Errorf("wanted [0]TTB, got %T", sortedTypes[2])
+	}
+}

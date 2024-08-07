@@ -32,6 +32,9 @@ type Gen struct {
 	MaxArrayLength  int // Default: 8192 (MaxLength)
 	MaxByteLength   int // Default: 2<<20 (ByteArrayMaxLen)
 	MaxStringLength int // Default: 8192 (MaxLength)
+
+	// Write output file in order of type names
+	SortTypeNames bool
 }
 
 func (g Gen) maxArrayLength() int {
@@ -222,7 +225,15 @@ func nameIsExported(name string) bool {
 }
 
 func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
-	t := reflect.TypeOf(itype)
+	// If we're handed *Foo instead of value Foo, deref the pointer.
+	// ParseTypeInfo is only every handed a top level type, so this shouldn't violate any expectations.
+	iv := reflect.ValueOf(itype)
+	switch iv.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		iv = iv.Elem()
+	default:
+	}
+	t := iv.Type()
 
 	pkg := t.PkgPath()
 
@@ -1683,7 +1694,7 @@ func (g Gen) emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	}
 
 	if gti.Transparent {
-		return fmt.Errorf("transparent fields not supported in map mode, use tuple encoding (outcome should be the same)")
+		return fmt.Errorf("%#v: transparent fields not supported in map mode, use tuple encoding (outcome should be the same)", gti.Name)
 	}
 
 	err := g.doTemplate(w, gti, `func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
