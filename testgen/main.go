@@ -26,6 +26,7 @@ func main() {
 		types.BigIntContainer{},
 		types.GenericStruct[*dummy1, dummy2]{},
 		types.SubGenericStruct[*dummy1, dummy2]{},
+		types.CborByteArray{},
 	); err != nil {
 		panic(err)
 	}
@@ -78,8 +79,8 @@ type (
 // dummy generic types that cbor-gen will replace, should be able to be handle both pointer and
 // value types
 var (
-	_ cbg.CBORSerializer[*dummy1] = (*dummy1)(nil)
-	_ cbg.CBORSerializer[dummy2]  = dummy2(0)
+	_ cbg.CBORGeneric[*dummy1] = (*dummy1)(nil)
+	_ cbg.CBORGeneric[dummy2]  = dummy2(0)
 )
 
 func (d *dummy1) ToCBOR(io.Writer) error              { return nil }
