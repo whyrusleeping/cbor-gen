@@ -165,12 +165,13 @@ var _ = sort.Sort
 const FieldNameSelf = "."
 
 type Field struct {
-	Name    string
-	MapKey  string
-	Pointer bool
-	Type    reflect.Type
-	Pkg     string
-	Const   *string
+	Name         string
+	GenericParam string // if this field is a generic, this is the name of the generic parameter (T1, T2, etc.)
+	MapKey       string
+	Pointer      bool
+	Type         reflect.Type
+	Pkg          string
+	Const        *string
 
 	OmitEmpty   bool
 	PreserveNil bool
@@ -202,26 +203,22 @@ func typeName(pkg string, t reflect.Type) string {
 }
 
 func getGenericTypeParameter(index int) string {
-	parameterLetters := "TUVWXYZ"
-	if index < len(parameterLetters) {
-		return string(parameterLetters[index])
-	}
-	return "T" + strconv.Itoa(index-len(parameterLetters)+1)
+	return "T" + strconv.Itoa(index+1)
 }
 
-// nameForms returns the type name without generic specifier, a safe name for
-// use in variable names, and a list of generic placeholders if the type is a
-// generic type.
+// nameForms returns the type name without generic specifier, a generated name
+// for use in variable names, and a list of generic placeholders if the type is
+// a generic type.
 func nameForms(typeName string) (string, string, []string) {
 	re := regexp.MustCompile(`^(.*?)\[(.*)\]$`)
 	matches := re.FindStringSubmatch(typeName)
 
 	name := typeName
-	safeName := typeName
+	generatedName := typeName
 	var genericPlaceholders []string
 
 	if len(matches) == 3 {
-		safeName = matches[1]
+		generatedName = matches[1]
 		genericPlaceholders = strings.Split(matches[2], ",")
 		for i := range genericPlaceholders {
 			genericPlaceholders[i] = strings.TrimSpace(genericPlaceholders[i])
@@ -233,7 +230,7 @@ func nameForms(typeName string) (string, string, []string) {
 		name = matches[1] + "[" + strings.Join(genericTypes, ",") + "]"
 	}
 
-	return name, safeName, genericPlaceholders
+	return name, generatedName, genericPlaceholders
 }
 
 func genericName(name string) string {
@@ -241,28 +238,31 @@ func genericName(name string) string {
 	return name
 }
 
-// genericSafeName replaces [GenericPlaceholder] with [T] for nicer comment printing
-func (gti GenTypeInfo) genericSafeName(name string) string {
+// toGeneratedName replaces [GenericPlaceholder] with [T] for nicer comment printing
+func (gti GenTypeInfo) toGeneratedName(name string) string {
+	// if this is a placeholder, replace it with the generic type param
 	for i, placeholder := range gti.GenericPlaceholders {
 		genericType := getGenericTypeParameter(i)
 		trimmedPlaceholder := strings.TrimPrefix(placeholder, "*")
 		if name == placeholder || name == trimmedPlaceholder {
-			name = genericType
-		} else {
-			re := regexp.MustCompile(`\[(.*?)\]`)
-			name = re.ReplaceAllStringFunc(name, func(match string) string {
-				inner := match[1 : len(match)-1]
-				parts := strings.Split(inner, ",")
-				for j, part := range parts {
-					if part == placeholder {
-						parts[j] = genericType
-					}
-				}
-				return "[" + strings.Join(parts, ",") + "]"
-			})
+			return genericType
 		}
 	}
-	return name
+
+	// if this is a type that has generics, replace the placeholders with the corresponding generic type params
+	re := regexp.MustCompile(`\[(.*?)\]`)
+	return re.ReplaceAllStringFunc(name, func(match string) string {
+		inner := match[1 : len(match)-1]
+		parts := strings.Split(inner, ",")
+		for j, part := range parts {
+			for i, placeholder := range gti.GenericPlaceholders {
+				if part == placeholder {
+					parts[j] = getGenericTypeParameter(i)
+				}
+			}
+		}
+		return "[" + strings.Join(parts, ",") + "]"
+	})
 }
 
 func (gti GenTypeInfo) toGenericTypeParam(name string) string {
@@ -297,7 +297,7 @@ func (f Field) Len() int {
 
 type GenTypeInfo struct {
 	Name                string
-	SafeName            string   // Name of the type, but safe to use in a variable name
+	GeneratedName       string   // Name of the type, but with generic placeholders replaced with generic type params
 	GenericPlaceholders []string // Placeholder for generic types that was originally passed in
 	Fields              []Field
 	Transparent         bool
@@ -317,7 +317,9 @@ func (gti *GenTypeInfo) Imports() []Import {
 		case reflect.Bool:
 			continue
 		}
-		imports = append(imports, ImportsForType(f.Pkg, f.Type)...)
+		if gti.toGenericTypeParam(f.Type.String()) == "" {
+			imports = append(imports, ImportsForType(f.Pkg, f.Type)...)
+		}
 	}
 	return imports
 }
@@ -339,11 +341,11 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 
 	pkg := t.PkgPath()
 
-	name, safeName, genericPlaceholders := nameForms(t.Name())
+	name, generatedName, genericPlaceholders := nameForms(t.Name())
 
 	out := GenTypeInfo{
 		Name:                name,
-		SafeName:            safeName,
+		GeneratedName:       generatedName,
 		GenericPlaceholders: genericPlaceholders,
 		Transparent:         false,
 	}
@@ -351,7 +353,7 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 	if t.Kind() != reflect.Struct {
 		return &GenTypeInfo{
 			Name:                name,
-			SafeName:            safeName,
+			GeneratedName:       generatedName,
 			GenericPlaceholders: genericPlaceholders,
 			Transparent:         true,
 			Fields: []Field{
@@ -434,15 +436,16 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 		}
 
 		out.Fields = append(out.Fields, Field{
-			Name:        f.Name,
-			MapKey:      mapk,
-			Pointer:     pointer,
-			Type:        ft,
-			Pkg:         pkg,
-			OmitEmpty:   omitempty,
-			PreserveNil: preservenil,
-			MaxLen:      usrMaxLen,
-			Const:       constval,
+			Name:         f.Name,
+			GenericParam: out.toGenericTypeParam(f.Type.String()),
+			MapKey:       mapk,
+			Pointer:      pointer,
+			Type:         ft,
+			Pkg:          pkg,
+			OmitEmpty:    omitempty,
+			PreserveNil:  preservenil,
+			MaxLen:       usrMaxLen,
+			Const:        constval,
 		})
 	}
 
@@ -898,7 +901,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	cw := cbg.NewCborWriter(w)
 `)
 	} else {
-		err = g.doTemplate(w, gti, `var lengthBuf{{ .SafeName }} = {{ .TupleHeaderAsByteString }}
+		err = g.doTemplate(w, gti, `var lengthBuf{{ .GeneratedName }} = {{ .TupleHeaderAsByteString }}
 func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -907,7 +910,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 
 	cw := cbg.NewCborWriter(w)
 
-	if _, err := cw.Write(lengthBuf{{ .SafeName }}); err != nil {
+	if _, err := cw.Write(lengthBuf{{ .GeneratedName }}); err != nil {
 		return err
 	}
 
@@ -924,13 +927,8 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 			f.Name = "t." + f.Name
 		}
 
-		genericParam := gti.toGenericTypeParam(f.Type.String())
-		if genericParam != "" {
-			data := map[string]interface{}{
-				"Name":         f.Name,
-				"GenericParam": genericParam,
-			}
-			g.doTemplate(w, data, `
+		if f.GenericParam != "" {
+			g.doTemplate(w, f, `
 				// {{ .Name }} ({{ .GenericParam }})
 			  if err := {{ .Name }}.ToCBOR(cw); err != nil {
 					return err
@@ -939,7 +937,7 @@ func (t *{{ .Name }}) MarshalCBOR(w io.Writer) error {
 			continue
 		}
 
-		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
+		fmt.Fprintf(w, "\n\t// %s (%s) (%s)", f.Name, gti.toGeneratedName(f.Type.String()), f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1726,13 +1724,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 			f.Name = "t." + f.Name
 		}
 
-		genericParam := gti.toGenericTypeParam(f.Type.String())
-		if genericParam != "" {
-			data := map[string]interface{}{
-				"Name":         f.Name,
-				"GenericParam": genericParam,
-			}
-			g.doTemplate(w, data, `
+		if f.GenericParam != "" {
+			g.doTemplate(w, f, `
 				// {{ .Name }} ({{ .GenericParam }})
 				{
 					var value {{ .GenericParam }}
@@ -1747,7 +1740,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 			continue
 		}
 
-		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
+		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, gti.toGeneratedName(f.Type.String()), f.Type.Kind())
 
 		switch f.Type.Kind() {
 		case reflect.String:
@@ -1906,7 +1899,7 @@ func (g Gen) emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	})
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
+		fmt.Fprintf(w, "\n\t// t.%s (%s) (%s)", f.Name, gti.toGeneratedName(f.Type.String()), f.Type.Kind())
 
 		if f.OmitEmpty {
 			if err := g.doTemplate(w, f, "\nif t.{{.Name}} != {{ .EmptyVal }} {\n"); err != nil {
@@ -2019,7 +2012,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 
 	for _, f := range gti.Fields {
-		fmt.Fprintf(w, "// t.%s (%s) (%s)", f.Name, gti.genericSafeName(f.Type.String()), f.Type.Kind())
+		fmt.Fprintf(w, "// t.%s (%s) (%s)", f.Name, gti.toGeneratedName(f.Type.String()), f.Type.Kind())
 
 		err := g.doTemplate(w, f, `
 		case "{{ .MapKey }}":
