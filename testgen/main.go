@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io"
+
 	cbg "github.com/whyrusleeping/cbor-gen"
 	types "github.com/whyrusleeping/cbor-gen/testing"
 )
@@ -22,6 +24,9 @@ func main() {
 		types.IntArrayAliasNewType{},
 		types.MapTransparentType{},
 		types.BigIntContainer{},
+		types.GenericStruct[dummy1, dummy2]{},
+		types.SubGenericStruct[dummy1, dummy2]{},
+		types.CborByteArray{},
 	); err != nil {
 		panic(err)
 	}
@@ -64,3 +69,22 @@ func main() {
 		panic(err)
 	}
 }
+
+// dummy generic types that cbor-gen will replace
+type (
+	dummy1 struct{}
+	dummy2 struct{}
+)
+
+// dummy generic types that cbor-gen will replace, should be able to be handle both pointer and
+// value types
+var (
+	_ cbg.CBORGeneric[dummy1] = dummy1{}
+	_ cbg.CBORGeneric[dummy2] = dummy2{}
+)
+
+func (d dummy1) ToCBOR(io.Writer) error             { return nil }
+func (d dummy1) FromCBOR(io.Reader) (dummy1, error) { return d, nil }
+
+func (d dummy2) ToCBOR(io.Writer) error             { return nil }
+func (d dummy2) FromCBOR(io.Reader) (dummy2, error) { return d, nil }

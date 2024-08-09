@@ -60,7 +60,6 @@ func resolvePkgName(path, typeName string) string {
 			return tryName
 		}
 	}
-
 }
 
 type Import struct {

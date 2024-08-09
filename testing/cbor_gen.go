@@ -2197,3 +2197,302 @@ func (t *BigIntContainer) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	return nil
 }
+
+var lengthBufGenericStruct = []byte{132}
+
+func (t *GenericStruct[T1, T2]) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write(lengthBufGenericStruct); err != nil {
+		return err
+	}
+
+	// t.Boop (int64) (int64)
+	if t.Boop >= 0 {
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Boop)); err != nil {
+			return err
+		}
+	} else {
+		if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-t.Boop-1)); err != nil {
+			return err
+		}
+	}
+
+	// t.Thing (T1)
+	if err := t.Thing.ToCBOR(cw); err != nil {
+		return err
+	}
+
+	// t.Thing2 (T2)
+	if err := t.Thing2.ToCBOR(cw); err != nil {
+		return err
+	}
+
+	// t.Sub (testing.SubGenericStruct[T1,T2]) (struct)
+	if err := t.Sub.MarshalCBOR(cw); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *GenericStruct[T1, T2]) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = GenericStruct[T1, T2]{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 4 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Boop (int64) (int64)
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
+		var extraI int64
+		switch maj {
+		case cbg.MajUnsignedInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 positive overflow")
+			}
+		case cbg.MajNegativeInt:
+			extraI = int64(extra)
+			if extraI < 0 {
+				return fmt.Errorf("int64 negative overflow")
+			}
+			extraI = -1 - extraI
+		default:
+			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		}
+
+		t.Boop = int64(extraI)
+	}
+
+	// t.Thing (T1)
+	{
+		var value T1
+		var err error
+		if value, err = value.FromCBOR(cr); err != nil {
+			return xerrors.Errorf("failed to read field: %w", err)
+		}
+		t.Thing = value
+	}
+
+	// t.Thing2 (T2)
+	{
+		var value T2
+		var err error
+		if value, err = value.FromCBOR(cr); err != nil {
+			return xerrors.Errorf("failed to read field: %w", err)
+		}
+		t.Thing2 = value
+	}
+
+	// t.Sub (testing.SubGenericStruct[T1,T2]) (struct)
+
+	{
+
+		if err := t.Sub.UnmarshalCBOR(cr); err != nil {
+			return xerrors.Errorf("unmarshaling t.Sub: %w", err)
+		}
+
+	}
+	return nil
+}
+
+var lengthBufSubGenericStruct = []byte{131}
+
+func (t *SubGenericStruct[T1, T2]) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write(lengthBufSubGenericStruct); err != nil {
+		return err
+	}
+
+	// t.Sub1 (T1)
+	if t.Sub1 == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := (*t.Sub1).ToCBOR(cw); err != nil {
+			return err
+		}
+	}
+
+	// t.Sub2 (T2)
+	if t.Sub2 == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := (*t.Sub2).ToCBOR(cw); err != nil {
+			return err
+		}
+	}
+
+	// t.Bam (string) (string)
+	if len(t.Bam) > 8192 {
+		return xerrors.Errorf("Value in field t.Bam was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Bam))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string(t.Bam)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *SubGenericStruct[T1, T2]) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = SubGenericStruct[T1, T2]{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.Sub1 (T1)
+	{
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+			var value T1
+			var err error
+			if value, err = value.FromCBOR(cr); err != nil {
+				return xerrors.Errorf("failed to read field: %w", err)
+			}
+			t.Sub1 = &value
+		}
+	}
+
+	// t.Sub2 (T2)
+	{
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+			var value T2
+			var err error
+			if value, err = value.FromCBOR(cr); err != nil {
+				return xerrors.Errorf("failed to read field: %w", err)
+			}
+			t.Sub2 = &value
+		}
+	}
+
+	// t.Bam (string) (string)
+
+	{
+		sval, err := cbg.ReadStringWithMax(cr, 8192)
+		if err != nil {
+			return err
+		}
+
+		t.Bam = string(sval)
+	}
+	return nil
+}
+
+func (t *CborByteArray) MarshalCBOR(w io.Writer) error {
+	cw := cbg.NewCborWriter(w)
+
+	// (*t) (testing.CborByteArray) (slice)
+	if len((*t)) > 2097152 {
+		return xerrors.Errorf("Byte array in field (*t) was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len((*t)))); err != nil {
+		return err
+	}
+
+	if _, err := cw.Write((*t)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *CborByteArray) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = CborByteArray{}
+
+	cr := cbg.NewCborReader(r)
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+	// (*t) (testing.CborByteArray) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > 2097152 {
+		return fmt.Errorf("(*t): byte array too large (%d)", extra)
+	}
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("expected byte array")
+	}
+
+	if extra > 0 {
+		(*t) = make([]uint8, extra)
+	}
+
+	if _, err := io.ReadFull(cr, (*t)); err != nil {
+		return err
+	}
+
+	return nil
+}
