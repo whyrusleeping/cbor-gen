@@ -208,14 +208,15 @@ type StringPtrSlices struct {
 }
 
 type GenericStruct[A cbg.CBORGeneric[A], B cbg.CBORGeneric[B]] struct {
-	Boop  int64
-	Thing A
-	Sub   SubGenericStruct[A, B]
+	Boop   int64
+	Thing  A
+	Thing2 B
+	Sub    SubGenericStruct[A, B]
 }
 
 type SubGenericStruct[A cbg.CBORGeneric[A], B cbg.CBORGeneric[B]] struct {
-	Sub1 A
-	Sub2 B
+	Sub1 *A
+	Sub2 *B
 	Bam  string
 }
 
