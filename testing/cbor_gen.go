@@ -2198,7 +2198,7 @@ func (t *BigIntContainer) UnmarshalCBOR(r io.Reader) (err error) {
 	return nil
 }
 
-var lengthBufGenericStruct = []byte{131}
+var lengthBufGenericStruct = []byte{132}
 
 func (t *GenericStruct[T1, T2]) MarshalCBOR(w io.Writer) error {
 	if t == nil {
@@ -2228,6 +2228,11 @@ func (t *GenericStruct[T1, T2]) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
+	// t.Thing2 (T2)
+	if err := t.Thing2.ToCBOR(cw); err != nil {
+		return err
+	}
+
 	// t.Sub (testing.SubGenericStruct[T1,T2]) (struct)
 	if err := t.Sub.MarshalCBOR(cw); err != nil {
 		return err
@@ -2254,7 +2259,7 @@ func (t *GenericStruct[T1, T2]) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("cbor input should be of type array")
 	}
 
-	if extra != 3 {
+	if extra != 4 {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
 
@@ -2294,6 +2299,16 @@ func (t *GenericStruct[T1, T2]) UnmarshalCBOR(r io.Reader) (err error) {
 		t.Thing = value
 	}
 
+	// t.Thing2 (T2)
+	{
+		var value T2
+		var err error
+		if value, err = value.FromCBOR(cr); err != nil {
+			return xerrors.Errorf("failed to read field: %w", err)
+		}
+		t.Thing2 = value
+	}
+
 	// t.Sub (testing.SubGenericStruct[T1,T2]) (struct)
 
 	{
@@ -2321,13 +2336,25 @@ func (t *SubGenericStruct[T1, T2]) MarshalCBOR(w io.Writer) error {
 	}
 
 	// t.Sub1 (T1)
-	if err := t.Sub1.ToCBOR(cw); err != nil {
-		return err
+	if t.Sub1 == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := (*t.Sub1).ToCBOR(cw); err != nil {
+			return err
+		}
 	}
 
 	// t.Sub2 (T2)
-	if err := t.Sub2.ToCBOR(cw); err != nil {
-		return err
+	if t.Sub2 == nil {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+		if err := (*t.Sub2).ToCBOR(cw); err != nil {
+			return err
+		}
 	}
 
 	// t.Bam (string) (string)
@@ -2369,22 +2396,40 @@ func (t *SubGenericStruct[T1, T2]) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Sub1 (T1)
 	{
-		var value T1
-		var err error
-		if value, err = value.FromCBOR(cr); err != nil {
-			return xerrors.Errorf("failed to read field: %w", err)
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
 		}
-		t.Sub1 = value
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+			var value T1
+			var err error
+			if value, err = value.FromCBOR(cr); err != nil {
+				return xerrors.Errorf("failed to read field: %w", err)
+			}
+			t.Sub1 = &value
+		}
 	}
 
 	// t.Sub2 (T2)
 	{
-		var value T2
-		var err error
-		if value, err = value.FromCBOR(cr); err != nil {
-			return xerrors.Errorf("failed to read field: %w", err)
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
 		}
-		t.Sub2 = value
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+			var value T2
+			var err error
+			if value, err = value.FromCBOR(cr); err != nil {
+				return xerrors.Errorf("failed to read field: %w", err)
+			}
+			t.Sub2 = &value
+		}
 	}
 
 	// t.Bam (string) (string)

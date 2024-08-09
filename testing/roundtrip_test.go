@@ -791,16 +791,19 @@ func ptr[T any](v T) *T {
 }
 
 func TestGenerics(t *testing.T) {
-	cba1 := NullableCborByteArray([]byte("hello"))
-	cba2 := NullableCborByteArray([]byte("world"))
+	cba1 := CborByteArray([]byte("hello"))
+	cba2 := CborByteArray([]byte("world"))
+	cbi1 := CborInt(456)
+	cbi2 := CborInt(789)
 
 	t.Run("Simple", func(t *testing.T) {
-		gs := GenericStruct[*NullableCborByteArray, CborInt]{
-			Boop:  123,
-			Thing: &cba1,
-			Sub: SubGenericStruct[*NullableCborByteArray, CborInt]{
+		gs := GenericStruct[CborByteArray, CborInt]{
+			Boop:   123,
+			Thing:  cba1,
+			Thing2: cbi1,
+			Sub: SubGenericStruct[CborByteArray, CborInt]{
 				Sub1: &cba2,
-				Sub2: CborInt(456),
+				Sub2: &cbi2,
 				Bam:  "bam!",
 			},
 		}
@@ -809,16 +812,17 @@ func TestGenerics(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected, _ := hex.DecodeString("83187b4568656c6c6f8345776f726c641901c86462616d21")
+		expected, _ := hex.DecodeString("84187b4568656c6c6f1901c88345776f726c641903156462616d21")
 		/*
-			83                                                # array(3)
+			84                                                # array(4)
 			  18 7b                                           #   uint(123)
 			  45                                              #   bytes(5)
 			    68656c6c6f                                    #     "hello"
+			  19 01c8                                         #   uint(456)
 			  83                                              #   array(3)
 			    45                                            #     bytes(5)
 			      776f726c64                                  #       "world"
-			    19 01c8                                       #     uint(456)
+			    19 0315                                       #     uint(789)
 			    64                                            #     string(4)
 			      62616d21                                    #       "bam!"
 		*/
@@ -826,7 +830,7 @@ func TestGenerics(t *testing.T) {
 			t.Fatalf("expected %x, got %x", expected, buf.Bytes())
 		}
 
-		var out GenericStruct[*NullableCborByteArray, CborInt]
+		var out GenericStruct[CborByteArray, CborInt]
 		if err := (&out).UnmarshalCBOR(buf); err != nil {
 			t.Fatal(err)
 		}
@@ -837,12 +841,13 @@ func TestGenerics(t *testing.T) {
 	})
 
 	t.Run("With nils", func(t *testing.T) {
-		gs := GenericStruct[*NullableCborByteArray, CborInt]{
-			Boop:  123,
-			Thing: nil,
-			Sub: SubGenericStruct[*NullableCborByteArray, CborInt]{
+		gs := GenericStruct[CborByteArray, CborInt]{
+			Boop:   123,
+			Thing:  nil, // should be zero-length byte array
+			Thing2: cbi1,
+			Sub: SubGenericStruct[CborByteArray, CborInt]{
 				Sub1: nil,
-				Sub2: CborInt(456),
+				Sub2: nil,
 				Bam:  "bam!",
 			},
 		}
@@ -851,14 +856,15 @@ func TestGenerics(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected, _ := hex.DecodeString("83187bf683f61901c86462616d21")
+		expected, _ := hex.DecodeString("84187b401901c883f6f66462616d21")
 		/*
-			83                                                # array(3)
+			84                                                # array(4)
 			  18 7b                                           #   uint(123)
-			  f6                                              #   null
+			  40                                              #   bytes(0)
+			  19 01c8                                         #   uint(456)
 			  83                                              #   array(3)
 			    f6                                            #     null
-			    19 01c8                                       #     uint(456)
+			    f6                                            #     null
 			    64                                            #     string(4)
 			      62616d21                                    #       "bam!"
 		*/
@@ -866,36 +872,74 @@ func TestGenerics(t *testing.T) {
 			t.Fatalf("expected %x, got %x", expected, buf.Bytes())
 		}
 
-		var out GenericStruct[*NullableCborByteArray, CborInt]
+		var out GenericStruct[CborByteArray, CborInt]
 		if err := (&out).UnmarshalCBOR(buf); err != nil {
 			t.Fatal(err)
 		}
 
+		if len(out.Thing) != 0 {
+			t.Fatal("expected zero-length byte array")
+		}
+		out.Thing = nil // make it nil so we can compare
 		if !cmp.Equal(gs, out) {
 			t.Fatal("not equal")
 		}
 	})
 
 	t.Run("Not nullable", func(t *testing.T) {
-		errBytes, _ := hex.DecodeString("83187bf683f6f66462616d21")
+		errBytes, _ := hex.DecodeString("84187bf61901c883f6f66462616d21")
 		/*
-			83                                                # array(3)
+			84                                                # array(4)
 			  18 7b                                           #   uint(123)
-			  f6                                              #   null
+			  f6                                              #   null      <-- this is the error
+			  19 01c8                                         #   uint(456)
 			  83                                              #   array(3)
 			    f6                                            #     null
-			    f6                                            #     null <-- this is the error
+			    f6                                            #     null
 			    64                                            #     string(4)
 			      62616d21                                    #       "bam!"
 		*/
-		var out GenericStruct[*NullableCborByteArray, CborInt]
+		var out GenericStruct[CborByteArray, CborInt]
 		err := (&out).UnmarshalCBOR(bytes.NewReader(errBytes))
+		if err == nil {
+			t.Fatal("expected error")
+		} else if !strings.Contains(err.Error(), "expected byte array") {
+			t.Fatal("unexpected error", err)
+		}
+
+		errBytes, _ = hex.DecodeString("84187b40f683f6f66462616d21")
+		/*
+			84                                                # array(4)
+			  18 7b                                           #   uint(123)
+			  40                                              #   bytes(0)
+			  f6                                              #   null      <-- this is the error
+			  83                                              #   array(3)
+			    f6                                            #     null
+			    f6                                            #     null
+			    64                                            #     string(4)
+			      62616d21                                    #       "bam!"
+		*/
+		err = (&out).UnmarshalCBOR(bytes.NewReader(errBytes))
 		if err == nil {
 			t.Fatal("expected error")
 		} else if !strings.Contains(err.Error(), "wrong type for int64") {
 			t.Fatal("unexpected error", err)
 		}
 	})
+}
+
+// Make CborByteArray, as CBORSerializer, conform to CBORGeneric
+
+func (t CborByteArray) FromCBOR(r io.Reader) (CborByteArray, error) {
+	ci := new(CborByteArray)
+	if err := ci.UnmarshalCBOR(r); err != nil {
+		return nil, err
+	}
+	return *ci, nil
+}
+
+func (t CborByteArray) ToCBOR(w io.Writer) error {
+	return t.MarshalCBOR(w)
 }
 
 // Make CborInt, as CBORSerializer, conform to CBORGeneric
@@ -910,32 +954,6 @@ func (t CborInt) FromCBOR(r io.Reader) (CborInt, error) {
 
 func (t CborInt) ToCBOR(w io.Writer) error {
 	return t.MarshalCBOR(w)
-}
-
-// NullableCborByteArray is a CborByteArray that can be nullable when serialized to CBOR.
-// It wraps a CborByteArray using the cbor-gen NullableUnmarshalCBOR and NullableMarshalCBOR
-// helpers.
-
-type NullableCborByteArray []byte
-
-func (t *NullableCborByteArray) FromCBOR(r io.Reader) (*NullableCborByteArray, error) {
-	var cbba CborByteArray
-	if err := cbg.NullableUnmarshalCBOR(r, &cbba); err != nil {
-		return nil, err
-	}
-	if cbba == nil {
-		return nil, nil
-	}
-	v := NullableCborByteArray(cbba)
-	return &v, nil
-}
-
-func (t *NullableCborByteArray) ToCBOR(w io.Writer) error {
-	if t != nil {
-		bap := CborByteArray(*t)
-		return cbg.NullableMarshalCBOR(w, &bap)
-	}
-	return cbg.NullableMarshalCBOR(w, nil)
 }
 
 // TODO: we can't generate a typed scalar because UnmarshalCBOR wants to make a zero value with
