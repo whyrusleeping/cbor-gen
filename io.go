@@ -11,7 +11,7 @@ var (
 
 type CborReader struct {
 	r    BytePeeker
-	hbuf []byte
+	hbuf [maxHeaderSize]byte
 }
 
 func NewCborReader(r io.Reader) *CborReader {
@@ -20,8 +20,7 @@ func NewCborReader(r io.Reader) *CborReader {
 	}
 
 	return &CborReader{
-		r:    GetPeeker(r),
-		hbuf: make([]byte, maxHeaderSize),
+		r: GetPeeker(r),
 	}
 }
 
@@ -38,7 +37,7 @@ func (cr *CborReader) UnreadByte() error {
 }
 
 func (cr *CborReader) ReadHeader() (byte, uint64, error) {
-	return CborReadHeaderBuf(cr.r, cr.hbuf)
+	return CborReadHeaderBuf(cr.r, cr.hbuf[:])
 }
 
 func (cr *CborReader) SetReader(r io.Reader) {
