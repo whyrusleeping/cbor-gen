@@ -219,9 +219,9 @@ func genericName(name string) string {
 func (gti GenTypeInfo) toGeneratedName(name string) string {
 	// if this is a placeholder, replace it with the generic type param
 	for i, placeholder := range gti.GenericPlaceholders {
-		genericType := getGenericTypeParameter(i)
 		trimmedPlaceholder := strings.TrimPrefix(placeholder, "*")
 		if name == placeholder || name == trimmedPlaceholder {
+			genericType := getGenericTypeParameter(i)
 			return genericType
 		}
 	}
@@ -243,8 +243,13 @@ func (gti GenTypeInfo) toGeneratedName(name string) string {
 }
 
 func (gti GenTypeInfo) toGenericTypeParam(name string) string {
+	// dummy generic placeholders should be non-pointers at generation time, but they may be used
+	// as pointers (e.g. struct `Foo[T]` but Foo has a field `F *T``) so we need to strip the
+	// pointer prefix if there is one to match the placeholder
 	name = strings.TrimPrefix(name, "*")
+
 	for i, placeholder := range gti.GenericPlaceholders {
+		// dummy generic placeholder could still be pointers in limited cases, so just in case:
 		placeholder = strings.TrimPrefix(placeholder, "*")
 		if name == placeholder {
 			return getGenericTypeParameter(i)
@@ -296,6 +301,8 @@ func (gti *GenTypeInfo) Imports() []Import {
 			continue
 		}
 		if gti.toGenericTypeParam(f.Type.String()) == "" {
+			// not a stray import that exists only as a dummy for a type that uses generics and therefore
+			// shouldn't be part of the generated output
 			imports = append(imports, ImportsForType(f.Pkg, f.Type)...)
 		}
 	}
