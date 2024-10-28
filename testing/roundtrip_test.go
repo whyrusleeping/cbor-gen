@@ -789,3 +789,25 @@ func TestStringPtrSlices(t *testing.T) {
 func ptr[T any](v T) *T {
 	return &v
 }
+
+func TestUnmarshalExtraFields(t *testing.T) {
+	in := &FieldNameOverlap{
+		LongerNamedField: "some stuff",
+		Foo:              1825,
+		Bar:              "less things",
+	}
+
+	buf := new(bytes.Buffer)
+	if err := in.MarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	var out RenamedFields
+	if err := out.UnmarshalCBOR(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	if out.Foo != in.Foo || out.Bar != in.Bar {
+		t.Fatal("encoding mismatch")
+	}
+}

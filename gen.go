@@ -220,6 +220,16 @@ func (gti *GenTypeInfo) Imports() []Import {
 	return imports
 }
 
+func (gti *GenTypeInfo) MaxMapKeyLength() int {
+	var mlen int
+	for _, f := range gti.Fields {
+		if len(f.MapKey) > mlen {
+			mlen = len(f.MapKey)
+		}
+	}
+	return mlen
+}
+
 func nameIsExported(name string) bool {
 	return strings.ToUpper(name[0:1]) == name[0:1]
 }
@@ -1853,21 +1863,28 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("{{ .Name }}: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, {{ .MaxMapKeyLength }})
 	for i := uint64(0); i < n; i++ {
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, {{ MaxLen 0 "String" }})
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid){})
+			continue
+		}
+
 `)
 	if err != nil {
 		return err
 	}
 
-	if err := g.emitCborUnmarshalStringField(w, Field{Name: "name"}); err != nil {
-		return err
-	}
-
 	err = g.doTemplate(w, gti, `
-		switch name {
+		switch string(nameBuf[:nameLen]) {
 `)
 	if err != nil {
 		return err

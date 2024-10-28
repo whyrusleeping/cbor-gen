@@ -138,7 +138,7 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	case *bufio.Reader:
 		return r.ReadByte()
 	case *peeker:
-		return r.ReadByte()
+		return r.ReadByteBuf(scratch)
 	case *CborReader:
 		return readByte(r.r)
 	case io.ByteReader:
@@ -405,6 +405,39 @@ func ReadStringWithMax(r io.Reader, maxLength uint64) (string, error) {
 	}
 
 	return string(buf), nil
+}
+
+// ReadFullStringIntoBuf will read a string off the given stream, consuming the
+// entire cbor item if the string on the stream is longer than the buffer,
+// the string is discarded and 'false' is returned
+func ReadFullStringIntoBuf(cr *CborReader, buf []byte, maxLength uint64) (int, bool, error) {
+	maj, l, err := cr.ReadHeader()
+	if err != nil {
+		return 0, false, err
+	}
+
+	if maj != MajTextString {
+		return 0, false, fmt.Errorf("got tag %d while reading string value (l = %d)", maj, l)
+	}
+
+	if l > maxLength {
+		return 0, false, fmt.Errorf("string in input was too long")
+	}
+
+	if l > uint64(len(buf)) {
+		_, err := io.CopyN(io.Discard, cr, int64(l))
+		if err != nil {
+			return 0, false, err
+		}
+		return 0, false, nil
+	}
+
+	_, err = io.ReadAtLeast(cr, buf[:l], int(l))
+	if err != nil {
+		return 0, false, err
+	}
+
+	return int(l), true, nil
 }
 
 // Deprecated: use ReadString

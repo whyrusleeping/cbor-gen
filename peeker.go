@@ -71,6 +71,21 @@ func (p *peeker) ReadByte() (byte, error) {
 	return b, nil
 }
 
+func (p *peeker) ReadByteBuf(buf []byte) (byte, error) {
+	if p.peekState == peekUnread {
+		p.peekState = peekSet
+		return p.lastByte, nil
+	}
+	_, err := io.ReadFull(p.reader, buf[:1])
+	if err != nil {
+		return 0, err
+	}
+	b := buf[0]
+	p.lastByte = b
+	p.peekState = peekSet
+	return b, nil
+}
+
 func (p *peeker) UnreadByte() error {
 	if p.peekState != peekSet {
 		return bufio.ErrInvalidUnreadByte

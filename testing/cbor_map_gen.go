@@ -267,21 +267,22 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("SimpleTypeTree: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 32)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Dog (string) (string)
 		case "Dog":
 
@@ -595,21 +596,22 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("NeedScratchForMap: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 5)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Thing (bool) (bool)
 		case "Thing":
 
@@ -908,21 +910,22 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("SimpleStructV1: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 14)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.OldMap (map[string]testing.SimpleTypeOne) (map)
 		case "OldMap":
 
@@ -1574,21 +1577,22 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("SimpleStructV2: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 9)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.NewMap (map[string]testing.SimpleTypeOne) (map)
 		case "NewMap":
 
@@ -2006,21 +2010,22 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("RenamedFields: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 4)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Foo (int64) (int64)
 		case "foo":
 			{
@@ -2193,21 +2198,22 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("TestEmpty: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 4)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Cat (int64) (int64)
 		case "Cat":
 			{
@@ -2354,21 +2360,22 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("TestConstField: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 5)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Cats (string) (string)
 		case "Cats":
 
@@ -2543,21 +2550,22 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("TestCanonicalFieldOrder: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 5)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Zp (string) (string)
 		case "ap":
 
@@ -2732,21 +2740,22 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("MapStringString: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 12)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Snorkleblump (map[string]string) (map)
 		case "Snorkleblump":
 
@@ -3002,21 +3011,22 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("TestSliceNilPreserve: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 8)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Cat (string) (string)
 		case "Cat":
 
@@ -3327,21 +3337,22 @@ func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("StringPtrSlices: map struct too large (%d)", extra)
 	}
 
-	var name string
 	n := extra
 
+	nameBuf := make([]byte, 10)
 	for i := uint64(0); i < n; i++ {
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			name = string(sval)
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
 		}
 
-		switch name {
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
 		// t.Strings ([]string) (slice)
 		case "Strings":
 
@@ -3431,6 +3442,184 @@ func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
 					}
 
 				}
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(r, func(cid.Cid) {})
+		}
+	}
+
+	return nil
+}
+func (t *FieldNameOverlap) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{163}); err != nil {
+		return err
+	}
+
+	// t.Foo (int64) (int64)
+	if len("foo") > 8192 {
+		return xerrors.Errorf("Value in field \"foo\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("foo"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("foo")); err != nil {
+		return err
+	}
+
+	if t.Foo >= 0 {
+		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Foo)); err != nil {
+			return err
+		}
+	} else {
+		if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-t.Foo-1)); err != nil {
+			return err
+		}
+	}
+
+	// t.Bar (string) (string)
+	if len("beep") > 8192 {
+		return xerrors.Errorf("Value in field \"beep\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("beep"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("beep")); err != nil {
+		return err
+	}
+
+	if len(t.Bar) > 8192 {
+		return xerrors.Errorf("Value in field t.Bar was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.Bar))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string(t.Bar)); err != nil {
+		return err
+	}
+
+	// t.LongerNamedField (string) (string)
+	if len("LongerNamedField") > 8192 {
+		return xerrors.Errorf("Value in field \"LongerNamedField\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("LongerNamedField"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("LongerNamedField")); err != nil {
+		return err
+	}
+
+	if len(t.LongerNamedField) > 8192 {
+		return xerrors.Errorf("Value in field t.LongerNamedField was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.LongerNamedField))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string(t.LongerNamedField)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *FieldNameOverlap) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = FieldNameOverlap{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("FieldNameOverlap: map struct too large (%d)", extra)
+	}
+
+	n := extra
+
+	nameBuf := make([]byte, 16)
+	for i := uint64(0); i < n; i++ {
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
+		// t.Foo (int64) (int64)
+		case "foo":
+			{
+				maj, extra, err := cr.ReadHeader()
+				if err != nil {
+					return err
+				}
+				var extraI int64
+				switch maj {
+				case cbg.MajUnsignedInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 positive overflow")
+					}
+				case cbg.MajNegativeInt:
+					extraI = int64(extra)
+					if extraI < 0 {
+						return fmt.Errorf("int64 negative overflow")
+					}
+					extraI = -1 - extraI
+				default:
+					return fmt.Errorf("wrong type for int64 field: %d", maj)
+				}
+
+				t.Foo = int64(extraI)
+			}
+			// t.Bar (string) (string)
+		case "beep":
+
+			{
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				if err != nil {
+					return err
+				}
+
+				t.Bar = string(sval)
+			}
+			// t.LongerNamedField (string) (string)
+		case "LongerNamedField":
+
+			{
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				if err != nil {
+					return err
+				}
+
+				t.LongerNamedField = string(sval)
 			}
 
 		default:
