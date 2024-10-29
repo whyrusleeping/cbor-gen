@@ -410,6 +410,8 @@ func ReadStringWithMax(r io.Reader, maxLength uint64) (string, error) {
 // ReadFullStringIntoBuf will read a string off the given stream, consuming the
 // entire cbor item if the string on the stream is longer than the buffer,
 // the string is discarded and 'false' is returned
+// Note: Will only read data into the buffer if the data fits into the buffer,
+// otherwise the bytes are discarded entirely
 func ReadFullStringIntoBuf(cr *CborReader, buf []byte, maxLength uint64) (int, bool, error) {
 	maj, l, err := cr.ReadHeader()
 	if err != nil {
