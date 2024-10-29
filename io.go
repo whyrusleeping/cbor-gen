@@ -68,7 +68,11 @@ func (cr *CborReader) ReadCid(scratchBuf []byte) (cid.Cid, error) {
 		return cid.Undef, fmt.Errorf("header size too big for a cid")
 	}
 
-	_, err = io.ReadAtLeast(cr, scratchBuf[:extra], int(extra))
+	if len(scratchBuf) < int(extra) {
+		return cid.Undef, fmt.Errorf("scratchBuf not large enough for cid")
+	}
+
+	_, err = io.ReadFull(cr, scratchBuf[:extra])
 	if err != nil {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF

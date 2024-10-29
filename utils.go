@@ -138,7 +138,7 @@ func readByteBuf(r io.Reader, scratch []byte) (byte, error) {
 	case *bufio.Reader:
 		return r.ReadByte()
 	case *peeker:
-		return r.ReadByteBuf(scratch)
+		return r.ReadByte()
 	case *CborReader:
 		return readByte(r.r)
 	case io.ByteReader:
@@ -432,9 +432,9 @@ func ReadFullStringIntoBuf(cr *CborReader, buf []byte, maxLength uint64) (int, b
 		return 0, false, nil
 	}
 
-	_, err = io.ReadAtLeast(cr, buf[:l], int(l))
+	n, err := io.ReadFull(cr, buf[:l])
 	if err != nil {
-		return 0, false, err
+		return n, false, err
 	}
 
 	return int(l), true, nil
