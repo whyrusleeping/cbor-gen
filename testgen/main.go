@@ -38,6 +38,7 @@ func main() {
 		types.MapStringString{},
 		types.TestSliceNilPreserve{},
 		types.StringPtrSlices{},
+		types.FieldNameOverlap{},
 	); err != nil {
 		panic(err)
 	}

@@ -115,6 +115,12 @@ type RenamedFields struct {
 	Bar string `cborgen:"beep"`
 }
 
+type FieldNameOverlap struct {
+	LongerNamedField string
+	Foo              int64  `cborgen:"foo"`
+	Bar              string `cborgen:"beep"`
+}
+
 type BigField struct {
 	LargeBytes []byte `cborgen:"maxlen=10000000"`
 }
