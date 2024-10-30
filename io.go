@@ -1,10 +1,7 @@
 package typegen
 
 import (
-	"fmt"
 	"io"
-
-	cid "github.com/ipfs/go-cid"
 )
 
 var (
@@ -45,42 +42,6 @@ func (cr *CborReader) ReadHeader() (byte, uint64, error) {
 
 func (cr *CborReader) SetReader(r io.Reader) {
 	cr.r = GetPeeker(r)
-}
-
-func (cr *CborReader) ReadCid(scratchBuf []byte) (cid.Cid, error) {
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-		return cid.Undef, err
-	}
-
-	if maj != MajTag {
-		return cid.Undef, fmt.Errorf("expected cbor type 'tag' in input")
-	}
-
-	if extra != 42 {
-		return cid.Undef, fmt.Errorf("expected tag 42")
-	}
-
-	if extra > 512 {
-		return cid.Undef, fmt.Errorf("header size too big for a cid")
-	}
-
-	if len(scratchBuf) < int(extra) {
-		return cid.Undef, fmt.Errorf("scratchBuf not large enough for cid")
-	}
-
-	_, err = io.ReadFull(cr, scratchBuf[:extra])
-	if err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-		return cid.Undef, err
-	}
-
-	return bufToCid(scratchBuf[:extra])
 }
 
 var (

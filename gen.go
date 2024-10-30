@@ -1874,7 +1874,9 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid){})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid){}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -1947,7 +1949,9 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	return g.doTemplate(w, gti, `
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid){})
+			if err := cbg.ScanForLinks(r, func(cid.Cid){}); err != nil {
+				return err
+			}
 		}
 	}
 

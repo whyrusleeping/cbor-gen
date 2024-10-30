@@ -427,9 +427,8 @@ func ReadFullStringIntoBuf(cr *CborReader, buf []byte, maxLength uint64) (int, b
 	}
 
 	if l > uint64(len(buf)) {
-		_, err := io.CopyN(io.Discard, cr, int64(l))
-		if err != nil {
-			return 0, false, err
+		if err := discard(cr, int(l)); err != nil {
+			return 0, false, nil
 		}
 		return 0, false, nil
 	}
