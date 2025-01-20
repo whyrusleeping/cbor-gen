@@ -311,7 +311,15 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 				return nil, fmt.Errorf("maxsize tag value was not valid: %w", err)
 			}
 
+			if f.Type.Kind() == reflect.Array && val > f.Type.Len() {
+				return nil, fmt.Errorf("maxlen tag value was larger than array length")
+			}
+
 			usrMaxLen = val
+		} else if f.Type.Kind() == reflect.Array {
+			// Override the max length for arrays to be the array length if no explicit
+			// length is specified.
+			usrMaxLen = f.Type.Len()
 		}
 
 		var constval *string
