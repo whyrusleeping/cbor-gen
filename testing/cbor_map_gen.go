@@ -278,7 +278,9 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -537,7 +539,9 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -607,7 +611,9 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -633,7 +639,9 @@ func (t *NeedScratchForMap) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -921,7 +929,9 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -1186,7 +1196,9 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1588,7 +1600,9 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -1922,7 +1936,9 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -2021,7 +2037,9 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -2066,7 +2084,9 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -2209,7 +2229,9 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -2275,7 +2297,9 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -2371,7 +2395,9 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -2416,7 +2442,9 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -2561,7 +2589,9 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -2643,7 +2673,9 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -2751,7 +2783,9 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -2802,7 +2836,9 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -3022,7 +3058,9 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -3222,7 +3260,9 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -3348,7 +3388,9 @@ func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -3446,7 +3488,9 @@ func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -3568,7 +3612,9 @@ func (t *FieldNameOverlap) UnmarshalCBOR(r io.Reader) (err error) {
 
 		if !ok {
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(cr, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -3624,7 +3670,9 @@ func (t *FieldNameOverlap) UnmarshalCBOR(r io.Reader) (err error) {
 
 		default:
 			// Field doesn't exist on this type, so ignore it
-			cbg.ScanForLinks(r, func(cid.Cid) {})
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
 		}
 	}
 
