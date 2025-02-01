@@ -9,6 +9,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 
+	"github.com/multiformats/go-multihash"
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 
@@ -239,8 +240,16 @@ func (cl *CborLink[T]) Store(val T) error {
 	if err := val.MarshalCBOR(&buf); err != nil {
 		return err
 	}
-	cl.cid = cid.NewCidV1(cid.DagCBOR, buf.Bytes())
-	return nil
+	p := cid.Prefix{
+		Version:  1,
+		Codec:    cid.DagCBOR,
+		MhType:   multihash.SHA2_256,
+		MhLength: -1,
+	}
+
+	var err error
+	cl.cid, err = p.Sum(buf.Bytes())
+	return err
 }
 
 type TypeWithGenericFields struct {

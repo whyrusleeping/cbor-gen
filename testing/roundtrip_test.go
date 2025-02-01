@@ -811,3 +811,93 @@ func TestUnmarshalExtraFields(t *testing.T) {
 		t.Fatal("encoding mismatch")
 	}
 }
+
+func TestGenericFieldRoundtrip(t *testing.T) {
+	// Create a SimpleTypeTwo value (you might set additional fields as needed).
+	st2 := &SimpleTypeTwo{
+		Dog: "bark",
+	}
+
+	// Create a generic CborLink and store st2 into it.
+	link := &CborLink[*SimpleTypeTwo]{}
+	if err := link.Store(st2); err != nil {
+		t.Fatalf("CborLink.Store failed: %v", err)
+	}
+
+	// Build the test object.
+	orig := &TypeWithGenericFields{
+		Link: link,
+	}
+
+	// Marshal to CBOR.
+	var buf bytes.Buffer
+	if err := orig.MarshalCBOR(&buf); err != nil {
+		t.Fatalf("MarshalCBOR failed: %v", err)
+	}
+
+	// Unmarshal into a new object.
+	newObj := new(TypeWithGenericFields)
+	if err := newObj.UnmarshalCBOR(&buf); err != nil {
+		t.Fatalf("UnmarshalCBOR failed: %v", err)
+	}
+
+	// Compare the inner CIDs.
+	if orig.Link == nil || newObj.Link == nil {
+		t.Fatal("unexpected nil CborLink")
+	}
+	if orig.Link.cid != newObj.Link.cid {
+		t.Fatalf("roundtrip mismatch: original cid %v, new cid %v", orig.Link.cid, newObj.Link.cid)
+	}
+}
+
+func TestGenericFieldArrayRoundtrip(t *testing.T) {
+	// First generic value.
+	st2a := &SimpleTypeTwo{
+		Dog: "woof1",
+	}
+	link1 := &CborLink[*SimpleTypeTwo]{}
+	if err := link1.Store(st2a); err != nil {
+		t.Fatalf("CborLink.Store failed for link1: %v", err)
+	}
+
+	// Second generic value.
+	st2b := &SimpleTypeTwo{
+		Dog: "woof2",
+	}
+	link2 := &CborLink[*SimpleTypeTwo]{}
+	if err := link2.Store(st2b); err != nil {
+		t.Fatalf("CborLink.Store failed for link2: %v", err)
+	}
+
+	// Build the test object.
+	orig := &TypeWithGenericFieldArray{
+		Link: []*CborLink[*SimpleTypeTwo]{link1, link2},
+	}
+
+	// Marshal to CBOR.
+	var buf bytes.Buffer
+	if err := orig.MarshalCBOR(&buf); err != nil {
+		t.Fatalf("MarshalCBOR failed: %v", err)
+	}
+
+	// Unmarshal into a new object.
+	newObj := new(TypeWithGenericFieldArray)
+	if err := newObj.UnmarshalCBOR(&buf); err != nil {
+		t.Fatalf("UnmarshalCBOR failed: %v", err)
+	}
+
+	// Check the length of the slice.
+	if len(orig.Link) != len(newObj.Link) {
+		t.Fatalf("slice length mismatch: original %d, new %d", len(orig.Link), len(newObj.Link))
+	}
+
+	// Compare the inner CIDs of each generic link.
+	for i, l := range orig.Link {
+		if l == nil || newObj.Link[i] == nil {
+			t.Fatalf("unexpected nil at index %d", i)
+		}
+		if l.cid != newObj.Link[i].cid {
+			t.Fatalf("link[%d] cid mismatch: %v vs %v", i, l.cid, newObj.Link[i].cid)
+		}
+	}
+}
