@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"bytes"
+	"io"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -209,4 +211,42 @@ type BigIntContainer struct {
 type StringPtrSlices struct {
 	Strings    []string
 	StringPtrs []*string
+}
+
+type CborLink[T cbg.CBORMarshaler] struct {
+	cid cid.Cid
+}
+
+func (cl *CborLink[T]) MarshalCBOR(w io.Writer) error {
+	return cbg.CborCid(cl.cid).MarshalCBOR(w)
+}
+
+func (cl *CborLink[T]) UnmarshalCBOR(r io.Reader) error {
+	var cc cbg.CborCid
+	if err := cc.UnmarshalCBOR(r); err != nil {
+		return err
+	}
+	cl.cid = cid.Cid(cc)
+	return nil
+}
+
+func (cl *CborLink[T]) Cid() cid.Cid {
+	return cl.cid
+}
+
+func (cl *CborLink[T]) Store(val T) error {
+	var buf bytes.Buffer
+	if err := val.MarshalCBOR(&buf); err != nil {
+		return err
+	}
+	cl.cid = cid.NewCidV1(cid.DagCBOR, buf.Bytes())
+	return nil
+}
+
+type TypeWithGenericFields struct {
+	Link *CborLink[*SimpleTypeTwo]
+}
+
+type TypeWithGenericFieldArray struct {
+	Link []*CborLink[*SimpleTypeTwo]
 }

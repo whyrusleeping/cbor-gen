@@ -39,6 +39,8 @@ func main() {
 		types.TestSliceNilPreserve{},
 		types.StringPtrSlices{},
 		types.FieldNameOverlap{},
+		types.TypeWithGenericFields{},
+		types.TypeWithGenericFieldArray{},
 	); err != nil {
 		panic(err)
 	}
