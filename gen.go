@@ -164,14 +164,14 @@ func typeName(pkg string, t reflect.Type) string {
 	case reflect.Map:
 		return "map[" + typeName(pkg, t.Key()) + "]" + typeName(pkg, t.Elem())
 	default:
-		pkgPath := t.PkgPath()
-		if pkgPath == "" {
-			// It's a built-in.
-			return t.String()
-		} else if pkgPath == pkg {
-			return t.Name()
+		raw := t.String()
+		expr, err := parseTypeName(raw)
+		if err != nil {
+			panic(fmt.Errorf("failed to parse type %s: %w", raw, err))
 		}
-		return fmt.Sprintf("%s.%s", resolvePkgName(pkgPath, t.String()), t.Name())
+		expr.ShortenPackages(pkg, resolvePkgName)
+		s := expr.RenderString()
+		return s
 	}
 }
 

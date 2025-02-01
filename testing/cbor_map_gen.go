@@ -3678,3 +3678,246 @@ func (t *FieldNameOverlap) UnmarshalCBOR(r io.Reader) (err error) {
 
 	return nil
 }
+func (t *TypeWithGenericFields) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{161}); err != nil {
+		return err
+	}
+
+	// t.Link (testing.CborLink[*github.com/whyrusleeping/cbor-gen/testing.SimpleTypeTwo]) (struct)
+	if len("Link") > 8192 {
+		return xerrors.Errorf("Value in field \"Link\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Link"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("Link")); err != nil {
+		return err
+	}
+
+	if err := t.Link.MarshalCBOR(cw); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *TypeWithGenericFields) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = TypeWithGenericFields{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("TypeWithGenericFields: map struct too large (%d)", extra)
+	}
+
+	n := extra
+
+	nameBuf := make([]byte, 4)
+	for i := uint64(0); i < n; i++ {
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
+		// t.Link (testing.CborLink[*github.com/whyrusleeping/cbor-gen/testing.SimpleTypeTwo]) (struct)
+		case "Link":
+
+			{
+
+				b, err := cr.ReadByte()
+				if err != nil {
+					return err
+				}
+				if b != cbg.CborNull[0] {
+					if err := cr.UnreadByte(); err != nil {
+						return err
+					}
+					t.Link = new(CborLink[*SimpleTypeTwo])
+					if err := t.Link.UnmarshalCBOR(cr); err != nil {
+						return xerrors.Errorf("unmarshaling t.Link pointer: %w", err)
+					}
+				}
+
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+func (t *TypeWithGenericFieldArray) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{161}); err != nil {
+		return err
+	}
+
+	// t.Link ([]*testing.CborLink[*github.com/whyrusleeping/cbor-gen/testing.SimpleTypeTwo]) (slice)
+	if len("Link") > 8192 {
+		return xerrors.Errorf("Value in field \"Link\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("Link"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("Link")); err != nil {
+		return err
+	}
+
+	if len(t.Link) > 8192 {
+		return xerrors.Errorf("Slice value in field t.Link was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Link))); err != nil {
+		return err
+	}
+	for _, v := range t.Link {
+		if err := v.MarshalCBOR(cw); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func (t *TypeWithGenericFieldArray) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = TypeWithGenericFieldArray{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("TypeWithGenericFieldArray: map struct too large (%d)", extra)
+	}
+
+	n := extra
+
+	nameBuf := make([]byte, 4)
+	for i := uint64(0); i < n; i++ {
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
+		// t.Link ([]*testing.CborLink[*github.com/whyrusleeping/cbor-gen/testing.SimpleTypeTwo]) (slice)
+		case "Link":
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > 8192 {
+				return fmt.Errorf("t.Link: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+
+			if extra > 0 {
+				t.Link = make([]*CborLink[*SimpleTypeTwo], extra)
+			}
+
+			for i := 0; i < int(extra); i++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					{
+
+						b, err := cr.ReadByte()
+						if err != nil {
+							return err
+						}
+						if b != cbg.CborNull[0] {
+							if err := cr.UnreadByte(); err != nil {
+								return err
+							}
+							t.Link[i] = new(CborLink[*SimpleTypeTwo])
+							if err := t.Link[i].UnmarshalCBOR(cr); err != nil {
+								return xerrors.Errorf("unmarshaling t.Link[i] pointer: %w", err)
+							}
+						}
+
+					}
+
+				}
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
