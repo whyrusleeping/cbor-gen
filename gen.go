@@ -147,6 +147,7 @@ type Field struct {
 	Const   *string
 
 	OmitEmpty   bool
+	Optional    bool
 	PreserveNil bool
 	IterLabel   string
 
@@ -196,9 +197,10 @@ func (f Field) Len() int {
 }
 
 type GenTypeInfo struct {
-	Name        string
-	Fields      []Field
-	Transparent bool
+	Name                string
+	Fields              []Field
+	MandatoryFieldCount int
+	Transparent         bool
 }
 
 func (gti *GenTypeInfo) Imports() []Import {
@@ -329,6 +331,7 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 		out.Transparent = transparent
 
 		_, omitempty := tags["omitempty"]
+		_, optional := tags["optional"]
 		_, preservenil := tags["preservenil"]
 
 		if preservenil && ft.Kind() != reflect.Slice {
@@ -345,7 +348,18 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			PreserveNil: preservenil,
 			MaxLen:      usrMaxLen,
 			Const:       constval,
+			Optional:    optional,
 		})
+	}
+
+	for i, field := range out.Fields {
+		if field.Optional {
+			continue
+		}
+		if out.MandatoryFieldCount != i {
+			return nil, fmt.Errorf("mandatory field %T.%s cannot come after optional fields", itype, field.Name)
+		}
+		out.MandatoryFieldCount++
 	}
 
 	return &out, nil
@@ -374,6 +388,8 @@ func tagparse(v string) (map[string]string, error) {
 			out["ignore"] = "true"
 		} else if elem == "transparent" {
 			out["transparent"] = "true"
+		} else if elem == "optional" {
+			out["optional"] = "true"
 		} else {
 			out["name"] = elem
 		}
@@ -1595,10 +1611,19 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	if maj != cbg.MajArray {
 		return fmt.Errorf("cbor input should be of type array")
 	}
-
-	if extra != {{ len .Fields }} {
+{{ if eq (len .Fields) .MandatoryFieldCount }}
+	if extra != {{ .MandatoryFieldCount }} {
 		return fmt.Errorf("cbor input had wrong number of fields")
 	}
+{{ else }}
+	if extra > {{ len .Fields }} {
+		return fmt.Errorf("cbor input has too many fields %d > {{ len .Fields }}", extra)
+	}
+
+	if extra < {{ .MandatoryFieldCount }} {
+		return fmt.Errorf("cbor input has too few fields %d < {{ .MandatoryFieldCount }}", extra)
+	}
+{{ end }}
 
 `)
 	}
@@ -1606,13 +1631,18 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	for _, f := range gti.Fields {
+	for fieldIndex, f := range gti.Fields {
 		if f.Name == FieldNameSelf {
 			f.Name = "(*t)" // self
 		} else {
 			f.Name = "t." + f.Name
 		}
+
 		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
+
+		if f.Optional {
+			fmt.Fprintf(w, "\tif extra < %d {\n\t\treturn nil\n\t}\n", fieldIndex+1)
+		}
 
 		switch f.Type.Kind() {
 		case reflect.String:
