@@ -19,7 +19,14 @@ func TestOptionalFields(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var out TupleWithOptionalFields
+			// Pre-fill with garbage. We want optional fields to be reset to their
+			// defaults.
+			out := TupleWithOptionalFields{
+				Int1: 0xf1,
+				Int2: 0xf2,
+				Int3: 0xf3,
+				Int4: 0xf4,
+			}
 			err := out.UnmarshalCBOR(&buf)
 			switch count {
 			case 4:
