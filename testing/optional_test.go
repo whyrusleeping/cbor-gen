@@ -46,10 +46,16 @@ func TestOptionalFields(t *testing.T) {
 				if out.Int1 != ints[0] {
 					t.Errorf("field 1 should be %d, was %d", ints[0], out.Int1)
 				}
-				if (count == 4 || count == 3) && out.Int4 != 0 {
-					t.Errorf("expected field 4 to be zero")
-				} else if count == 3 && out.Int3 != 0 {
-					t.Errorf("expected field 3 to be zero")
+				switch count {
+				case 2:
+					if out.Int3 != 0 {
+						t.Errorf("expected field 3 to be zero, was %d", out.Int3)
+					}
+					fallthrough
+				case 3:
+					if out.Int4 != 0 {
+						t.Errorf("expected field 4 to be zero, was %d", out.Int4)
+					}
 				}
 				if err != nil {
 					t.Errorf("expected no error when unmarshaling, got: %s", err)
