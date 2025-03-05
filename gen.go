@@ -1623,6 +1623,8 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	if extra < {{ .MandatoryFieldCount }} {
 		return fmt.Errorf("cbor input has too few fields %d < {{ .MandatoryFieldCount }}", extra)
 	}
+	
+	fieldCount := extra
 {{ end }}
 
 `)
@@ -1641,7 +1643,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 
 		if f.Optional {
-			fmt.Fprintf(w, "\tif extra < %d {\n\t\treturn nil\n\t}\n", fieldIndex+1)
+			fmt.Fprintf(w, "\tif fieldCount < %d {\n\t\treturn nil\n\t}\n", fieldIndex+1)
 		}
 
 		switch f.Type.Kind() {
