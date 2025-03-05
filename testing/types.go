@@ -212,8 +212,8 @@ type StringPtrSlices struct {
 }
 
 type TupleWithOptionalFields struct {
-	Int1 int64
-	Int2 int64
-	Int3 int64 `cborgen:"optional"`
-	Int4 int64 `cborgen:"optional"`
+	Int1  int64
+	Uint2 uint64
+	Int3  int64 `cborgen:"optional"`
+	Int4  int64 `cborgen:"optional"`
 }

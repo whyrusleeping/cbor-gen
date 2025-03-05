@@ -76,45 +76,48 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Signed ([]uint64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Signed: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Signed: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Signed = make([]uint64, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Signed = make([]uint64, extra)
+		}
 
+		for i := 0; i < int(extra); i++ {
 			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
 
-				maj, extra, err = cr.ReadHeader()
-				if err != nil {
-					return err
+				{
+
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajUnsignedInt {
+						return fmt.Errorf("wrong type for uint64 field")
+					}
+					t.Signed[i] = uint64(extra)
+
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Signed[i] = uint64(extra)
 
 			}
-
 		}
 	}
 	return nil
@@ -249,7 +252,7 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		maj, extra, err := cr.ReadHeader()
 		if err != nil {
 			return err
 		}
@@ -261,26 +264,29 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Binary ([]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 2097152 {
-		return fmt.Errorf("t.Binary: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 0 {
-		t.Binary = make([]uint8, extra)
-	}
+		if extra > 2097152 {
+			return fmt.Errorf("t.Binary: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
 
-	if _, err := io.ReadFull(cr, t.Binary); err != nil {
-		return err
-	}
+		if extra > 0 {
+			t.Binary = make([]uint8, extra)
+		}
 
+		if _, err := io.ReadFull(cr, t.Binary); err != nil {
+			return err
+		}
+
+	}
 	// t.Signed (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
@@ -318,41 +324,44 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Strings ([]string) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Strings: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Strings: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Strings = make([]string, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Strings = make([]string, extra)
+		}
 
+		for i := 0; i < int(extra); i++ {
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
-				if err != nil {
-					return err
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+
+				{
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					if err != nil {
+						return err
+					}
+
+					t.Strings[i] = string(sval)
 				}
 
-				t.Strings[i] = string(sval)
 			}
-
 		}
 	}
 	return nil
@@ -549,149 +558,162 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Others ([]uint64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Others: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Others: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Others = make([]uint64, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Others = make([]uint64, extra)
+		}
 
+		for i := 0; i < int(extra); i++ {
 			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
 
-				maj, extra, err = cr.ReadHeader()
-				if err != nil {
-					return err
+				{
+
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajUnsignedInt {
+						return fmt.Errorf("wrong type for uint64 field")
+					}
+					t.Others[i] = uint64(extra)
+
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Others[i] = uint64(extra)
 
 			}
-
 		}
 	}
 	// t.SignedOthers ([]int64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.SignedOthers: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.SignedOthers: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.SignedOthers = make([]int64, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.SignedOthers = make([]int64, extra)
+		}
+
+		for i := 0; i < int(extra); i++ {
 			{
-				maj, extra, err := cr.ReadHeader()
-				if err != nil {
-					return err
-				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+				{
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
 					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					var extraI int64
+					switch maj {
+					case cbg.MajUnsignedInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 positive overflow")
+						}
+					case cbg.MajNegativeInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 negative overflow")
+						}
+						extraI = -1 - extraI
+					default:
+						return fmt.Errorf("wrong type for int64 field: %d", maj)
 					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
+
+					t.SignedOthers[i] = int64(extraI)
 				}
 
-				t.SignedOthers[i] = int64(extraI)
 			}
-
 		}
 	}
 	// t.Test ([][]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Test: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Test: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Test = make([][]uint8, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Test = make([][]uint8, extra)
+		}
 
-			maj, extra, err = cr.ReadHeader()
-			if err != nil {
-				return err
+		for i := 0; i < int(extra); i++ {
+			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+
+				{
+
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+
+					if extra > 2097152 {
+						return fmt.Errorf("t.Test[i]: byte array too large (%d)", extra)
+					}
+					if maj != cbg.MajByteString {
+						return fmt.Errorf("expected byte array")
+					}
+
+					if extra > 0 {
+						t.Test[i] = make([]uint8, extra)
+					}
+
+					if _, err := io.ReadFull(cr, t.Test[i]); err != nil {
+						return err
+					}
+
+				}
+
 			}
-
-			if extra > 2097152 {
-				return fmt.Errorf("t.Test[i]: byte array too large (%d)", extra)
-			}
-			if maj != cbg.MajByteString {
-				return fmt.Errorf("expected byte array")
-			}
-
-			if extra > 0 {
-				t.Test[i] = make([]uint8, extra)
-			}
-
-			if _, err := io.ReadFull(cr, t.Test[i]); err != nil {
-				return err
-			}
-
 		}
 	}
 	// t.Dog (string) (string)
@@ -706,45 +728,48 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Numbers ([]testing.NamedNumber) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Numbers: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Numbers: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Numbers = make([]NamedNumber, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Numbers = make([]NamedNumber, extra)
+		}
 
+		for i := 0; i < int(extra); i++ {
 			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
 
-				maj, extra, err = cr.ReadHeader()
-				if err != nil {
-					return err
+				{
+
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajUnsignedInt {
+						return fmt.Errorf("wrong type for uint64 field")
+					}
+					t.Numbers[i] = NamedNumber(extra)
+
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Numbers[i] = NamedNumber(extra)
 
 			}
-
 		}
 	}
 	// t.Pizza (uint64) (uint64)
@@ -759,7 +784,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			if err := cr.UnreadByte(); err != nil {
 				return err
 			}
-			maj, extra, err = cr.ReadHeader()
+			maj, extra, err := cr.ReadHeader()
 			if err != nil {
 				return err
 			}
@@ -783,7 +808,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			if err := cr.UnreadByte(); err != nil {
 				return err
 			}
-			maj, extra, err = cr.ReadHeader()
+			maj, extra, err := cr.ReadHeader()
 			if err != nil {
 				return err
 			}
@@ -797,38 +822,40 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Arrrrrghay: array too large (%d)", extra)
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Arrrrrghay: array too large (%d)", extra)
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-	if extra != 3 {
-		return fmt.Errorf("expected array to have 3 elements")
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
+		if extra != 3 {
+			return fmt.Errorf("expected array to have 3 elements")
+		}
 
-	t.Arrrrrghay = [3]SimpleTypeOne{}
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
-
+		t.Arrrrrghay = [3]SimpleTypeOne{}
+		for i := 0; i < int(extra); i++ {
 			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
 
-				if err := t.Arrrrrghay[i].UnmarshalCBOR(cr); err != nil {
-					return xerrors.Errorf("unmarshaling t.Arrrrrghay[i]: %w", err)
+				{
+
+					if err := t.Arrrrrghay[i].UnmarshalCBOR(cr); err != nil {
+						return xerrors.Errorf("unmarshaling t.Arrrrrghay[i]: %w", err)
+					}
+
 				}
-
 			}
 		}
 	}
@@ -925,7 +952,7 @@ func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		maj, extra, err := cr.ReadHeader()
 		if err != nil {
 			return err
 		}
@@ -1021,85 +1048,91 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Bytes ([20]uint8) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 2097152 {
-		return fmt.Errorf("t.Bytes: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	if extra != 20 {
-		return fmt.Errorf("expected array to have 20 elements")
-	}
+		if extra > 2097152 {
+			return fmt.Errorf("t.Bytes: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
+		if extra != 20 {
+			return fmt.Errorf("expected array to have 20 elements")
+		}
 
-	t.Bytes = [20]uint8{}
-	if _, err := io.ReadFull(cr, t.Bytes[:]); err != nil {
-		return err
+		t.Bytes = [20]uint8{}
+		if _, err := io.ReadFull(cr, t.Bytes[:]); err != nil {
+			return err
+		}
 	}
 	// t.Uint8 ([20]uint8) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 2097152 {
-		return fmt.Errorf("t.Uint8: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	if extra != 20 {
-		return fmt.Errorf("expected array to have 20 elements")
-	}
+		if extra > 2097152 {
+			return fmt.Errorf("t.Uint8: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
+		if extra != 20 {
+			return fmt.Errorf("expected array to have 20 elements")
+		}
 
-	t.Uint8 = [20]uint8{}
-	if _, err := io.ReadFull(cr, t.Uint8[:]); err != nil {
-		return err
+		t.Uint8 = [20]uint8{}
+		if _, err := io.ReadFull(cr, t.Uint8[:]); err != nil {
+			return err
+		}
 	}
 	// t.Uint64 ([20]uint64) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Uint64: array too large (%d)", extra)
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Uint64: array too large (%d)", extra)
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-	if extra != 20 {
-		return fmt.Errorf("expected array to have 20 elements")
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
+		if extra != 20 {
+			return fmt.Errorf("expected array to have 20 elements")
+		}
 
-	t.Uint64 = [20]uint64{}
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
-
+		t.Uint64 = [20]uint64{}
+		for i := 0; i < int(extra); i++ {
 			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
 
-				maj, extra, err = cr.ReadHeader()
-				if err != nil {
-					return err
-				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Uint64[i] = uint64(extra)
+				{
 
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajUnsignedInt {
+						return fmt.Errorf("wrong type for uint64 field")
+					}
+					t.Uint64[i] = uint64(extra)
+
+				}
 			}
 		}
 	}
@@ -1276,26 +1309,29 @@ func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.LargeBytes ([]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 10000000 {
-		return fmt.Errorf("t.LargeBytes: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 0 {
-		t.LargeBytes = make([]uint8, extra)
-	}
+		if extra > 10000000 {
+			return fmt.Errorf("t.LargeBytes: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
 
-	if _, err := io.ReadFull(cr, t.LargeBytes); err != nil {
-		return err
-	}
+		if extra > 0 {
+			t.LargeBytes = make([]uint8, extra)
+		}
 
+		if _, err := io.ReadFull(cr, t.LargeBytes); err != nil {
+			return err
+		}
+
+	}
 	return nil
 }
 
@@ -1329,62 +1365,61 @@ func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntArray{}
 
 	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
 	// t.Ints ([]int64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Ints: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Ints: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Ints = make([]int64, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Ints = make([]int64, extra)
+		}
+
+		for i := 0; i < int(extra); i++ {
 			{
-				maj, extra, err := cr.ReadHeader()
-				if err != nil {
-					return err
-				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+				{
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
 					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					var extraI int64
+					switch maj {
+					case cbg.MajUnsignedInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 positive overflow")
+						}
+					case cbg.MajNegativeInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 negative overflow")
+						}
+						extraI = -1 - extraI
+					default:
+						return fmt.Errorf("wrong type for int64 field: %d", maj)
 					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
+
+					t.Ints[i] = int64(extraI)
 				}
 
-				t.Ints[i] = int64(extraI)
 			}
-
 		}
 	}
 	return nil
@@ -1420,62 +1455,61 @@ func (t *IntAliasArray) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntAliasArray{}
 
 	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
 	// t.Ints ([]testing.IntAlias) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Ints: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("t.Ints: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Ints = make([]IntAlias, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Ints = make([]IntAlias, extra)
+		}
+
+		for i := 0; i < int(extra); i++ {
 			{
-				maj, extra, err := cr.ReadHeader()
-				if err != nil {
-					return err
-				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+				{
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
 					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					var extraI int64
+					switch maj {
+					case cbg.MajUnsignedInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 positive overflow")
+						}
+					case cbg.MajNegativeInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 negative overflow")
+						}
+						extraI = -1 - extraI
+					default:
+						return fmt.Errorf("wrong type for int64 field: %d", maj)
 					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
+
+					t.Ints[i] = IntAlias(extraI)
 				}
 
-				t.Ints[i] = IntAlias(extraI)
 			}
-
 		}
 	}
 	return nil
@@ -1782,7 +1816,7 @@ func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		maj, extra, err := cr.ReadHeader()
 		if err != nil {
 			return err
 		}
@@ -1804,7 +1838,7 @@ func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
 			if err := cr.UnreadByte(); err != nil {
 				return err
 			}
-			maj, extra, err = cr.ReadHeader()
+			maj, extra, err := cr.ReadHeader()
 			if err != nil {
 				return err
 			}
@@ -1849,62 +1883,61 @@ func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntArrayNewType{}
 
 	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
 	// (*t) (testing.IntArrayNewType) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("(*t): array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("(*t): array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		(*t) = make([]int64, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			(*t) = make([]int64, extra)
+		}
+
+		for i := 0; i < int(extra); i++ {
 			{
-				maj, extra, err := cr.ReadHeader()
-				if err != nil {
-					return err
-				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+				{
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
 					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					var extraI int64
+					switch maj {
+					case cbg.MajUnsignedInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 positive overflow")
+						}
+					case cbg.MajNegativeInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 negative overflow")
+						}
+						extraI = -1 - extraI
+					default:
+						return fmt.Errorf("wrong type for int64 field: %d", maj)
 					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
+
+					(*t)[i] = int64(extraI)
 				}
 
-				(*t)[i] = int64(extraI)
 			}
-
 		}
 	}
 	return nil
@@ -1940,62 +1973,61 @@ func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = IntArrayAliasNewType{}
 
 	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
 	// (*t) (testing.IntArrayAliasNewType) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("(*t): array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 8192 {
+			return fmt.Errorf("(*t): array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		(*t) = make([]IntAlias, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			(*t) = make([]IntAlias, extra)
+		}
+
+		for i := 0; i < int(extra); i++ {
 			{
-				maj, extra, err := cr.ReadHeader()
-				if err != nil {
-					return err
-				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
+				{
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
 					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					var extraI int64
+					switch maj {
+					case cbg.MajUnsignedInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 positive overflow")
+						}
+					case cbg.MajNegativeInt:
+						extraI = int64(extra)
+						if extraI < 0 {
+							return fmt.Errorf("int64 negative overflow")
+						}
+						extraI = -1 - extraI
+					default:
+						return fmt.Errorf("wrong type for int64 field: %d", maj)
 					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
+
+					(*t)[i] = IntAlias(extraI)
 				}
 
-				(*t)[i] = IntAlias(extraI)
 			}
-
 		}
 	}
 	return nil
@@ -2053,51 +2085,49 @@ func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = MapTransparentType{}
 
 	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
 	// (*t) (testing.MapTransparentType) (map)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-	if maj != cbg.MajMap {
-		return fmt.Errorf("expected a map (major type 5)")
-	}
-	if extra > 4096 {
-		return fmt.Errorf("(*t): map too large")
-	}
-
-	(*t) = make(map[string]string, extra)
-
-	for i, l := 0, int(extra); i < l; i++ {
-
-		var k string
-
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
-			}
-
-			k = string(sval)
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajMap {
+			return fmt.Errorf("expected a map (major type 5)")
+		}
+		if extra > 4096 {
+			return fmt.Errorf("(*t): map too large")
 		}
 
-		var v string
+		(*t) = make(map[string]string, extra)
 
-		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
-			if err != nil {
-				return err
+		for i, l := 0, int(extra); i < l; i++ {
+
+			var k string
+
+			{
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				if err != nil {
+					return err
+				}
+
+				k = string(sval)
 			}
 
-			v = string(sval)
+			var v string
+
+			{
+				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				if err != nil {
+					return err
+				}
+
+				v = string(sval)
+			}
+
+			(*t)[k] = v
+
 		}
-
-		(*t)[k] = v
-
 	}
 	return nil
 }
@@ -2164,36 +2194,38 @@ func (t *BigIntContainer) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Int (big.Int) (struct)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajTag || extra != 2 {
-		return fmt.Errorf("big ints should be cbor bignums")
-	}
-
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("big ints should be tagged cbor byte strings")
-	}
-
-	if extra > 256 {
-		return fmt.Errorf("t.Int: cbor bignum was too large")
-	}
-
-	if extra > 0 {
-		buf := make([]byte, extra)
-		if _, err := io.ReadFull(cr, buf); err != nil {
+	{
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
 			return err
 		}
-		t.Int = big.NewInt(0).SetBytes(buf)
-	} else {
-		t.Int = big.NewInt(0)
+
+		if maj != cbg.MajTag || extra != 2 {
+			return fmt.Errorf("big ints should be cbor bignums")
+		}
+
+		maj, extra, err = cr.ReadHeader()
+		if err != nil {
+			return err
+		}
+
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("big ints should be tagged cbor byte strings")
+		}
+
+		if extra > 256 {
+			return fmt.Errorf("t.Int: cbor bignum was too large")
+		}
+
+		if extra > 0 {
+			buf := make([]byte, extra)
+			if _, err := io.ReadFull(cr, buf); err != nil {
+				return err
+			}
+			t.Int = big.NewInt(0).SetBytes(buf)
+		} else {
+			t.Int = big.NewInt(0)
+		}
 	}
 	return nil
 }
@@ -2223,15 +2255,10 @@ func (t *TupleWithOptionalFields) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	// t.Int2 (int64) (int64)
-	if t.Int2 >= 0 {
-		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Int2)); err != nil {
-			return err
-		}
-	} else {
-		if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-t.Int2-1)); err != nil {
-			return err
-		}
+	// t.Uint2 (uint64) (uint64)
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Uint2)); err != nil {
+		return err
 	}
 
 	// t.Int3 (int64) (int64)
@@ -2311,30 +2338,19 @@ func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
 
 		t.Int1 = int64(extraI)
 	}
-	// t.Int2 (int64) (int64)
+	// t.Uint2 (uint64) (uint64)
+
 	{
+
 		maj, extra, err := cr.ReadHeader()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
 		}
+		t.Uint2 = uint64(extra)
 
-		t.Int2 = int64(extraI)
 	}
 	// t.Int3 (int64) (int64)
 	if extra < 3 {

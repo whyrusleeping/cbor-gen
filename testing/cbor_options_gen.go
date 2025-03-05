@@ -100,69 +100,75 @@ func (t *LimitedStruct) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Arr ([]uint64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 10 {
-		return fmt.Errorf("t.Arr: array too large (%d)", extra)
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
+		if extra > 10 {
+			return fmt.Errorf("t.Arr: array too large (%d)", extra)
+		}
 
-	if extra > 0 {
-		t.Arr = make([]uint64, extra)
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
 
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if extra > 0 {
+			t.Arr = make([]uint64, extra)
+		}
 
+		for i := 0; i < int(extra); i++ {
 			{
+				var maj byte
+				var extra uint64
+				var err error
+				_ = maj
+				_ = extra
+				_ = err
 
-				maj, extra, err = cr.ReadHeader()
-				if err != nil {
-					return err
+				{
+
+					maj, extra, err := cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+					if maj != cbg.MajUnsignedInt {
+						return fmt.Errorf("wrong type for uint64 field")
+					}
+					t.Arr[i] = uint64(extra)
+
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Arr[i] = uint64(extra)
 
 			}
-
 		}
 	}
 	// t.Byts ([]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 9 {
-		return fmt.Errorf("t.Byts: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
+		maj, extra, err := cr.ReadHeader()
+		if err != nil {
+			return err
+		}
 
-	if extra > 0 {
-		t.Byts = make([]uint8, extra)
-	}
+		if extra > 9 {
+			return fmt.Errorf("t.Byts: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
 
-	if _, err := io.ReadFull(cr, t.Byts); err != nil {
-		return err
-	}
+		if extra > 0 {
+			t.Byts = make([]uint8, extra)
+		}
 
+		if _, err := io.ReadFull(cr, t.Byts); err != nil {
+			return err
+		}
+
+	}
 	// t.Str (string) (string)
 
 	{

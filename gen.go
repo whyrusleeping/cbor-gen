@@ -932,36 +932,38 @@ func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	switch f.Type {
 	case bigIntType:
 		return g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajTag || extra != 2 {
-		return fmt.Errorf("big ints should be cbor bignums")
-	}
-
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("big ints should be tagged cbor byte strings")
-	}
-
-	if extra > 256 {
-		return fmt.Errorf("{{ .Name }}: cbor bignum was too large")
-	}
-
-	if extra > 0 {
-		buf := make([]byte, extra)
-		if _, err := io.ReadFull(cr, buf); err != nil {
+	{
+		maj, extra, err := {{ ReadHeader "cr" }}
+		if err != nil {
 			return err
 		}
-		{{ .Name }} = big.NewInt(0).SetBytes(buf)
-	} else {
-		{{ .Name }} = big.NewInt(0)
+
+		if maj != cbg.MajTag || extra != 2 {
+			return fmt.Errorf("big ints should be cbor bignums")
+		}
+
+		maj, extra, err = {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
+
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("big ints should be tagged cbor byte strings")
+		}
+
+		if extra > 256 {
+			return fmt.Errorf("{{ .Name }}: cbor bignum was too large")
+		}
+
+		if extra > 0 {
+			buf := make([]byte, extra)
+			if _, err := io.ReadFull(cr, buf); err != nil {
+				return err
+			}
+			{{ .Name }} = big.NewInt(0).SetBytes(buf)
+		} else {
+			{{ .Name }} = big.NewInt(0)
+		}
 	}
 `)
 	case cidType:
@@ -1081,7 +1083,7 @@ func (g Gen) emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		if err := cr.UnreadByte(); err != nil {
 			return err
 		}
-		maj, extra, err = {{ ReadHeader "cr" }}
+		maj, extra, err := {{ ReadHeader "cr" }}
 		if err != nil {
 			return err
 		}
@@ -1092,7 +1094,7 @@ func (g Gen) emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 		{{ .Name }} = &typed
 	}
 {{ else }}
-	maj, extra, err = {{ ReadHeader "cr" }}
+	maj, extra, err := {{ ReadHeader "cr" }}
 	if err != nil {
 		return err
 	}
@@ -1107,17 +1109,19 @@ func (g Gen) emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
 
 func (g Gen) emitCborUnmarshalUint8Field(w io.Writer, f Field) error {
 	return g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
+	{
+		maj, extra, err := {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint8 field")
+		}
+		if extra > math.MaxUint8 {
+			return fmt.Errorf("integer in input was too large for uint8 field")
+		}
+		{{ .Name }} = {{ .TypeName }}(extra)
 	}
-	if maj != cbg.MajUnsignedInt {
-		return fmt.Errorf("wrong type for uint8 field")
-	}
-	if extra > math.MaxUint8 {
-		return fmt.Errorf("integer in input was too large for uint8 field")
-	}
-	{{ .Name }} = {{ .TypeName }}(extra)
 `)
 }
 
@@ -1134,7 +1138,7 @@ func (g Gen) emitCborUnmarshalBoolField(w io.Writer, f Field) error {
 				return err
 			}
 
-			maj, extra, err = {{ ReadHeader "cr" }}
+			maj, extra, err := {{ ReadHeader "cr" }}
 			if err != nil {
 				return err
 			}
@@ -1157,20 +1161,22 @@ func (g Gen) emitCborUnmarshalBoolField(w io.Writer, f Field) error {
 `)
 	} else {
 		return g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-	if maj != cbg.MajOther {
-		return fmt.Errorf("booleans must be major type 7")
-	}
-	switch extra {
-	case 20:
-		{{ .Name }} = false
-	case 21:
-		{{ .Name }} = true
-	default:
-		return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+	{
+		maj, extra, err := {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajOther {
+			return fmt.Errorf("booleans must be major type 7")
+		}
+		switch extra {
+		case 20:
+			{{ .Name }} = false
+		case 21:
+			{{ .Name }} = true
+		default:
+			return fmt.Errorf("booleans are either major type 7, value 20 or 21 (got %d)", extra)
+		}
 	}
 `)
 	}
@@ -1178,21 +1184,21 @@ func (g Gen) emitCborUnmarshalBoolField(w io.Writer, f Field) error {
 
 func (g Gen) emitCborUnmarshalMapField(w io.Writer, f Field) error {
 	err := g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-	if maj != cbg.MajMap {
-		return fmt.Errorf("expected a map (major type 5)")
-	}
-	if extra > 4096 {
-		return fmt.Errorf("{{ .Name }}: map too large")
-	}
+	{
+		maj, extra, err := {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
+		if maj != cbg.MajMap {
+			return fmt.Errorf("expected a map (major type 5)")
+		}
+		if extra > 4096 {
+			return fmt.Errorf("{{ .Name }}: map too large")
+		}
 
-	{{ .Name }} = make({{ .TypeName }}, extra)
+		{{ .Name }} = make({{ .TypeName }}, extra)
 
-
-	for i, l := 0, int(extra); i < l; i++ {
+		for i, l := 0, int(extra); i < l; i++ {
 `)
 	if err != nil {
 		return err
@@ -1260,6 +1266,7 @@ func (g Gen) emitCborUnmarshalMapField(w io.Writer, f Field) error {
 	}
 
 	return g.doTemplate(w, f, `
+		}
 	}
 `)
 }
@@ -1277,8 +1284,8 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	err := g.doTemplate(w, f, `
-	{{ if .PreserveNil }}
 	{
+	{{ if .PreserveNil }}
 		b, err := cr.ReadByte()
 		if err != nil {
 			return err
@@ -1289,7 +1296,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			}
 
 	{{ end }}
-			maj, extra, err = {{ ReadHeader "cr" }}
+			maj, extra, err := {{ ReadHeader "cr" }}
 			if err != nil {
 				return err
 			}
@@ -1319,8 +1326,8 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	{{ if .PreserveNil }}
 		}
-	}
 	{{ end }}
+	}
 `)
 	}
 
@@ -1425,9 +1432,9 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 
 	if err := g.doTemplate(w, f, `
 	{{ if .PreserveNil }}
-				}
-			}
+					}
 	{{ end }}
+			}
 		}
 	}
 	`); err != nil {
@@ -1450,10 +1457,11 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 	}
 
 	err := g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
+	{
+		maj, extra, err := {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
 `)
 	if err != nil {
 		return err
@@ -1461,41 +1469,42 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 
 	if e.Kind() == reflect.Uint8 {
 		return g.doTemplate(w, f, `
-	if extra > {{ MaxLen .MaxLen "Bytes" }} {
-		return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	if extra != {{ .Len }} {
-		return fmt.Errorf("expected array to have {{ .Len }} elements")
-	}
+		if extra > {{ MaxLen .MaxLen "Bytes" }} {
+			return fmt.Errorf("{{ .Name }}: byte array too large (%d)", extra)
+		}
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("expected byte array")
+		}
+		if extra != {{ .Len }} {
+			return fmt.Errorf("expected array to have {{ .Len }} elements")
+		}
 
-	{{ .Name }} = {{ .TypeName }}{}
-	if _, err := io.ReadFull(cr, {{ .Name }}[:]); err != nil {
-		return err
+		{{ .Name }} = {{ .TypeName }}{}
+		if _, err := io.ReadFull(cr, {{ .Name }}[:]); err != nil {
+			return err
+		}
 	}
 `)
 	}
 
 	if err := g.doTemplate(w, f, `
-	if extra > {{ MaxLen .MaxLen "Array" }} {
-		return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
-	}
+		if extra > {{ MaxLen .MaxLen "Array" }} {
+			return fmt.Errorf("{{ .Name }}: array too large (%d)", extra)
+		}
 `); err != nil {
 		return err
 	}
 
 	err = g.doTemplate(w, f, `
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-	if extra != {{ .Len }} {
-		return fmt.Errorf("expected array to have {{ .Len }} elements")
-	}
+		if maj != cbg.MajArray {
+			return fmt.Errorf("expected cbor array")
+		}
+		if extra != {{ .Len }} {
+			return fmt.Errorf("expected array to have {{ .Len }} elements")
+		}
 
-	{{ .Name }} = {{ .TypeName }}{}
-	for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
+		{{ .Name }} = {{ .TypeName }}{}
+		for {{ .IterLabel }} := 0; {{ .IterLabel }} < int(extra); {{ .IterLabel }}++ {
 `)
 	if err != nil {
 		return err
@@ -1573,8 +1582,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 	default:
 		return fmt.Errorf("do not yet support slices of %s yet", e.Elem())
 	}
-	fmt.Fprintf(w, "\t\t}\n")
-	fmt.Fprintf(w, "\t}\n\n")
+	fmt.Fprintf(w, "\t\t\t}\t\t}\n\t}\n\n")
 
 	return nil
 }
@@ -1586,10 +1594,6 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	*t = {{.Name}}{}
 
 	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
 `)
 	} else {
 		err = g.doTemplate(w, gti, `
