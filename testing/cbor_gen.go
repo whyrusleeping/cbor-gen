@@ -2223,15 +2223,10 @@ func (t *TupleWithOptionalFields) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	// t.Int2 (int64) (int64)
-	if t.Int2 >= 0 {
-		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Int2)); err != nil {
-			return err
-		}
-	} else {
-		if err := cw.WriteMajorTypeHeader(cbg.MajNegativeInt, uint64(-t.Int2-1)); err != nil {
-			return err
-		}
+	// t.Uint2 (uint64) (uint64)
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Uint2)); err != nil {
+		return err
 	}
 
 	// t.Int3 (int64) (int64)
@@ -2286,6 +2281,8 @@ func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
 		return fmt.Errorf("cbor input has too few fields %d < 2", extra)
 	}
 
+	fieldCount := extra
+
 	// t.Int1 (int64) (int64)
 	{
 		maj, extra, err := cr.ReadHeader()
@@ -2311,33 +2308,22 @@ func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
 
 		t.Int1 = int64(extraI)
 	}
-	// t.Int2 (int64) (int64)
+	// t.Uint2 (uint64) (uint64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		maj, extra, err = cr.ReadHeader()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		if maj != cbg.MajUnsignedInt {
+			return fmt.Errorf("wrong type for uint64 field")
 		}
+		t.Uint2 = uint64(extra)
 
-		t.Int2 = int64(extraI)
 	}
 	// t.Int3 (int64) (int64)
-	if extra < 3 {
+	if fieldCount < 3 {
 		return nil
 	}
 	{
@@ -2365,7 +2351,7 @@ func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
 		t.Int3 = int64(extraI)
 	}
 	// t.Int4 (int64) (int64)
-	if extra < 4 {
+	if fieldCount < 4 {
 		return nil
 	}
 	{
