@@ -1643,7 +1643,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 
 		if f.Optional {
-			fmt.Fprintf(w, "\tif fieldCount < %d {\n\t\treturn nil\n\t}\n", fieldIndex+1)
+			fmt.Fprintf(w, "\tif fieldCount < %d {\n", fieldIndex+1)
 		}
 
 		switch f.Type.Kind() {
@@ -1685,6 +1685,16 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 		default:
 			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
+		}
+
+		if f.Optional {
+			// If the field implements Initializer by-reference, call Init on the field
+			// to initialize it. Otherwise, we leave it as a zero-value.
+			if _, ok := reflect.Zero(reflect.PointerTo(f.Type)).Interface().(Initializer); ok {
+				fmt.Fprintf(w, "\t} else {\n")
+				fmt.Fprintf(w, "\t\t%s.Init()\n", f.Name)
+			}
+			fmt.Fprintf(w, "\t}\n")
 		}
 	}
 
