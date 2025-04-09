@@ -214,6 +214,13 @@ type StringPtrSlices struct {
 	StringPtrs []*string
 }
 
+type TupleWithOptionalFields struct {
+	Int1  int64
+	Uint2 uint64
+	Int3  int64 `cborgen:"optional"`
+	Int4  int64 `cborgen:"optional"`
+}
+
 type CborLink[T cbg.CBORMarshaler] struct {
 	cid cid.Cid
 }

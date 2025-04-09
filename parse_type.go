@@ -238,7 +238,7 @@ func (p *typeParser) parseTypeExpr() (*TypeExpr, error) {
 	for !p.done() {
 		tk := p.currToken()
 		// stop if bracket or punctuation that indicates generics or something
-		if tk == "[" || tk == "]" || tk == "," || tk == "*" || tk == "map" || tk == "[" {
+		if tk == "[" || tk == "]" || tk == "," || tk == "*" || tk == "map" {
 			break
 		}
 		// else it's part of the base name
