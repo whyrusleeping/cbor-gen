@@ -2844,6 +2844,208 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 
 	return nil
 }
+func (t *MapStringSliceString) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write([]byte{161}); err != nil {
+		return err
+	}
+
+	// t.SnorkleMultiblump (map[string][]string) (map)
+	if len("SnorkleMultiblump") > 8192 {
+		return xerrors.Errorf("Value in field \"SnorkleMultiblump\" was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len("SnorkleMultiblump"))); err != nil {
+		return err
+	}
+	if _, err := cw.WriteString(string("SnorkleMultiblump")); err != nil {
+		return err
+	}
+
+	{
+		if len(t.SnorkleMultiblump) > 4096 {
+			return xerrors.Errorf("cannot marshal t.SnorkleMultiblump map too large")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajMap, uint64(len(t.SnorkleMultiblump))); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(t.SnorkleMultiblump))
+		for k := range t.SnorkleMultiblump {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := t.SnorkleMultiblump[k]
+
+			if len(k) > 8192 {
+				return xerrors.Errorf("Value in field k was too long")
+			}
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(k))); err != nil {
+				return err
+			}
+			if _, err := cw.WriteString(string(k)); err != nil {
+				return err
+			}
+
+			if len(v) > 8192 {
+				return xerrors.Errorf("Slice value in field v was too long")
+			}
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(v))); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if len(v) > 8192 {
+					return xerrors.Errorf("Value in field v was too long")
+				}
+
+				if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(v))); err != nil {
+					return err
+				}
+				if _, err := cw.WriteString(string(v)); err != nil {
+					return err
+				}
+
+			}
+
+		}
+	}
+	return nil
+}
+
+func (t *MapStringSliceString) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = MapStringSliceString{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajMap {
+		return fmt.Errorf("cbor input should be of type map")
+	}
+
+	if extra > cbg.MaxLength {
+		return fmt.Errorf("MapStringSliceString: map struct too large (%d)", extra)
+	}
+
+	n := extra
+
+	nameBuf := make([]byte, 17)
+	for i := uint64(0); i < n; i++ {
+		nameLen, ok, err := cbg.ReadFullStringIntoBuf(cr, nameBuf, 8192)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			// Field doesn't exist on this type, so ignore it
+			if err := cbg.ScanForLinks(cr, func(cid.Cid) {}); err != nil {
+				return err
+			}
+			continue
+		}
+
+		switch string(nameBuf[:nameLen]) {
+		// t.SnorkleMultiblump (map[string][]string) (map)
+		case "SnorkleMultiblump":
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+			if maj != cbg.MajMap {
+				return fmt.Errorf("expected a map (major type 5)")
+			}
+			if extra > 4096 {
+				return fmt.Errorf("t.SnorkleMultiblump: map too large")
+			}
+
+			t.SnorkleMultiblump = make(map[string][]string, extra)
+
+			for i, l := 0, int(extra); i < l; i++ {
+
+				var k string
+
+				{
+					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					if err != nil {
+						return err
+					}
+
+					k = string(sval)
+				}
+
+				var v []string
+
+				maj, extra, err = cr.ReadHeader()
+				if err != nil {
+					return err
+				}
+
+				if extra > 8192 {
+					return fmt.Errorf("v: array too large (%d)", extra)
+				}
+
+				if maj != cbg.MajArray {
+					return fmt.Errorf("expected cbor array")
+				}
+
+				if extra > 0 {
+					v = make([]string, extra)
+				}
+
+				for i := 0; i < int(extra); i++ {
+					{
+						var maj byte
+						var extra uint64
+						var err error
+						_ = maj
+						_ = extra
+						_ = err
+
+						{
+							sval, err := cbg.ReadStringWithMax(cr, 8192)
+							if err != nil {
+								return err
+							}
+
+							v[i] = string(sval)
+						}
+
+					}
+				}
+
+				t.SnorkleMultiblump[k] = v
+
+			}
+
+		default:
+			// Field doesn't exist on this type, so ignore it
+			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
 func (t *TestSliceNilPreserve) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)

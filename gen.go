@@ -635,6 +635,10 @@ func (g Gen) emitCborMarshalMapField(w io.Writer, f Field) error {
 		if err := g.emitCborMarshalStringField(w, Field{Name: "v"}); err != nil {
 			return err
 		}
+	case reflect.Slice:
+		if err := g.emitCborMarshalSliceField(w, Field{Name: "v", Type: f.Type.Elem(), Pkg: f.Pkg}); err != nil {
+			return err
+		}
 	case reflect.Ptr:
 		if f.Type.Elem().Elem().Kind() != reflect.Struct {
 			return fmt.Errorf("unsupported map elem ptr type: %s", f.Type.Elem())
@@ -1229,6 +1233,22 @@ func (g Gen) emitCborUnmarshalMapField(w io.Writer, f Field) error {
 `); err != nil {
 			return err
 		}
+	case reflect.Slice:
+		subf := Field{Name: "v", Type: t, Pkg: f.Pkg}
+		if err := g.doTemplate(w, subf, `
+	var v {{ .TypeName }}
+`); err != nil {
+			return err
+		}
+		if err := g.emitCborUnmarshalSliceField(w, subf); err != nil {
+			return err
+		}
+		if err := g.doTemplate(w, f, `
+	{{ .Name }}[k] = v
+`); err != nil {
+			return err
+		}
+
 	case reflect.Ptr:
 		if t.Elem().Kind() != reflect.Struct {
 			return fmt.Errorf("unsupported map elem ptr type: %s", t)
@@ -1623,7 +1643,7 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 	if extra < {{ .MandatoryFieldCount }} {
 		return fmt.Errorf("cbor input has too few fields %d < {{ .MandatoryFieldCount }}", extra)
 	}
-	
+
 	fieldCount := extra
 {{ end }}
 

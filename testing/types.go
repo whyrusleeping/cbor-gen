@@ -147,6 +147,10 @@ type MapStringString struct {
 	Snorkleblump map[string]string
 }
 
+type MapStringSliceString struct {
+	SnorkleMultiblump map[string][]string
+}
+
 type TestSliceNilPreserve struct {
 	Cat      string
 	Stuff    []uint64
