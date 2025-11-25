@@ -465,19 +465,8 @@ func TestConstRoundtrip(t *testing.T) {
 		Thing: 16223,
 	}
 
-	buf := new(bytes.Buffer)
-	if err := tcf.MarshalCBOR(buf); err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Printf("%x\n", buf.Bytes())
-
 	var out TestConstField
-	if err := out.UnmarshalCBOR(buf); err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(out)
+	testValueRoundtrip(t, tcf, &out)
 }
 
 func TestMapOfStringToString(t *testing.T) {
@@ -498,17 +487,8 @@ func TestMapOfStringToString(t *testing.T) {
 		"Still":       "Here with the ones that I came with",
 	}}
 
-	buf := new(bytes.Buffer)
-	if err := mss.MarshalCBOR(buf); err != nil {
-		t.Fatal(err)
-	}
-
 	var out MapStringString
-	if err := out.UnmarshalCBOR(buf); err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(out)
+	testValueRoundtrip(t, mss, &out)
 }
 
 //TODO same for strings
