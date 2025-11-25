@@ -491,6 +491,17 @@ func TestMapOfStringToString(t *testing.T) {
 	testValueRoundtrip(t, mss, &out)
 }
 
+func TestMapOfStringToSliceString(t *testing.T) {
+	mss := &MapStringSliceString{SnorkleMultiblump: map[string][]string{
+		"This snorkle is empty": {},
+		"This snorkle has":      {"just one blump"},
+		"This snorkle":          {"has multiple", "blumps"},
+	}}
+
+	var out MapStringSliceString
+	testValueRoundtrip(t, mss, &out)
+}
+
 //TODO same for strings
 
 func TestTransparentIntArray(t *testing.T) {

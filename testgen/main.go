@@ -37,6 +37,7 @@ func main() {
 		types.TestConstField{},
 		types.TestCanonicalFieldOrder{},
 		types.MapStringString{},
+		types.MapStringSliceString{},
 		types.TestSliceNilPreserve{},
 		types.StringPtrSlices{},
 		types.FieldNameOverlap{},
