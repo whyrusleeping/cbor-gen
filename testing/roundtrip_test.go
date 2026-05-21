@@ -60,19 +60,10 @@ func TestLongStrings(t *testing.T) {
 }
 
 func TestBigInt(t *testing.T) {
-	bigPos, _ := new(big.Int).SetString("123456789012345678901234567890", 10)
-	bigNeg := new(big.Int).Neg(bigPos)
-
 	for _, v := range []BigIntContainer{
 		{Int: big.NewInt(100)},
 		{Int: big.NewInt(0)},
 		{Int: nil},
-		// negative values: CBOR negative bignums (tag 3)
-		{Int: big.NewInt(-1)},
-		{Int: big.NewInt(-100)},
-		{Int: big.NewInt(-256)},
-		{Int: bigPos},
-		{Int: bigNeg},
 	} {
 
 		var buf bytes.Buffer
@@ -89,38 +80,14 @@ func TestBigInt(t *testing.T) {
 				t.Fatal("expected nil to serialize to 0")
 			}
 		} else if v.Int.Cmp(o.Int) != 0 {
-			t.Fatalf("did not round-trip: got %s want %s", o.Int, v.Int)
+			t.Fatal("did not round-trip")
 		}
 	}
-}
-
-// TestBigIntGolden pins the CBOR wire form of a few representative values so the
-// tag-2/tag-3 (positive/negative bignum) encoding can't drift unnoticed.
-func TestBigIntGolden(t *testing.T) {
-	cases := []struct {
-		val    int64
-		golden []byte // the encoded big.Int field (the array header is omitted)
-	}{
-		{0, []byte{0xc2, 0x40}},          // tag 2, empty byte string
-		{100, []byte{0xc2, 0x41, 0x64}},  // tag 2, 0x64
-		{-1, []byte{0xc3, 0x40}},         // tag 3, n=0  -> -1 - 0
-		{-256, []byte{0xc3, 0x41, 0xff}}, // tag 3, n=255 -> -1 - 255
-	}
-
-	for _, tc := range cases {
-		var buf bytes.Buffer
-		v := BigIntContainer{Int: big.NewInt(tc.val)}
-		if err := v.MarshalCBOR(&buf); err != nil {
-			t.Fatalf("marshal %d: %v", tc.val, err)
-		}
-		// Strip the single-element tuple array header (0x81).
-		enc := buf.Bytes()
-		if len(enc) == 0 || enc[0] != 0x81 {
-			t.Fatalf("%d: expected array header 0x81, got %x", tc.val, enc)
-		}
-		if got := enc[1:]; !bytes.Equal(got, tc.golden) {
-			t.Fatalf("%d: encoding mismatch: got %x want %x", tc.val, got, tc.golden)
-		}
+	var buf bytes.Buffer
+	v := BigIntContainer{Int: big.NewInt(-1)}
+	err := v.MarshalCBOR(&buf)
+	if err == nil {
+		t.Fatal("marshalling a negative int should have failed")
 	}
 }
 
