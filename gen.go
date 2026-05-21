@@ -152,6 +152,31 @@ type Field struct {
 	IterLabel   string
 
 	MaxLen int
+
+	// The following options are only meaningful for a transparent scalar
+	// (string-kinded) field, i.e. an "opaque wrapper" type such as a
+	// validating identifier whose sole field is unexported.
+	Bytes     bool   // encode the string as a CBOR byte string instead of a text string
+	Nullable  bool   // encode the zero value as CBOR null (and decode null back to it)
+	ParseFunc string // package-level constructor "func(T) (Self, error)" to validate on decode
+}
+
+// ScalarMajorType returns the CBOR major type used to encode a string-kinded
+// field: a byte string when Bytes is set, a text string otherwise.
+func (f Field) ScalarMajorType() string {
+	if f.Bytes {
+		return "cbg.MajByteString"
+	}
+	return "cbg.MajTextString"
+}
+
+// ScalarMaxLenType selects which configured maximum length applies to a
+// string-kinded field ("Bytes" or "String"); see the MaxLen template helper.
+func (f Field) ScalarMaxLenType() string {
+	if f.Bytes {
+		return "Bytes"
+	}
+	return "String"
 }
 
 func typeName(pkg string, t reflect.Type) string {
@@ -281,7 +306,21 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 		}
 
 		f := t.Field(i)
-		if !nameIsExported(f.Name) {
+
+		tagval := f.Tag.Get("cborgen")
+		tags, err := tagparse(tagval)
+		if err != nil {
+			return nil, fmt.Errorf("invalid tag format: %w", err)
+		}
+
+		_, transparent := tags["transparent"]
+
+		// Unexported fields are normally invisible to the generator. They are
+		// only included when explicitly tagged transparent, which enables
+		// "opaque wrapper" types: a struct whose sole (unexported) field holds
+		// a validated value and which encodes as that field alone. The
+		// generated code must therefore live in the type's own package.
+		if !nameIsExported(f.Name) && !transparent {
 			continue
 		}
 
@@ -294,11 +333,6 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 
 		mapk := f.Name
 		usrMaxLen := NoUsrMaxLen
-		tagval := f.Tag.Get("cborgen")
-		tags, err := tagparse(tagval)
-		if err != nil {
-			return nil, fmt.Errorf("invalid tag format: %w", err)
-		}
 
 		if _, ok := tags["ignore"]; ok {
 			continue
@@ -324,7 +358,6 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			constval = &cv
 		}
 
-		_, transparent := tags["transparent"]
 		if transparent && len(out.Fields) > 0 {
 			return nil, fmt.Errorf("only one transparent field is allowed")
 		}
@@ -338,6 +371,22 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			return nil, fmt.Errorf("%T.%s: preservenil is only supported on slice types", itype, f.Name)
 		}
 
+		_, asBytes := tags["bytes"]
+		_, nullable := tags["nullable"]
+		parseFunc := tags["parse"]
+
+		// bytes/nullable/parse only make sense for an opaque scalar wrapper: a
+		// transparent, string-kinded field. Reject the combinations early so
+		// misuse fails at generation time rather than producing broken code.
+		if asBytes || nullable || parseFunc != "" {
+			if !transparent {
+				return nil, fmt.Errorf("%T.%s: bytes, nullable and parse options require the transparent tag", itype, f.Name)
+			}
+			if ft.Kind() != reflect.String {
+				return nil, fmt.Errorf("%T.%s: bytes, nullable and parse options are only supported on string-kinded fields", itype, f.Name)
+			}
+		}
+
 		out.Fields = append(out.Fields, Field{
 			Name:        f.Name,
 			MapKey:      mapk,
@@ -349,6 +398,9 @@ func ParseTypeInfo(itype interface{}) (*GenTypeInfo, error) {
 			MaxLen:      usrMaxLen,
 			Const:       constval,
 			Optional:    optional,
+			Bytes:       asBytes,
+			Nullable:    nullable,
+			ParseFunc:   parseFunc,
 		})
 	}
 
@@ -388,6 +440,10 @@ func tagparse(v string) (map[string]string, error) {
 			out["ignore"] = "true"
 		} else if elem == "transparent" {
 			out["transparent"] = "true"
+		} else if elem == "bytes" {
+			out["bytes"] = "true"
+		} else if elem == "nullable" {
+			out["nullable"] = "true"
 		} else if elem == "optional" {
 			out["optional"] = "true"
 		} else {
@@ -460,7 +516,10 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 
 	}
 
-	return g.doTemplate(w, f, `
+	// Plain string fields keep their original encoding. The richer template
+	// below is only needed for opaque-wrapper fields (bytes/nullable/parse).
+	if !f.Bytes && !f.Nullable && f.ParseFunc == "" {
+		return g.doTemplate(w, f, `
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
 		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
 	}
@@ -469,6 +528,28 @@ func (g Gen) emitCborMarshalStringField(w io.Writer, f Field) error {
 	if _, err := cw.WriteString(string({{ .Name }})); err != nil {
 		return err
 	}
+`)
+	}
+
+	return g.doTemplate(w, f, `
+{{ if .Nullable }}
+	if {{ .Name }} == "" {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+{{ end }}
+	if len({{ .Name }}) > {{ MaxLen .MaxLen .ScalarMaxLenType }} {
+		return xerrors.Errorf("Value in field {{ .Name | js }} was too long")
+	}
+
+	{{ MajorType "cw" .ScalarMajorType (print "len(" .Name ")") }}
+	if _, err := cw.WriteString(string({{ .Name }})); err != nil {
+		return err
+	}
+{{ if .Nullable }}
+	}
+{{ end }}
 `)
 }
 
@@ -920,7 +1001,11 @@ func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
 	if f.Type == nil {
 		f.Type = reflect.TypeOf("")
 	}
-	return g.doTemplate(w, f, `
+
+	// Plain string fields keep their original decoding. The richer template
+	// below is only needed for opaque-wrapper fields (bytes/nullable/parse).
+	if !f.Bytes && !f.Nullable && f.ParseFunc == "" {
+		return g.doTemplate(w, f, `
 	{
 		sval, err := cbg.ReadStringWithMax(cr, {{  MaxLen 0 "String" }})
 		if err != nil {
@@ -928,6 +1013,54 @@ func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
 		}
 
 		{{ .Name }} = {{ .TypeName }}(sval)
+	}
+`)
+	}
+
+	return g.doTemplate(w, f, `
+	{
+{{ if .Nullable }}
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+{{ end }}
+{{ if .Bytes }}
+		bval, err := cbg.ReadByteArray(cr, {{ MaxLen .MaxLen .ScalarMaxLenType }})
+		if err != nil {
+			return err
+		}
+{{ if .ParseFunc }}
+		parsed, err := {{ .ParseFunc }}(bval)
+		if err != nil {
+			return err
+		}
+		*t = parsed
+{{ else }}
+		{{ .Name }} = {{ .TypeName }}(bval)
+{{ end }}
+{{ else }}
+		sval, err := cbg.ReadStringWithMax(cr, {{ MaxLen .MaxLen .ScalarMaxLenType }})
+		if err != nil {
+			return err
+		}
+{{ if .ParseFunc }}
+		parsed, err := {{ .ParseFunc }}(sval)
+		if err != nil {
+			return err
+		}
+		*t = parsed
+{{ else }}
+		{{ .Name }} = {{ .TypeName }}(sval)
+{{ end }}
+{{ end }}
+{{ if .Nullable }}
+		}
+{{ end }}
 	}
 `)
 }

@@ -99,6 +99,50 @@ type TransparentExample struct {
 }
 ```
 
+#### Opaque Wrapper Types
+
+A common Go idiom for making invalid states unrepresentable is the "opaque
+wrapper": a struct whose sole field is **unexported**, so values can only be
+produced by a validating constructor. Identifier types such as
+[`go-address.Address`](https://github.com/filecoin-project/go-address) follow
+this pattern and previously had to hand-roll their CBOR codecs.
+
+cbor-gen can generate the codec for these types when the single unexported
+field is tagged `transparent`. Because the generated code must reach the
+unexported field, **it has to be generated into the type's own package**, and
+any `parse=` constructor must live there too. Opaque wrappers must use tuple
+encoding (`WriteTupleEncodersToFile`); transparent types are not supported in
+map mode.
+
+The following options refine how the (string-kinded) field is encoded:
+
+| Option | Effect |
+| --- | --- |
+| `bytes` | encode as a CBOR byte string (`MajByteString`) instead of a text string |
+| `nullable` | encode the zero value as CBOR null, and decode CBOR null back to the zero value |
+| `parse=Fn` | on decode, call the package-level constructor `Fn(value) (T, error)` to validate the value (`Fn` receives a `string` by default, or a `[]byte` when `bytes` is also set) |
+| `maxlen=N` | reject values longer than `N` on encode and decode |
+
+For example, the equivalents of `did.DID` (a nullable, validated text string)
+and `go-address.Address` (a validated byte string) are:
+
+```go
+type DID struct {
+	str string `cborgen:"transparent,parse=Parse,nullable"`
+}
+
+func Parse(s string) (DID, error) { /* ... */ }
+
+type Address struct {
+	str string `cborgen:"transparent,bytes,parse=NewFromBytes,maxlen=64"`
+}
+
+func NewFromBytes(b []byte) (Address, error) { /* ... */ }
+```
+
+If `parse=` is omitted, the decoded value is assigned to the field directly
+without validation.
+
 ### Upgrading Type Schemas
 
 When working with map-encoded types, all fields are optional when decoding (they default to the field's zero-value) and unknown fields are skipped.
