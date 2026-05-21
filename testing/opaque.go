@@ -57,3 +57,43 @@ type OpaqueDirect struct {
 func NewOpaqueDirect(s string) OpaqueDirect { return OpaqueDirect{val: s} }
 
 func (o OpaqueDirect) String() string { return o.val }
+
+// OpaqueBytesDirect is a transparent wrapper encoded as a CBOR byte string with
+// no validating constructor; decoding assigns the bytes directly. It exercises
+// the `bytes` codegen path without a parse= hook.
+type OpaqueBytesDirect struct {
+	raw string `cborgen:"transparent,bytes"`
+}
+
+func NewOpaqueBytesDirect(b []byte) OpaqueBytesDirect { return OpaqueBytesDirect{raw: string(b)} }
+
+func (o OpaqueBytesDirect) Bytes() []byte { return []byte(o.raw) }
+
+// OpaqueNullableDirect is a transparent text-string wrapper whose zero value is
+// nullable and which has no validating constructor. It exercises the nullable
+// codegen path with direct field assignment (no parse= hook).
+type OpaqueNullableDirect struct {
+	val string `cborgen:"transparent,nullable"`
+}
+
+func NewOpaqueNullableDirect(s string) OpaqueNullableDirect { return OpaqueNullableDirect{val: s} }
+
+func (o OpaqueNullableDirect) String() string { return o.val }
+
+// OpaqueBytesNullable combines the `bytes` and `nullable` options on a single
+// transparent field with no constructor: the zero value encodes as CBOR null,
+// any other value as a byte string assigned directly on decode.
+type OpaqueBytesNullable struct {
+	raw string `cborgen:"transparent,bytes,nullable"`
+}
+
+func NewOpaqueBytesNullable(b []byte) OpaqueBytesNullable { return OpaqueBytesNullable{raw: string(b)} }
+
+func (o OpaqueBytesNullable) Bytes() []byte { return []byte(o.raw) }
+
+// OpaqueContainer holds opaque wrappers as exported fields, verifying that the
+// generated types compose as fields of another generated (tuple) type.
+type OpaqueContainer struct {
+	Name OpaqueString
+	Data OpaqueBytes
+}

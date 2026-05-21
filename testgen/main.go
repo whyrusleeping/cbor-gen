@@ -26,6 +26,10 @@ func main() {
 		types.OpaqueString{},
 		types.OpaqueBytes{},
 		types.OpaqueDirect{},
+		types.OpaqueBytesDirect{},
+		types.OpaqueNullableDirect{},
+		types.OpaqueBytesNullable{},
+		types.OpaqueContainer{},
 	); err != nil {
 		panic(err)
 	}
