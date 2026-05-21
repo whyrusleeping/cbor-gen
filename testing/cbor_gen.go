@@ -2118,21 +2118,15 @@ func (t *BigIntContainer) MarshalCBOR(w io.Writer) error {
 
 	// t.Int (big.Int) (struct)
 	{
-		// CBOR bignums (RFC 8949 3.4.3): tag 2 for non-negative values, tag 3
-		// for negative ones. A tag-3 byte string holds n where the value is
-		// -1 - n, so a negative x is stored as n = -1 - x = -(x + 1).
-		tag := uint64(2)
+		if t.Int != nil && t.Int.Sign() < 0 {
+			return xerrors.Errorf("Value in field t.Int was a negative big-integer (not supported)")
+		}
+		if err := cw.CborWriteHeader(cbg.MajTag, 2); err != nil {
+			return err
+		}
 		var b []byte
 		if t.Int != nil {
-			if t.Int.Sign() < 0 {
-				tag = 3
-				b = new(big.Int).Sub(new(big.Int).Neg(t.Int), big.NewInt(1)).Bytes()
-			} else {
-				b = t.Int.Bytes()
-			}
-		}
-		if err := cw.CborWriteHeader(cbg.MajTag, tag); err != nil {
-			return err
+			b = t.Int.Bytes()
 		}
 
 		if err := cw.CborWriteHeader(cbg.MajByteString, uint64(len(b))); err != nil {
@@ -2170,45 +2164,36 @@ func (t *BigIntContainer) UnmarshalCBOR(r io.Reader) (err error) {
 
 	// t.Int (big.Int) (struct)
 
-	{
-		maj, extra, err = cr.ReadHeader()
-		if err != nil {
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajTag || extra != 2 {
+		return fmt.Errorf("big ints should be cbor bignums")
+	}
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if maj != cbg.MajByteString {
+		return fmt.Errorf("big ints should be tagged cbor byte strings")
+	}
+
+	if extra > 256 {
+		return fmt.Errorf("t.Int: cbor bignum was too large")
+	}
+
+	if extra > 0 {
+		buf := make([]byte, extra)
+		if _, err := io.ReadFull(cr, buf); err != nil {
 			return err
 		}
-
-		// CBOR bignums (RFC 8949 3.4.3): tag 2 is non-negative, tag 3 negative.
-		if maj != cbg.MajTag || (extra != 2 && extra != 3) {
-			return fmt.Errorf("big ints should be cbor bignums")
-		}
-		negative := extra == 3
-
-		maj, extra, err = cr.ReadHeader()
-		if err != nil {
-			return err
-		}
-
-		if maj != cbg.MajByteString {
-			return fmt.Errorf("big ints should be tagged cbor byte strings")
-		}
-
-		if extra > 256 {
-			return fmt.Errorf("t.Int: cbor bignum was too large")
-		}
-
-		if extra > 0 {
-			buf := make([]byte, extra)
-			if _, err := io.ReadFull(cr, buf); err != nil {
-				return err
-			}
-			t.Int = big.NewInt(0).SetBytes(buf)
-		} else {
-			t.Int = big.NewInt(0)
-		}
-
-		// A tag-3 byte string encodes n where the value is -1 - n.
-		if negative {
-			t.Int.Sub(big.NewInt(-1), t.Int)
-		}
+		t.Int = big.NewInt(0).SetBytes(buf)
+	} else {
+		t.Int = big.NewInt(0)
 	}
 	return nil
 }
