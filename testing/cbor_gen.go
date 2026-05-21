@@ -2763,3 +2763,68 @@ func (t *OpaqueContainer) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	return nil
 }
+
+func (t *DID) MarshalCBOR(w io.Writer) error {
+	cw := cbg.NewCborWriter(w)
+
+	// t.str (string) (string)
+
+	if t.str == "" {
+		if _, err := cw.Write(cbg.CborNull); err != nil {
+			return err
+		}
+	} else {
+
+		if len(t.str) > 8192 {
+			return xerrors.Errorf("Value in field t.str was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajTextString, uint64(len(t.str))); err != nil {
+			return err
+		}
+		if _, err := cw.WriteString(string(t.str)); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (t *DID) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = DID{}
+
+	cr := cbg.NewCborReader(r)
+	var maj byte
+	var extra uint64
+	_ = maj
+	_ = extra
+	// t.str (string) (string)
+
+	{
+
+		b, err := cr.ReadByte()
+		if err != nil {
+			return err
+		}
+		if b != cbg.CborNull[0] {
+			if err := cr.UnreadByte(); err != nil {
+				return err
+			}
+
+			sval, err := cbg.ReadStringWithMax(cr, 8192)
+			if err != nil {
+				return err
+			}
+
+			parsed, err := ParseDID(sval)
+			if err != nil {
+				return err
+			}
+			*t = parsed
+
+		}
+
+	}
+	return nil
+}

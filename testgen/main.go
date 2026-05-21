@@ -30,6 +30,7 @@ func main() {
 		types.OpaqueNullableDirect{},
 		types.OpaqueBytesNullable{},
 		types.OpaqueContainer{},
+		types.DID{},
 	); err != nil {
 		panic(err)
 	}

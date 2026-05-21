@@ -91,6 +91,35 @@ func NewOpaqueBytesNullable(b []byte) OpaqueBytesNullable { return OpaqueBytesNu
 
 func (o OpaqueBytesNullable) Bytes() []byte { return []byte(o.raw) }
 
+// DID is a worked example of the opaque-wrapper pattern applied to a real type:
+// a Decentralized Identifier of the form "did:<method>:<id>". It is a faithful
+// stand-in for ucantone's did.DID — a validating constructor (ParseDID) is the
+// only way to build a non-zero value, the wire form is the bare identifier
+// string, and the zero (undefined) DID encodes as CBOR null. The generator
+// produces its CBOR codec from the field tag alone; no hand-rolled
+// MarshalCBOR/UnmarshalCBOR is required.
+type DID struct {
+	str string `cborgen:"transparent,parse=ParseDID,nullable"`
+}
+
+// ParseDID validates s and returns a DID. It accepts identifiers of the form
+// "did:<method>:<id>" with non-empty method and id segments. The empty string
+// is rejected here; the undefined DID is represented by the zero value and is
+// produced only by decoding CBOR null.
+func ParseDID(s string) (DID, error) {
+	parts := strings.SplitN(s, ":", 3)
+	if len(parts) != 3 || parts[0] != "did" || parts[1] == "" || parts[2] == "" {
+		return DID{}, fmt.Errorf("invalid DID %q: expected \"did:<method>:<id>\"", s)
+	}
+	return DID{str: s}, nil
+}
+
+// Defined reports whether the DID holds a value (as opposed to the zero,
+// undefined DID that encodes as CBOR null).
+func (d DID) Defined() bool { return d.str != "" }
+
+func (d DID) String() string { return d.str }
+
 // OpaqueContainer holds opaque wrappers as exported fields, verifying that the
 // generated types compose as fields of another generated (tuple) type.
 type OpaqueContainer struct {

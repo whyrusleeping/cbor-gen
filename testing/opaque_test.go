@@ -24,6 +24,8 @@ var (
 	_ cbg.CBORUnmarshaler = (*OpaqueBytesNullable)(nil)
 	_ cbg.CBORMarshaler   = (*OpaqueContainer)(nil)
 	_ cbg.CBORUnmarshaler = (*OpaqueContainer)(nil)
+	_ cbg.CBORMarshaler   = (*DID)(nil)
+	_ cbg.CBORUnmarshaler = (*DID)(nil)
 )
 
 func mustMarshal(t *testing.T, m cbg.CBORMarshaler) []byte {
@@ -289,5 +291,91 @@ func TestOpaqueContainerRoundtrip(t *testing.T) {
 	}
 	if !bytes.Equal(out.Data.Bytes(), in.Data.Bytes()) {
 		t.Fatalf("Data mismatch: got %x want %x", out.Data.Bytes(), in.Data.Bytes())
+	}
+}
+
+// TestDIDRoundtrip is an end-to-end demonstration of the opaque-wrapper pattern
+// on a realistic type: a DID is built only through its validating constructor,
+// the generator-produced codec encodes it as the bare identifier string, and it
+// round-trips back to an equal value. The undefined (zero) DID encodes as CBOR
+// null and decodes back to undefined.
+func TestDIDRoundtrip(t *testing.T) {
+	cases := []struct {
+		name   string
+		did    string
+		golden []byte
+	}{
+		{
+			name: "did:key",
+			did:  "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH",
+			golden: append(
+				[]byte{0x78, 0x38}, // CBOR text string, length 56 (0x38) with a 1-byte length prefix
+				[]byte("did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH")...,
+			),
+		},
+		{
+			name:   "did:web",
+			did:    "did:web:example.com",
+			golden: append([]byte{0x73}, []byte("did:web:example.com")...), // text string, length 19 (0x13)
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in, err := ParseDID(tc.did)
+			if err != nil {
+				t.Fatalf("ParseDID(%q): %v", tc.did, err)
+			}
+
+			enc := mustMarshal(t, &in)
+			if !bytes.Equal(enc, tc.golden) {
+				t.Fatalf("encoding mismatch: got %x want %x", enc, tc.golden)
+			}
+
+			var out DID
+			if err := out.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+			if !out.Defined() {
+				t.Fatal("decoded DID should be defined")
+			}
+			if out.String() != in.String() {
+				t.Fatalf("roundtrip mismatch: got %q want %q", out.String(), in.String())
+			}
+		})
+	}
+}
+
+// TestDIDUndefinedRoundtrip confirms the zero DID encodes as CBOR null and
+// decodes back to the undefined value.
+func TestDIDUndefinedRoundtrip(t *testing.T) {
+	var in DID
+	if in.Defined() {
+		t.Fatal("zero DID should be undefined")
+	}
+
+	enc := mustMarshal(t, &in)
+	if !bytes.Equal(enc, []byte{0xf6}) { // CBOR null
+		t.Fatalf("encoding mismatch: got %x want f6", enc)
+	}
+
+	var out DID
+	if err := out.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if out.Defined() {
+		t.Fatalf("decoded DID should be undefined, got %q", out.String())
+	}
+}
+
+// TestDIDValidatesOnDecode confirms ParseDID runs on the decode path: a valid
+// CBOR text string that is not a well-formed DID is rejected.
+func TestDIDValidatesOnDecode(t *testing.T) {
+	// "not-a-did" — valid CBOR text string, but not a "did:<method>:<id>".
+	enc := append([]byte{0x69}, []byte("not-a-did")...) // text string, length 9
+
+	var out DID
+	if err := out.UnmarshalCBOR(bytes.NewReader(enc)); err == nil {
+		t.Fatal("expected decode of malformed DID to fail validation, got nil error")
 	}
 }
