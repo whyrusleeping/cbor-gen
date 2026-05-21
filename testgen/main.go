@@ -23,6 +23,9 @@ func main() {
 		types.MapTransparentType{},
 		types.BigIntContainer{},
 		types.TupleWithOptionalFields{},
+		types.OpaqueString{},
+		types.OpaqueBytes{},
+		types.OpaqueDirect{},
 	); err != nil {
 		panic(err)
 	}
