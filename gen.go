@@ -477,15 +477,21 @@ func (g Gen) emitCborMarshalStructField(w io.Writer, f Field) error {
 	case bigIntType:
 		return g.doTemplate(w, f, `
 	{
-		if {{ .Name }} != nil && {{ .Name }}.Sign() < 0 {
-			return xerrors.Errorf("Value in field {{ .Name | js }} was a negative big-integer (not supported)")
-		}
-		if err := cw.CborWriteHeader(cbg.MajTag, 2); err != nil {
-			return err
-		}
+		// CBOR bignums (RFC 8949 3.4.3): tag 2 for non-negative values, tag 3
+		// for negative ones. A tag-3 byte string holds n where the value is
+		// -1 - n, so a negative x is stored as n = -1 - x = -(x + 1).
+		tag := uint64(2)
 		var b []byte
 		if {{ .Name }} != nil {
-			b = {{ .Name }}.Bytes()
+			if {{ .Name }}.Sign() < 0 {
+				tag = 3
+				b = new(big.Int).Sub(new(big.Int).Neg({{ .Name }}), big.NewInt(1)).Bytes()
+			} else {
+				b = {{ .Name }}.Bytes()
+			}
+		}
+		if err := cw.CborWriteHeader(cbg.MajTag, tag); err != nil {
+			return err
 		}
 
 		if err := cw.CborWriteHeader(cbg.MajByteString, uint64(len(b))); err != nil {
@@ -936,36 +942,45 @@ func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
 	switch f.Type {
 	case bigIntType:
 		return g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajTag || extra != 2 {
-		return fmt.Errorf("big ints should be cbor bignums")
-	}
-
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("big ints should be tagged cbor byte strings")
-	}
-
-	if extra > 256 {
-		return fmt.Errorf("{{ .Name }}: cbor bignum was too large")
-	}
-
-	if extra > 0 {
-		buf := make([]byte, extra)
-		if _, err := io.ReadFull(cr, buf); err != nil {
+	{
+		maj, extra, err = {{ ReadHeader "cr" }}
+		if err != nil {
 			return err
 		}
-		{{ .Name }} = big.NewInt(0).SetBytes(buf)
-	} else {
-		{{ .Name }} = big.NewInt(0)
+
+		// CBOR bignums (RFC 8949 3.4.3): tag 2 is non-negative, tag 3 negative.
+		if maj != cbg.MajTag || (extra != 2 && extra != 3) {
+			return fmt.Errorf("big ints should be cbor bignums")
+		}
+		negative := extra == 3
+
+		maj, extra, err = {{ ReadHeader "cr" }}
+		if err != nil {
+			return err
+		}
+
+		if maj != cbg.MajByteString {
+			return fmt.Errorf("big ints should be tagged cbor byte strings")
+		}
+
+		if extra > 256 {
+			return fmt.Errorf("{{ .Name }}: cbor bignum was too large")
+		}
+
+		if extra > 0 {
+			buf := make([]byte, extra)
+			if _, err := io.ReadFull(cr, buf); err != nil {
+				return err
+			}
+			{{ .Name }} = big.NewInt(0).SetBytes(buf)
+		} else {
+			{{ .Name }} = big.NewInt(0)
+		}
+
+		// A tag-3 byte string encodes n where the value is -1 - n.
+		if negative {
+			{{ .Name }}.Sub(big.NewInt(-1), {{ .Name }})
+		}
 	}
 `)
 	case cidType:
