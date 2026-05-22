@@ -727,6 +727,8 @@ func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
 		err = g.emitCborMarshalUint8Field(w, subf)
 	case reflect.Int64:
 		err = g.emitCborMarshalInt64Field(w, subf)
+	case reflect.Bool:
+		err = g.emitCborMarshalBoolField(w, subf)
 	case reflect.Slice:
 		err = g.emitCborMarshalSliceField(w, subf)
 	case reflect.String:
@@ -1404,6 +1406,16 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 		if err != nil {
 			return err
 		}
+	case reflect.Bool:
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
+		}
+		err := g.emitCborUnmarshalBoolField(w, subf)
+		if err != nil {
+			return err
+		}
 	case reflect.Array:
 		nextIter := string([]byte{f.IterLabel[0] + 1})
 		subf := Field{
@@ -1553,6 +1565,16 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 			Name: f.Name + "[" + f.IterLabel + "]",
 		}
 		err := g.emitCborUnmarshalInt64Field(w, subf)
+		if err != nil {
+			return err
+		}
+	case reflect.Bool:
+		subf := Field{
+			Type: e,
+			Pkg:  f.Pkg,
+			Name: f.Name + "[" + f.IterLabel + "]",
+		}
+		err := g.emitCborUnmarshalBoolField(w, subf)
 		if err != nil {
 			return err
 		}
