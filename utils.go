@@ -40,6 +40,10 @@ type CBORMarshaler interface {
 	MarshalCBOR(io.Writer) error
 }
 
+type Initializer interface {
+	Init()
+}
+
 func readByte(r io.Reader) (byte, error) {
 	// try to cast to a concrete type, it's much faster than casting to an
 	// interface.

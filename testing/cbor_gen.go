@@ -2240,7 +2240,7 @@ func (t *TupleWithOptionalFields) MarshalCBOR(w io.Writer) error {
 		}
 	}
 
-	// t.Int4 (int64) (int64)
+	// t.Int4 (testing.DefaultOne) (int64)
 	if t.Int4 >= 0 {
 		if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(t.Int4)); err != nil {
 			return err
@@ -2324,59 +2324,57 @@ func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	// t.Int3 (int64) (int64)
 	if fieldCount < 3 {
-		return nil
-	}
-	{
-		maj, extra, err := cr.ReadHeader()
-		if err != nil {
-			return err
-		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
+		{
+			maj, extra, err := cr.ReadHeader()
+			if err != nil {
+				return err
 			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
+			var extraI int64
+			switch maj {
+			case cbg.MajUnsignedInt:
+				extraI = int64(extra)
+				if extraI < 0 {
+					return fmt.Errorf("int64 positive overflow")
+				}
+			case cbg.MajNegativeInt:
+				extraI = int64(extra)
+				if extraI < 0 {
+					return fmt.Errorf("int64 negative overflow")
+				}
+				extraI = -1 - extraI
+			default:
+				return fmt.Errorf("wrong type for int64 field: %d", maj)
 			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
 
-		t.Int3 = int64(extraI)
+			t.Int3 = int64(extraI)
+		}
 	}
-	// t.Int4 (int64) (int64)
+	// t.Int4 (testing.DefaultOne) (int64)
 	if fieldCount < 4 {
-		return nil
-	}
-	{
-		maj, extra, err := cr.ReadHeader()
-		if err != nil {
-			return err
-		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
+		{
+			maj, extra, err := cr.ReadHeader()
+			if err != nil {
+				return err
 			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
+			var extraI int64
+			switch maj {
+			case cbg.MajUnsignedInt:
+				extraI = int64(extra)
+				if extraI < 0 {
+					return fmt.Errorf("int64 positive overflow")
+				}
+			case cbg.MajNegativeInt:
+				extraI = int64(extra)
+				if extraI < 0 {
+					return fmt.Errorf("int64 negative overflow")
+				}
+				extraI = -1 - extraI
+			default:
+				return fmt.Errorf("wrong type for int64 field: %d", maj)
 			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
 
-		t.Int4 = int64(extraI)
+			t.Int4 = DefaultOne(extraI)
+		}
 	}
 	return nil
 }
