@@ -35,8 +35,9 @@ func init() {
 
 func resolvePkgName(path, typeName string) string {
 	parts := strings.Split(typeName, ".")
-	if len(parts) != 2 {
-		panic(fmt.Sprintf("expected type to have a package name: %s", typeName))
+	if len(parts) < 2 {
+		// Already a short name.
+		return typeName
 	}
 	defaultName := parts[0]
 
@@ -60,7 +61,6 @@ func resolvePkgName(path, typeName string) string {
 			return tryName
 		}
 	}
-
 }
 
 type Import struct {
