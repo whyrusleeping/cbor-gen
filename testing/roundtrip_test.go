@@ -91,6 +91,62 @@ func TestBigInt(t *testing.T) {
 	}
 }
 
+func TestAllInts(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(AllInts{}))
+}
+
+func TestAllIntsOverflow(t *testing.T) {
+	t.Run("uint16 overflow", func(t *testing.T) {
+		enc := []byte{
+			0x8a,                         // array of 10
+			0x00,                         // I8 = 0
+			0x00,                         // I16 = 0
+			0x00,                         // I32 = 0
+			0x00,                         // I64 = 0
+			0x00,                         // U8 = 0
+			0x1a, 0x00, 0x01, 0x00, 0x00, // U16 = 65536 (too large)
+			0x00, // U32 = 0
+			0x00, // U64 = 0
+			0xf6, // PI16 = nil
+			0xf6, // PU32 = nil
+		}
+		var out AllInts
+		err := out.UnmarshalCBOR(bytes.NewReader(enc))
+		if err == nil {
+			t.Fatal("expected overflow error for uint16, got nil")
+		}
+	})
+
+	t.Run("int8 positive overflow", func(t *testing.T) {
+		enc := []byte{
+			0x8a,
+			0x18, 0x80, // I8 = 128 (too large)
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0xf6, 0xf6,
+		}
+		var out AllInts
+		err := out.UnmarshalCBOR(bytes.NewReader(enc))
+		if err == nil {
+			t.Fatal("expected overflow error for int8, got nil")
+		}
+	})
+
+	t.Run("int8 negative overflow", func(t *testing.T) {
+		// -129 encodes as major type 1, payload 128 (0x38 0x80).
+		enc := []byte{
+			0x8a,
+			0x38, 0x80, // I8 = -129 (too negative)
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0xf6, 0xf6,
+		}
+		var out AllInts
+		err := out.UnmarshalCBOR(bytes.NewReader(enc))
+		if err == nil {
+			t.Fatal("expected negative overflow error for int8, got nil")
+		}
+	})
+}
+
 type RoundTripOptions struct {
 	Golden []byte
 }
