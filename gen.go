@@ -731,6 +731,8 @@ func (g Gen) emitCborMarshalSliceField(w io.Writer, f Field) error {
 		err = g.emitCborMarshalSliceField(w, subf)
 	case reflect.String:
 		err = g.emitCborMarshalStringField(w, subf)
+	case reflect.Array:
+		err = g.emitCborMarshalArrayField(w, subf)
 	}
 	if err != nil {
 		return err
@@ -803,6 +805,8 @@ func (g Gen) emitCborMarshalArrayField(w io.Writer, f Field) error {
 		err = g.emitCborMarshalSliceField(w, subf)
 	case reflect.String:
 		err = g.emitCborMarshalStringField(w, subf)
+	case reflect.Array:
+		err = g.emitCborMarshalArrayField(w, subf)
 	}
 	if err != nil {
 		return err

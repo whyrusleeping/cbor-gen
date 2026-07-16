@@ -221,3 +221,9 @@ type TupleWithOptionalFields struct {
 	Int3  int64 `cborgen:"optional"`
 	Int4  int64 `cborgen:"optional"`
 }
+
+type SlicesOfArrays struct {
+	ByteArrs [][4]byte
+	IntArrs  [][3]uint64
+	Nested   [][2][3]byte
+}

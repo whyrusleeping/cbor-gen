@@ -2380,3 +2380,325 @@ func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
 	}
 	return nil
 }
+
+var lengthBufSlicesOfArrays = []byte{131}
+
+func (t *SlicesOfArrays) MarshalCBOR(w io.Writer) error {
+	if t == nil {
+		_, err := w.Write(cbg.CborNull)
+		return err
+	}
+
+	cw := cbg.NewCborWriter(w)
+
+	if _, err := cw.Write(lengthBufSlicesOfArrays); err != nil {
+		return err
+	}
+
+	// t.ByteArrs ([][4]uint8) (slice)
+	if len(t.ByteArrs) > 8192 {
+		return xerrors.Errorf("Slice value in field t.ByteArrs was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.ByteArrs))); err != nil {
+		return err
+	}
+	for _, v := range t.ByteArrs {
+		if len(v) > 2097152 {
+			return xerrors.Errorf("Byte array in field v was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(v))); err != nil {
+			return err
+		}
+
+		if _, err := cw.Write(v[:]); err != nil {
+			return err
+		}
+
+	}
+
+	// t.IntArrs ([][3]uint64) (slice)
+	if len(t.IntArrs) > 8192 {
+		return xerrors.Errorf("Slice value in field t.IntArrs was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.IntArrs))); err != nil {
+		return err
+	}
+	for _, v := range t.IntArrs {
+		if len(v) > 8192 {
+			return xerrors.Errorf("Slice value in field v was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(v))); err != nil {
+			return err
+		}
+		for _, v := range v {
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajUnsignedInt, uint64(v)); err != nil {
+				return err
+			}
+
+		}
+
+	}
+
+	// t.Nested ([][2][3]uint8) (slice)
+	if len(t.Nested) > 8192 {
+		return xerrors.Errorf("Slice value in field t.Nested was too long")
+	}
+
+	if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(t.Nested))); err != nil {
+		return err
+	}
+	for _, v := range t.Nested {
+		if len(v) > 8192 {
+			return xerrors.Errorf("Slice value in field v was too long")
+		}
+
+		if err := cw.WriteMajorTypeHeader(cbg.MajArray, uint64(len(v))); err != nil {
+			return err
+		}
+		for _, v := range v {
+			if len(v) > 2097152 {
+				return xerrors.Errorf("Byte array in field v was too long")
+			}
+
+			if err := cw.WriteMajorTypeHeader(cbg.MajByteString, uint64(len(v))); err != nil {
+				return err
+			}
+
+			if _, err := cw.Write(v[:]); err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+func (t *SlicesOfArrays) UnmarshalCBOR(r io.Reader) (err error) {
+	*t = SlicesOfArrays{}
+
+	cr := cbg.NewCborReader(r)
+
+	maj, extra, err := cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("cbor input should be of type array")
+	}
+
+	if extra != 3 {
+		return fmt.Errorf("cbor input had wrong number of fields")
+	}
+
+	// t.ByteArrs ([][4]uint8) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > 8192 {
+		return fmt.Errorf("t.ByteArrs: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.ByteArrs = make([][4]uint8, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > 2097152 {
+				return fmt.Errorf("t.ByteArrs[i]: byte array too large (%d)", extra)
+			}
+			if maj != cbg.MajByteString {
+				return fmt.Errorf("expected byte array")
+			}
+			if extra != 4 {
+				return fmt.Errorf("expected array to have 4 elements")
+			}
+
+			t.ByteArrs[i] = [4]uint8{}
+			if _, err := io.ReadFull(cr, t.ByteArrs[i][:]); err != nil {
+				return err
+			}
+
+		}
+	}
+	// t.IntArrs ([][3]uint64) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > 8192 {
+		return fmt.Errorf("t.IntArrs: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.IntArrs = make([][3]uint64, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > 8192 {
+				return fmt.Errorf("t.IntArrs[i]: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+			if extra != 3 {
+				return fmt.Errorf("expected array to have 3 elements")
+			}
+
+			t.IntArrs[i] = [3]uint64{}
+			for j := 0; j < int(extra); j++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					{
+
+						maj, extra, err = cr.ReadHeader()
+						if err != nil {
+							return err
+						}
+						if maj != cbg.MajUnsignedInt {
+							return fmt.Errorf("wrong type for uint64 field")
+						}
+						t.IntArrs[i][j] = uint64(extra)
+
+					}
+				}
+			}
+
+		}
+	}
+	// t.Nested ([][2][3]uint8) (slice)
+
+	maj, extra, err = cr.ReadHeader()
+	if err != nil {
+		return err
+	}
+
+	if extra > 8192 {
+		return fmt.Errorf("t.Nested: array too large (%d)", extra)
+	}
+
+	if maj != cbg.MajArray {
+		return fmt.Errorf("expected cbor array")
+	}
+
+	if extra > 0 {
+		t.Nested = make([][2][3]uint8, extra)
+	}
+
+	for i := 0; i < int(extra); i++ {
+		{
+			var maj byte
+			var extra uint64
+			var err error
+			_ = maj
+			_ = extra
+			_ = err
+
+			maj, extra, err = cr.ReadHeader()
+			if err != nil {
+				return err
+			}
+
+			if extra > 8192 {
+				return fmt.Errorf("t.Nested[i]: array too large (%d)", extra)
+			}
+
+			if maj != cbg.MajArray {
+				return fmt.Errorf("expected cbor array")
+			}
+			if extra != 2 {
+				return fmt.Errorf("expected array to have 2 elements")
+			}
+
+			t.Nested[i] = [2][3]uint8{}
+			for j := 0; j < int(extra); j++ {
+				{
+					var maj byte
+					var extra uint64
+					var err error
+					_ = maj
+					_ = extra
+					_ = err
+
+					maj, extra, err = cr.ReadHeader()
+					if err != nil {
+						return err
+					}
+
+					if extra > 2097152 {
+						return fmt.Errorf("t.Nested[i][j]: byte array too large (%d)", extra)
+					}
+					if maj != cbg.MajByteString {
+						return fmt.Errorf("expected byte array")
+					}
+					if extra != 3 {
+						return fmt.Errorf("expected array to have 3 elements")
+					}
+
+					t.Nested[i][j] = [3]uint8{}
+					if _, err := io.ReadFull(cr, t.Nested[i][j][:]); err != nil {
+						return err
+					}
+				}
+			}
+
+		}
+	}
+	return nil
+}

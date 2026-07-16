@@ -47,6 +47,10 @@ func TestSimpleTypeTree(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeTree{}))
 }
 
+func TestSlicesOfArrays(t *testing.T) {
+	testTypeRoundtrips(t, reflect.TypeOf(SlicesOfArrays{}))
+}
+
 func TestNeedScratchForMap(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(NeedScratchForMap{}))
 }
