@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -45,6 +46,106 @@ func TestSimpleTypeTwo(t *testing.T) {
 
 func TestSimpleTypeTree(t *testing.T) {
 	testTypeRoundtrips(t, reflect.TypeOf(SimpleTypeTree{}))
+}
+
+func ptrI64(v int64) *int64   { return &v }
+func ptrU64(v uint64) *uint64 { return &v }
+
+func TestAllIntsOverflow(t *testing.T) {
+	cases := []struct {
+		name string
+		src  AllInts64
+	}{
+		{
+			name: "I8 positive overflow",
+			src:  AllInts64{I8: math.MaxInt8 + 1},
+		},
+		{
+			name: "I8 negative overflow",
+			src:  AllInts64{I8: math.MinInt8 - 1},
+		},
+		{
+			name: "PI8 positive overflow",
+			src:  AllInts64{PI8: ptrI64(math.MaxInt8 + 1)},
+		},
+		{
+			name: "PI8 negative overflow",
+			src:  AllInts64{PI8: ptrI64(math.MinInt8 - 1)},
+		},
+		{
+			name: "I16 positive overflow",
+			src:  AllInts64{I16: math.MaxInt16 + 1},
+		},
+		{
+			name: "I16 negative overflow",
+			src:  AllInts64{I16: math.MinInt16 - 1},
+		},
+		{
+			name: "PI16 positive overflow",
+			src:  AllInts64{PI16: ptrI64(math.MaxInt16 + 1)},
+		},
+		{
+			name: "PI16 negative overflow",
+			src:  AllInts64{PI16: ptrI64(math.MinInt16 - 1)},
+		},
+		{
+			name: "I32 positive overflow",
+			src:  AllInts64{I32: math.MaxInt32 + 1},
+		},
+		{
+			name: "I32 negative overflow",
+			src:  AllInts64{I32: math.MinInt32 - 1},
+		},
+		{
+			name: "PI32 positive overflow",
+			src:  AllInts64{PI32: ptrI64(math.MaxInt32 + 1)},
+		},
+		{
+			name: "PI32 negative overflow",
+			src:  AllInts64{PI32: ptrI64(math.MinInt32 - 1)},
+		},
+		{
+			name: "U8 overflow",
+			src:  AllInts64{U8: math.MaxUint8 + 1},
+		},
+		{
+			name: "PU8 overflow",
+			src:  AllInts64{PU8: ptrU64(math.MaxUint8 + 1)},
+		},
+		{
+			name: "U16 overflow",
+			src:  AllInts64{U16: math.MaxUint16 + 1},
+		},
+		{
+			name: "PU16 overflow",
+			src:  AllInts64{PU16: ptrU64(math.MaxUint16 + 1)},
+		},
+		{
+			name: "U32 overflow",
+			src:  AllInts64{U32: math.MaxUint32 + 1},
+		},
+		{
+			name: "PU32 overflow",
+			src:  AllInts64{PU32: ptrU64(math.MaxUint32 + 1)},
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+
+		t.Run(c.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			if err := c.src.MarshalCBOR(&buf); err != nil {
+				t.Fatalf("marshal source: %v", err)
+			}
+
+			var out AllInts
+			if err := out.UnmarshalCBOR(&buf); err == nil {
+				t.Fatalf("expected overflow error, got nil")
+			}
+		})
+	}
 }
 
 func TestNeedScratchForMap(t *testing.T) {

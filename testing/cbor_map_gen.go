@@ -405,6 +405,9 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 						if maj != cbg.MajUnsignedInt {
 							return fmt.Errorf("wrong type for uint64 field")
 						}
+						if extra > 18446744073709551615 {
+							return fmt.Errorf("value %d is too large for uint64", extra)
+						}
 						t.Others[i] = uint64(extra)
 
 					}
@@ -484,6 +487,9 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 					if maj != cbg.MajUnsignedInt {
 						return fmt.Errorf("wrong type for uint64 field")
 					}
+					if extra > 18446744073709551615 {
+						return fmt.Errorf("value %d is too large for uint64", extra)
+					}
 					typed := uint64(extra)
 					t.NotPizza = &typed
 				}
@@ -520,16 +526,15 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.SixtyThreeBitIntegerWithASignBit: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -989,6 +994,9 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 				}
 				if maj != cbg.MajUnsignedInt {
 					return fmt.Errorf("wrong type for uint64 field")
+				}
+				if extra > 18446744073709551615 {
+					return fmt.Errorf("value %d is too large for uint64", extra)
 				}
 				t.OldNum = uint64(extra)
 
@@ -1661,6 +1669,9 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				if maj != cbg.MajUnsignedInt {
 					return fmt.Errorf("wrong type for uint64 field")
 				}
+				if extra > 18446744073709551615 {
+					return fmt.Errorf("value %d is too large for uint64", extra)
+				}
 				t.NewNum = uint64(extra)
 
 			}
@@ -1751,6 +1762,9 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				}
 				if maj != cbg.MajUnsignedInt {
 					return fmt.Errorf("wrong type for uint64 field")
+				}
+				if extra > 18446744073709551615 {
+					return fmt.Errorf("value %d is too large for uint64", extra)
 				}
 				t.OldNum = uint64(extra)
 
@@ -2054,16 +2068,15 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Foo: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -2246,16 +2259,15 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Cat: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -2423,16 +2435,15 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Thing: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -2617,16 +2628,15 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Foo: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -2654,16 +2664,15 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Drond: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -3324,6 +3333,9 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 								if maj != cbg.MajUnsignedInt {
 									return fmt.Errorf("wrong type for uint64 field")
 								}
+								if extra > 18446744073709551615 {
+									return fmt.Errorf("value %d is too large for uint64", extra)
+								}
 								t.Not[i] = uint64(extra)
 
 							}
@@ -3343,16 +3355,15 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Beep: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
@@ -3419,6 +3430,9 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 						}
 						if maj != cbg.MajUnsignedInt {
 							return fmt.Errorf("wrong type for uint64 field")
+						}
+						if extra > 18446744073709551615 {
+							return fmt.Errorf("value %d is too large for uint64", extra)
 						}
 						t.Stuff[i] = uint64(extra)
 
@@ -3831,16 +3845,15 @@ func (t *FieldNameOverlap) UnmarshalCBOR(r io.Reader) (err error) {
 				var extraI int64
 				switch maj {
 				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("value %d is too large for int64", extra)
 					}
+					extraI = int64(extra)
 				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
+					if extra > 9223372036854775807 {
+						return fmt.Errorf("t.Foo: value %d too negative for int64", extra)
 					}
-					extraI = -1 - extraI
+					extraI = -1 - int64(extra)
 				default:
 					return fmt.Errorf("wrong type for int64 field: %d", maj)
 				}
