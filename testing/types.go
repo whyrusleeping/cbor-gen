@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"encoding/binary"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -14,6 +16,21 @@ const Thingc = 3
 
 type NamedNumber uint64
 type NamedString string
+type FixedBinary uint64
+
+func (b *FixedBinary) MarshalBinary() ([]byte, error) {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], uint64(*b))
+	return buf[:], nil
+}
+
+func (b *FixedBinary) UnmarshalBinary(data []byte) error {
+	if len(data) != 8 {
+		return fmt.Errorf("FixedBinary: expected 8 bytes, got %d", len(data))
+	}
+	*b = FixedBinary(binary.BigEndian.Uint64(data))
+	return nil
+}
 
 type SignedArray struct {
 	Signed []uint64
@@ -220,4 +237,10 @@ type TupleWithOptionalFields struct {
 	Uint2 uint64
 	Int3  int64 `cborgen:"optional"`
 	Int4  int64 `cborgen:"optional"`
+}
+
+type BinaryMarshalerTuple struct {
+	Val    FixedBinary  `cborgen:"binarymarshaler"`
+	ValPtr *FixedBinary `cborgen:"binarymarshaler"`
+	After  string
 }
