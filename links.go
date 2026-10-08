@@ -70,9 +70,15 @@ func ScanForLinks(br io.Reader, cb func(cid.Cid)) (err error) {
 				remaining++
 			}
 		case MajArray:
+			if extra > math.MaxUint64-remaining {
+				return fmt.Errorf("cbor array length overflows remaining item count")
+			}
 			remaining += extra
 		case MajMap:
-			remaining += (extra * 2)
+			if extra > (math.MaxUint64-remaining)/2 {
+				return fmt.Errorf("cbor map length overflows remaining item count")
+			}
+			remaining += extra * 2
 		default:
 			return fmt.Errorf("unhandled cbor type: %d", maj)
 		}
